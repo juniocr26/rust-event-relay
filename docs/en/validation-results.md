@@ -2,6 +2,47 @@
 
 # Validation results
 
+## Milestone 1.5 — Persistence abstraction validation
+
+Date: 2026-10-07. Docker development container, Rust 1.95.0. New Rust-level tests use no database, driver, environment configuration, pools or SQL. No migrations/schema changes or PostgreSQL calls were made for this milestone. Prior schema/credential validation remains preserved below.
+
+| Check | Actual result |
+| --- | --- |
+| Initial targeted test and Clippy attempt | Failed: E0283/E0284, ambiguous Chrono parse timezone in one new assertion |
+| Correction | Added explicit parse::<DateTime<Utc>>; no envelope or schema changes |
+| Docker cargo fmt --check | Passed after formatting |
+| Docker Clippy all targets/features, warnings denied | Passed |
+| Docker cargo test --locked | Passed: 2 unit, 6 envelope, 2 lifecycle, 5 persistence tests (15 total) |
+| Docker cargo build --locked | Passed |
+| Rustdoc with -D warnings, --locked --no-deps | Passed; public persistence API documented |
+| git diff --check / local links and anchors | Passed |
+| Boundary/source review | No SQLx/PostgreSQL imports or types; no concrete adapter, mutations, worker or producer append |
+| Scope verification | Cargo manifest/lock, EventEnvelope, existing migrations and configuration unchanged |
+
+The five new tests cover positive bounded requests/zero rejection/explicit UTC, envelope preservation with separate unsigned attempts/UTC availability, all error categories and downcastable sources with Display/Debug redaction, generic contract use on a Tokio-spawned Send future, and empty-success/typed-failure handling. A single prepared-result fake demonstrates substitution only, not filtering, locking, durability, claim ownership or adapter conformance. Those guarantees cannot be validated without Milestones 1.6/1.7 and future worker semantics.
+
+Exact commands executed (first targeted attempt failed before the explicit UTC correction):
+
+```bash
+# Initial attempt
+docker compose exec -T app cargo fmt
+docker compose exec -T app cargo test --locked --test persistence_contract
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+
+# After fixing the test annotation
+docker compose exec -T app cargo fmt
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
+git diff --check
+```
+
+The existing Python pathlib/re documentation scan resolved local file links and heading anchors across both READMEs and docs. Git diff/source review confirmed no edits to dependencies, migrations or canonical envelope and no storage-driver coupling in the new persistence module. No commit or push was created.
+
+Scope decisions: one bounded read-only port instead of prematurely freezing claim/completion/reschedule/dead-letter APIs; no producer writer whose own transaction could misrepresent producer atomicity; no terminal enum without a returned terminal view. These are allowed smaller-boundary choices, not implementation of Milestone 1.6. Open questions include ownership/recovery, mutation atomicity/idempotency/conflicts, attempt update timing, producer duplicates, payload/operational limits and aggregate ordering. No production/throughput or concurrent-worker-safety claims. Configuration and the developer database remain unchanged.
+
 ## Milestone 1.4 — Outbox schema validation
 
 Date: 2026-10-07. Real developer PostgreSQL 18.6 cluster, SQLx CLI 0.8.6, Docker Desktop/Linux ARM64, Rust 1.95.0. Existing authentication diagnostic passed before schema work. No cluster reset was performed. The preflight catalog showed no outbox table and only namespace migration 20261007000000 installed, so rollback of the new empty table was safe.

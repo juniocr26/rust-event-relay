@@ -8,13 +8,13 @@ Este projeto de código aberto, estudo e portfólio investiga entrega distribuí
 
 ## Estado atual e escopo
 
-**Implementado hoje:** configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial (sem persistência da aplicação), verificações de CI e documentação bilíngue.
+**Implementado hoje:** configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial e contratos de persistência da aplicação (sem adapter PostgreSQL ou gravações pela aplicação), verificações de CI e documentação bilíngue.
 
 **Planejado / exploração futura:** persistência e processamento outbox, persistência da aplicação em PostgreSQL, entrega RabbitMQ, tentativas, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. A aplicação Rust não persiste nem entrega eventos hoje. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture.md).
 
 ## Arquitetura
 
-Um `main.rs` pequeno carrega configuração, configura tracing, abre um socket e executa a aplicação. `application.rs` controla o ciclo de vida HTTP; `config.rs` interpreta configuração; `telemetry.rs` configura logs. `domain/event.rs` define o envelope canônico de eventos; módulos de entrega continuam planejados. Ainda não há dependências Rust de banco ou broker. Compose fornece PostgreSQL local; o binário não se conecta a ele.
+Um `main.rs` pequeno carrega configuração, configura tracing, abre um socket e executa a aplicação. `application.rs` controla o ciclo de vida HTTP; `config.rs` interpreta configuração; `telemetry.rs` configura logs. `domain/event.rs` define o envelope canônico de eventos; módulos de entrega continuam planejados. Ainda não há dependências Rust de banco ou broker. Compose fornece PostgreSQL local; o binário não se conecta a ele. O módulo persistence expõe snapshots pending limitados e erros classificados para futuros chamadores genéricos; sem adapter em runtime.
 
 ## Desenvolvimento
 
@@ -65,6 +65,7 @@ Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver
 - [Decisão PostgreSQL e trade-offs](docs/pt-BR/postgresql.md)
 - [Migrações de banco](docs/pt-BR/database-migrations.md)
 - [Schema outbox](docs/pt-BR/outbox-schema.md)
+- [Abstração de persistência](docs/pt-BR/persistence-abstraction.md)
 - [Recuperação de dependências](docs/pt-BR/development-dependencies.md)
 - [Docker e configuração](docs/pt-BR/docker-and-configuration.md)
 - [Guia do projeto e dependências](docs/pt-BR/project-guide.md)
@@ -74,9 +75,10 @@ Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver
 - [ADR 002: PostgreSQL](docs/pt-BR/adr/002-use-postgresql-for-durable-event-storage.md)
 - [ADR 003: Migrações SQL versionadas](docs/pt-BR/adr/003-use-versioned-sql-migrations.md)
 - [ADR 004: Schema outbox transacional](docs/pt-BR/adr/004-use-postgresql-transactional-outbox-schema.md)
+- [ADR 005: Fronteira de persistência](docs/pt-BR/adr/005-separate-persistence-contracts-from-postgresql.md)
 
 ## Limites e filosofia
 
-`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O encerramento HTTP ainda não tem timeout forçado; requisições prolongadas podem atrasá-lo. Não há autenticação, persistência, relay, medição de desempenho ou imagem de produção. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
+`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O encerramento HTTP ainda não tem timeout forçado; requisições prolongadas podem atrasá-lo. Não há autenticação, implementação de persistência da aplicação, relay, medição de desempenho ou imagem de produção. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
 
 Licença MIT; consulte [LICENSE](LICENSE).

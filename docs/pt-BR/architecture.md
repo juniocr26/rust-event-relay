@@ -5,7 +5,7 @@
 ## Base implementada
 
 `main` → configuração e telemetria → listener TCP → ciclo de vida HTTP da aplicação.
-A aplicação aceita uma future de encerramento injetada; os testes usam um socket real com porta efêmera, sem estado global de sinais. Não há lógica de entrega ou armazenamento. O domínio de eventos está em `src/domain/event.rs`; não foram introduzidas interfaces de persistência ou abstrações de brokers.
+A aplicação aceita uma future de encerramento injetada; os testes usam um socket real com porta efêmera, sem estado global de sinais. Não há lógica de entrega ou armazenamento. O domínio de eventos está em `src/domain/event.rs`; interfaces focadas de persistência agora existem separadamente; sem adapter em runtime ou abstração de broker conectados.
 
 ## Envelope canônico de eventos — Marco 1.1 implementado
 
@@ -80,7 +80,7 @@ A futura entrega inicialmente mira semântica de pelo menos uma vez, sem entrega
 | Marco | Exploração |
 | --- | --- |
 | 0 — Fundação | Rust, Docker, configuração, tracing, encerramento, health, testes, documentação bilíngue (implementado) |
-| 1 — Modelo durável de eventos | **1.1 envelope, 1.2 PostgreSQL local e 1.3 infraestrutura de migrações e 1.4 schema outbox implementados**; repositórios e testes de integração da persistência continuam planejados |
+| 1 — Modelo durável de eventos | **1.1 envelope, 1.2 PostgreSQL local e 1.3 infraestrutura de migrações, 1.4 schema outbox e 1.5 abstração de persistência implementados**; repositórios e testes de integração da persistência continuam planejados |
 | 2 — Primeiro adaptador | Publicador RabbitMQ, estado de entrega, tentativas, semântica de pelo menos uma vez |
 | 3 — Confiabilidade | Backoff exponencial, DLQ, idempotência, recuperação de crashes, mensagens problemáticas |
 | 4 — Concorrência | Canais limitados, pools de workers, limites de concorrência, contrapressão, drenagem no encerramento |
@@ -96,14 +96,14 @@ São marcos de estudo, não lançamentos prometidos. A arquitetura pode mudar qu
 - [x] 1.2 PostgreSQL local no Docker
 - [x] 1.3 Infraestrutura de migrações
 - [x] 1.4 Schema outbox
-- [ ] 1.5 Abstração de persistência
+- [x] 1.5 Abstração de persistência
 - [ ] 1.6 Repositório PostgreSQL
 - [ ] 1.7 Testes de integração
 - [ ] 1.8 Semântica de falhas e transações
 
 ## Infraestrutura de migrações — Marco 1.3 concluído
 
-SQLx CLI 0.8.6 é apenas ferramenta Docker de desenvolvimento. A migração inicial cria namespace `relay`; Marco 1.4 adiciona tabela outbox por nova migração. Sem dependências Rust de banco. [Fluxo](database-migrations.md) e [ADR 003](adr/003-use-versioned-sql-migrations.md) definem responsabilidade e limites. Marco 1 continua incompleto; 1.5+ persistência e processamento continuam planejados.
+SQLx CLI 0.8.6 é apenas ferramenta Docker de desenvolvimento. A migração inicial cria namespace `relay`; Marco 1.4 adiciona tabela outbox por nova migração. Sem dependências Rust de banco. [Fluxo](database-migrations.md) e [ADR 003](adr/003-use-versioned-sql-migrations.md) definem responsabilidade e limites. Marco 1 continua incompleto; 1.6 adapter PostgreSQL e processamento posterior continuam planejados.
 
 ## Schema outbox — Marco 1.4 concluído
 
@@ -125,3 +125,22 @@ flowchart LR
 ```
 
 Produtor grava eventos duráveis com sua mudança de negócio em uma transação do banco; relay entrega esses eventos depois. Conceitualmente: BEGIN → atualizar estado de negócio → inserir relay.outbox_events (...) → COMMIT. Outro banco ou broker remoto está fora da fronteira atômica. Entrega pelo menos uma vez e idempotência são preocupações futuras; tabela sozinha não garante efeitos exatamente uma vez.
+
+## Abstração de persistência — Marco 1.5 concluído
+
+O contrato `OutboxReader` observa snapshots pending elegíveis com corte UTC explícito e BatchSize positivo. PendingOutboxEvent envolve envelope inalterado com tentativas unsigned/disponibilidade UTC. É visão pending, não linha SQL ou claim. Erros classificados preservam fontes com formatação sanitizada. Futures Send nativas e dispatch genérico não adicionam dependências. Runtime continua apenas HTTP.
+
+```mermaid
+flowchart LR
+    APP[Lógica relay futura]
+    PORT[Contratos e modelos de persistência]
+    PG[Adapter PostgreSQL futuro - 1.6]
+    DB[(relay.outbox_events)]
+    APP -->|depende de| PORT
+    PG -->|implementa; depende para dentro| PORT
+    PG -->|acesso ao armazenamento| DB
+```
+
+Setas para PORT significam dependência de compilação, não sequência de chamadas. Chamadores genéricos invocarão implementação pelo contrato; tipos PostgreSQL não entram nessa fronteira. Escrita permanece na transação de negócio do produtor, sem append relay com commit independente. Snapshots não são claims: mutações/propriedade/recuperação estão adiadas, sem afirmar segurança concorrente ou exatamente uma vez. Diagrama produtor/relay acima permanece conceitual para escrita/entrega.
+
+Veja [contratos e questões abertas](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) e [testes](testing.md). Marco 1 segue incompleto; 1.6 adapter, 1.7 integração e 1.8 falhas/transações planejados.

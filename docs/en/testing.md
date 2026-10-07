@@ -162,3 +162,26 @@ The reusable [read-only catalog inspection](../../tests/sql/inspect_outbox_schem
 ```bash
 docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql
 ```
+
+## Persistence contract tests — Milestone 1.5
+
+[tests/persistence_contract.rs](../../tests/persistence_contract.rs) contains five database-independent Rust tests:
+
+- Positive batch limits, zero rejection and no arbitrary maximum; explicit UTC cutoff survives request construction.
+- Canonical envelope identity/time/payload/UUID metadata remains intact, while attempt/availability metadata stays outside the serialized nine-field event.
+- All error categories, optional downcastable sources and source redaction in both Display and Debug.
+- Generic OutboxReader usage with a one-response scripted fake, captured request and Tokio-spawned Send future.
+- Successful empty snapshots and typed unavailable failure propagation through a generic caller.
+
+The fake holds only one prepared result; it is not an in-memory engine and does not simulate eligibility filtering, locks, durability or claims. The tests do not query PostgreSQL, instantiate pools, read .env or execute SQL. Adapter conformance and repository integration remain untested until Milestones 1.6/1.7. Pending metadata uses unsigned u32; checked signed-width decoding is future adapter responsibility.
+
+```bash
+docker compose exec -T app cargo test --locked --test persistence_contract
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
+```
+
+Distinguish Milestone 1.4 SQL schema fixtures above, these Milestone 1.5 contract/model tests, and future Milestone 1.7 PostgreSQL repository integration tests. The existing schema fixtures are unchanged and were not rerun for this Rust-only milestone. See [contract requirements](persistence-abstraction.md) and [actual validation](validation-results.md).

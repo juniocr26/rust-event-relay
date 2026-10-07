@@ -142,3 +142,7 @@ Compose supplies POSTGRES_HOST/PORT to postgres for these client diagnostics; th
 Changing `.env` does not update an initialized cluster. A missing role can produce generic TCP password-authentication failure. Inspect server details/roles to distinguish it from an existing role with a wrong password. The real-cluster repair inspected for data before the explicitly authorized destructive reset, then ran existing migrations. Normal Compose startup/shutdown remains non-destructive. Reset deletes all cluster state; migration rollback does not repair credentials.
 
 Raw Compose config, environment dumps and SQLx help can reveal secrets; inspect through a parser reporting only non-sensitive fields/equality checks and redact identifying credentials before sharing logs. See [PostgreSQL repair](postgresql.md#authentication-remediation-on-the-real-local-cluster) and [actual remediation results](validation-results.md#local-postgresql-authentication-remediation).
+
+## Persistence abstraction configuration — Milestone 1.5
+
+No new environment variables, pools or persistence tuning are introduced. The new Rust contract/model tests do not load .env or connect to PostgreSQL. Existing Docker PostgreSQL/SQLx setup remains schema tooling; the Rust binary still has no database adapter. Batch-size operational caps, poll interval, retry delays and maximum attempts belong to later caller/worker configuration. See [persistence decisions](persistence-abstraction.md).

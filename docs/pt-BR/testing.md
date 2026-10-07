@@ -162,3 +162,26 @@ A [inspeção de catálogo somente leitura](../../tests/sql/inspect_outbox_schem
 ```bash
 docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql
 ```
+
+## Testes de contratos de persistência — Marco 1.5
+
+[tests/persistence_contract.rs](../../tests/persistence_contract.rs) contém cinco testes Rust sem banco:
+
+- Limites positivos, rejeição de zero e ausência de máximo arbitrário; corte UTC explícito preservado.
+- Identidade/tempo/payload/UUIDs do envelope intactos, com tentativa/disponibilidade fora dos nove campos serializados.
+- Todas categorias de erro, fontes opcionais com downcast e remoção de texto sensível em Display/Debug.
+- Chamador OutboxReader genérico com fake de uma resposta, captura da requisição e future Send em Tokio spawn.
+- Snapshot vazio bem-sucedido e propagação de erro Unavailable pelo chamador genérico.
+
+Fake mantém um resultado preparado; não é engine em memória nem simula filtros, locks, durabilidade ou claims. Testes não consultam PostgreSQL, instanciam pools, leem .env ou executam SQL. Conformidade de adapter/integração segue sem teste até 1.6/1.7. Metadados usam u32 unsigned; conversão de largura assinada é responsabilidade futura do adapter.
+
+```bash
+docker compose exec -T app cargo test --locked --test persistence_contract
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
+```
+
+Distinga fixtures SQL do Marco 1.4 acima, testes Rust de contrato/modelo do 1.5 e integração PostgreSQL futura do 1.7. Fixtures de schema permanecem inalterados e não foram reexecutados neste marco Rust. Veja [requisitos do contrato](persistence-abstraction.md) e [validação real](validation-results.md).

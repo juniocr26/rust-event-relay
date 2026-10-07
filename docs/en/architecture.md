@@ -5,7 +5,7 @@
 ## Implemented foundation
 
 `main` → configuration and telemetry → TCP listener → application HTTP lifecycle.
-The application accepts an injected shutdown future, so lifecycle tests use a real ephemeral socket without global signal state. It has no delivery or storage logic. The event domain lives in `src/domain/event.rs`; no persistence interfaces or broker abstractions are introduced.
+The application accepts an injected shutdown future, so lifecycle tests use a real ephemeral socket without global signal state. It has no delivery or storage logic. The event domain lives in `src/domain/event.rs`; focused persistence interfaces now exist separately; no runtime adapter or broker abstraction is connected.
 
 ## Canonical event envelope — Milestone 1.1 implemented
 
@@ -80,7 +80,7 @@ Future delivery initially targets at-least-once semantics, not exactly-once deli
 | Milestone | Exploration |
 | --- | --- |
 | 0 — Foundation | Rust, Docker, configuration, tracing, shutdown, health, tests, bilingual docs (implemented) |
-| 1 — Durable event model | **1.1 envelope, 1.2 local PostgreSQL and 1.3 migration infrastructure and 1.4 outbox schema implemented**; repositories and persistence integration tests remain planned |
+| 1 — Durable event model | **1.1 envelope, 1.2 local PostgreSQL and 1.3 migration infrastructure, 1.4 outbox schema and 1.5 persistence abstraction implemented**; repositories and persistence integration tests remain planned |
 | 2 — First delivery adapter | RabbitMQ publisher, delivery state, retries, at-least-once semantics |
 | 3 — Reliability | Exponential backoff, DLQ, idempotency, crash recovery, poison messages |
 | 4 — Concurrency | Bounded channels, worker pools, concurrency limits, backpressure, graceful draining |
@@ -96,14 +96,14 @@ These are study milestones, not promised releases. Architecture may change when 
 - [x] 1.2 Local PostgreSQL in Docker
 - [x] 1.3 Migration Infrastructure
 - [x] 1.4 Outbox schema
-- [ ] 1.5 Persistence abstraction
+- [x] 1.5 Persistence abstraction
 - [ ] 1.6 PostgreSQL repository
 - [ ] 1.7 Integration tests
 - [ ] 1.8 Failure and transaction semantics
 
 ## Migration infrastructure — Milestone 1.3 completed
 
-SQLx CLI 0.8.6 is Docker development tooling only. The initial migration creates the `relay` namespace; Milestone 1.4 adds the outbox table through a new migration. No Rust database dependencies. [Migration workflow](database-migrations.md) and [ADR 003](adr/003-use-versioned-sql-migrations.md) define ownership and rollback limits. Milestone 1 remains incomplete; 1.5+ persistence and processing remain planned.
+SQLx CLI 0.8.6 is Docker development tooling only. The initial migration creates the `relay` namespace; Milestone 1.4 adds the outbox table through a new migration. No Rust database dependencies. [Migration workflow](database-migrations.md) and [ADR 003](adr/003-use-versioned-sql-migrations.md) define ownership and rollback limits. Milestone 1 remains incomplete; 1.6 PostgreSQL adapter and later processing remain planned.
 
 ## Outbox schema — Milestone 1.4 completed
 
@@ -125,3 +125,22 @@ flowchart LR
 ```
 
 The producer writes durable outbox events with its own business change in one database transaction; the relay later delivers those durable events. Conceptually: BEGIN → update business state → insert relay.outbox_events (...) → COMMIT. A separate database or remote broker is outside this atomic boundary. At-least-once delivery and idempotency remain future concerns; the table alone does not guarantee exactly-once effects.
+
+## Persistence abstraction — Milestone 1.5 completed
+
+The application-facing `OutboxReader` contract observes eligible pending snapshots using an explicit UTC cutoff and positive BatchSize. PendingOutboxEvent wraps the unchanged envelope plus unsigned attempt count and UTC availability. It is a pending view, not a SQL row or claim. Classified errors retain diagnostic sources with sanitized formatting. Native Send futures and generic dispatch add no dependencies. Runtime remains HTTP-only.
+
+```mermaid
+flowchart LR
+    APP[Future relay application logic]
+    PORT[Persistence contracts and models]
+    PG[Future PostgreSQL adapter - 1.6]
+    DB[(relay.outbox_events)]
+    APP -->|depends on| PORT
+    PG -->|implements; depends inward| PORT
+    PG -->|storage access| DB
+```
+
+Logic/adapter arrows to PORT mean compile-time dependency, not a runtime call sequence. Generic future callers invoke an implementation through that port; no PostgreSQL types flow inward. Producer writing remains with the producer's business transaction, not an independently committing relay append API. Snapshots are not claims: lifecycle mutation/ownership/recovery APIs are deferred, and no concurrent delivery safety or exactly-once behavior is asserted. The producer/relay handoff diagram above remains conceptual for writes and delivery.
+
+See [full contracts and open questions](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) and [test coverage](testing.md). Milestone 1 remains incomplete; 1.6 adapter, 1.7 integration tests and 1.8 failure/transaction semantics are planned.

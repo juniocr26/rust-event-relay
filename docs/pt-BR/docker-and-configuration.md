@@ -142,3 +142,7 @@ Compose fornece POSTGRES_HOST/PORT ao postgres para diagnósticos de cliente, se
 Mudar `.env` não atualiza cluster inicializado. Usuário ausente pode gerar erro TCP genérico de senha. Inspecione detalhes do servidor/usuários para distinguir de usuário existente com senha incorreta. A correção real verificou ausência de dados antes do reset destrutivo explicitamente autorizado e executou migrações existentes. Startup/shutdown Compose normal continua não destrutivo. Reset exclui todo estado; rollback de migração não corrige credenciais.
 
 Configuração Compose bruta, dumps de ambiente e ajuda SQLx podem revelar segredos; use parser que informe apenas campos não sensíveis/comparações e remova credenciais dos logs compartilhados. Veja [correção PostgreSQL](postgresql.md#correção-de-autenticação-no-cluster-local-real) e [resultados reais](validation-results.md#correção-de-autenticação-postgresql-local).
+
+## Configuração da abstração — Marco 1.5
+
+Sem novas variáveis, pools ou tuning de persistência. Novos testes Rust não carregam .env nem conectam PostgreSQL. Setup Docker PostgreSQL/SQLx continua como ferramenta de schema; binário segue sem adapter de banco. Limites operacionais de lote, intervalo de polling, delays e máximo de tentativas pertencem à configuração futura do chamador/worker. Veja [decisões de persistência](persistence-abstraction.md).

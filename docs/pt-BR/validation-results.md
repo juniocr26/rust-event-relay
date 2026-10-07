@@ -2,6 +2,47 @@
 
 # Resultados de validação
 
+## Marco 1.5 — Validação da abstração de persistência
+
+Data: 2026-10-07. Container Docker de desenvolvimento, Rust 1.95.0. Novos testes Rust não usam banco, driver, configuração de ambiente, pools ou SQL. Sem migrações/alterações de schema ou chamadas PostgreSQL neste marco. Validação anterior de schema/credenciais permanece abaixo.
+
+| Verificação | Resultado real |
+| --- | --- |
+| Primeira tentativa de teste específico e Clippy | Falhou: E0283/E0284, timezone ambígua no parse Chrono de uma nova asserção |
+| Correção | parse::<DateTime<Utc>> explícito; sem alterações no envelope/schema |
+| Docker cargo fmt --check | Passou após formatação |
+| Clippy Docker todos targets/features, warnings negados | Passou |
+| Docker cargo test --locked | Passou: 2 unitários, 6 envelope, 2 ciclo de vida, 5 persistência (15 total) |
+| Docker cargo build --locked | Passou |
+| Rustdoc -D warnings, --locked --no-deps | Passou; API pública documentada |
+| git diff --check / links e âncoras locais | Passou |
+| Revisão de fronteira/código | Sem imports/tipos SQLx/PostgreSQL, adapter concreto, mutações, worker ou append de produtor |
+| Verificação de escopo | Cargo manifest/lock, EventEnvelope, migrações e configuração inalterados |
+
+Cinco novos testes cobrem limites positivos/rejeição de zero/UTC explícito, envelope preservado com tentativas unsigned/disponibilidade separadas, categorias/fontes downcastable com Display/Debug sanitizados, contrato genérico em future Send Tokio e sucesso vazio/falha tipada. Fake de resultado preparado demonstra substituição, não filtros, locks, durabilidade, claims ou conformidade de adapter. Garantias exigem 1.6/1.7 e semântica futura de workers.
+
+Comandos exatos executados (tentativa inicial específica falhou antes da correção UTC):
+
+```bash
+# Initial attempt
+docker compose exec -T app cargo fmt
+docker compose exec -T app cargo test --locked --test persistence_contract
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+
+# After fixing the test annotation
+docker compose exec -T app cargo fmt
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
+git diff --check
+```
+
+Varredura Python pathlib/re existente resolveu links/âncoras nos READMEs/docs. Revisão de diff/código confirmou dependências, migrações e envelope inalterados, sem acoplamento a driver no módulo. Sem commit/push.
+
+Decisões: um contrato limitado somente leitura sem congelar APIs claim/conclusão/reagendamento/dead-letter; sem writer que deturpa atomicidade do produtor; sem enum terminal sem visão retornada. São escolhas permitidas de fronteira menor, não implementação do 1.6. Questões abertas: propriedade/recuperação, atomicidade/idempotência/conflitos, momento das tentativas, duplicatas, limites de payload/operação e ordem por agregado. Sem alegar produção/throughput/segurança concorrente. Configuração e banco permanecem inalterados.
+
 ## Marco 1.4 — Validação do schema outbox
 
 Data: 2026-10-07. Cluster real PostgreSQL 18.6, SQLx CLI 0.8.6, Docker Desktop/Linux ARM64, Rust 1.95.0. Diagnóstico de autenticação passou antes do trabalho. Sem reset do cluster. Inspeção inicial mostrou ausência da tabela outbox e somente migração 20261007000000 instalada; rollback da nova tabela vazia era seguro.
