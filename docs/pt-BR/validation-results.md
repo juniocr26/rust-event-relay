@@ -2,6 +2,142 @@
 
 # Resultados de validação
 
+## Marco 1.3 — Validação da infraestrutura de migrações
+
+Data: 2026-10-07. Docker Desktop no macOS, container app Linux ARM64. SQLx informa `sqlx-cli 0.8.6`; instalação usou `--locked --no-default-features --features rustls,postgres`. Nenhuma dependência da aplicação ou código de domínio mudou.
+
+| Verificação | Resultado observado |
+| --- | --- |
+| Build da imagem e startup condicionado ao health | Passou |
+| Cluster existente do desenvolvedor | Saudável, publicado em 127.0.0.1:5433; credenciais atuais falham na autenticação TCP e sqlx migrate info |
+| Preservação de dados | Sem reset, alteração de usuário/senha ou aplicação de migrações ao cluster do desenvolvedor |
+| Geração isolada | CLI produziu par up/down com timestamp em /tmp/milestone13-generated do container |
+| Migração isolada info/run/revert/run | Passou; pending → installed → pending → installed |
+| Inspeção namespace | relay presente após aplicar, ausente após reverter e presente após reaplicar; zero tabelas relay |
+| Histórico SQLx | Versão 20261007000000, success true; execução repetida não aplicou nada |
+| Encoding de credenciais | Conexão SQLx autenticada passou com senha de teste contendo : @ / % ? # |
+| Autenticação TCP interna e pela publicação no host | SELECT 1 passou; host.docker.internal:15433 mapeou para PostgreSQL de teste |
+| Ambiente de inicialização mudado com dados persistidos de teste | Novas credenciais falharam, originais do app conectaram; restauração preservou migração instalada |
+| PostgreSQL indisponível | SQLx encerrou com erro DNS/conexão; reinício saudável restaurou status installed |
+| cargo fmt --check | Passou no Docker |
+| Clippy todos targets/features, warnings negados | Passou no Docker |
+| cargo test --locked | Passou: 2 testes unitários + 6 envelope + 2 ciclo de vida (10) |
+| cargo build --locked | Passou no Docker |
+| git diff --check e links Markdown locais relativos | Passou |
+
+A divergência de credenciais foi observada diretamente; usuário/senha reais foram omitidos. A validação usou projeto separado `relay-milestone13-validation`, dados em /tmp e loopback 15433. Configuração apenas ilustrativa e função Compose exata estão em [testes](testing.md#ambiente-isolado-de-validação). Nenhum diretório de dados do desenvolvedor foi excluído. Containers/rede do teste foram removidos; dados temporários permanecem em /tmp. Ambiente original continua executando.
+
+Publicação de porta e credenciais foram validadas no ambiente isolado, mas a interface DBeaver não foi testada diretamente. Publicação original foi confirmada; credenciais configuradas falharam, portanto não se afirma conexão com elas. Integração outbox, rollback em produção, Rust nativo, portabilidade Linux e execução CI GitHub não foram validados.
+
+### Comandos exatos executados
+
+No projeto original (falhas de autenticação abaixo são constatações esperadas, não verificações bem-sucedidas):
+
+```bash
+docker compose ps
+docker compose up -d --build --wait --wait-timeout 120
+docker compose exec -T app sqlx --version
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT 1;"'
+docker compose port postgres 5432
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+```
+
+Após criar arquivos do ambiente isolado conforme testes:
+
+```bash
+docker compose -p relay-milestone13-validation --env-file /tmp/relay-milestone13-validation/test.env -f compose.yaml -f /tmp/relay-milestone13-validation/compose.yaml up -d --wait --wait-timeout 120
+dc() {
+  docker compose -p relay-milestone13-validation --env-file /tmp/relay-milestone13-validation/test.env -f compose.yaml -f /tmp/relay-milestone13-validation/compose.yaml "$@"
+}
+dc ps
+dc exec -T app sqlx --version
+dc exec -T app sqlx migrate add -r --source /tmp/milestone13-generated create_relay_schema
+dc exec -T app sqlx migrate info
+dc exec -T app sqlx migrate run
+dc exec -T app sqlx migrate info
+dc exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT nspname FROM pg_namespace WHERE nspname = '\''relay'\''; SELECT version, success FROM _sqlx_migrations; SELECT tablename FROM pg_tables WHERE schemaname = '\''relay'\'';"'
+dc exec -T app sqlx migrate revert
+dc exec -T app sqlx migrate info
+dc exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT count(*) AS relay_schema_count FROM pg_namespace WHERE nspname = '\''relay'\'';"'
+dc exec -T app sqlx migrate run
+dc exec -T app sqlx migrate run
+dc exec -T app sqlx migrate info
+dc port postgres 5432
+dc exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h host.docker.internal -p 15433 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT 1;"'
+```
+
+Para reproduzir inicialização de credenciais, foi escrito override adicional apenas de teste:
+
+```yaml
+# /tmp/relay-milestone13-validation/changed-environment.yaml
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: validation_changed_user
+      POSTGRES_PASSWORD: validation_changed_password
+```
+
+Depois executado (com a mesma função dc):
+
+```bash
+dc -f /tmp/relay-milestone13-validation/changed-environment.yaml up -d --force-recreate --no-deps --wait --wait-timeout 120 postgres
+if dc exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT 1;"'; then
+  echo 'Unexpected success with changed initialization credentials' >&2
+  exit 1
+fi
+# app retains the original isolated test credentials, proving they still work.
+dc exec -T app sqlx migrate info
+dc up -d --force-recreate --no-deps --wait --wait-timeout 120 postgres
+dc exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT 1;"'
+dc exec -T app sqlx migrate info
+```
+
+Falha com servidor indisponível e encerramento:
+
+```bash
+dc stop postgres
+if dc exec -T app sqlx migrate info --connect-timeout 2; then
+  echo 'Unexpected success with unavailable PostgreSQL' >&2
+  exit 1
+fi
+dc up -d --wait --wait-timeout 120 postgres
+dc exec -T app sqlx migrate info
+dc down
+```
+
+Os três grupos rodaram como scripts temporários com `set -eu`; falhas esperadas usaram if para verificar saída diferente de zero. `dc exec -T app sqlx migrate info --help` também foi executado para consultar timeout de conexão. Verificação do workspace usou `git diff --check`, `git check-ignore .env .dockerized-postgres/ .cargo-cache/ target/` e varredura Python pathlib/re de links e âncoras locais. Sem commit ou push.
+
+Asserções de encoding de URL e topologia também passaram no Docker. O comando adicional exato usou apenas credenciais sintéticas:
+
+```bash
+docker compose exec -T app python3 - <<'PY'
+import importlib.util
+from urllib.parse import unquote, urlsplit
+spec = importlib.util.spec_from_file_location('sqlx_wrapper', '/app/docker/sqlx.py')
+wrapper = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(wrapper)
+environment = dict(POSTGRES_USER='user:@/雪', POSTGRES_PASSWORD='password:@/%?#雪', POSTGRES_DB='db/@?#雪', POSTGRES_HOST='postgres', POSTGRES_PORT='5432')
+url = urlsplit(wrapper.database_url(environment))
+assert unquote(url.username) == environment['POSTGRES_USER']
+assert unquote(url.password) == environment['POSTGRES_PASSWORD']
+assert unquote(url.path[1:]) == environment['POSTGRES_DB']
+assert url.hostname == 'postgres' and url.port == 5432
+assert not url.query and not url.fragment
+for key, value in [('POSTGRES_HOST', 'localhost'), ('POSTGRES_PORT', '5433')]:
+    try:
+        wrapper.database_url({**environment, key: value})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('invalid Docker topology accepted')
+print('URL encoding and topology validation passed')
+PY
+```
+
 ## Marco 1.2 — 2026-10-07
 
 Ambiente: macOS com Docker Desktop; imagem Rust de desenvolvimento existente reconstruída e imagem oficial PostgreSQL baixada. Nenhuma fonte Rust, dependência Cargo, migração ou persistência da aplicação foi adicionada.
@@ -46,14 +182,14 @@ docker compose exec -T app cargo clippy --locked --all-targets --all-features --
 docker compose exec -T app cargo test --locked
 docker compose exec -T app cargo build --locked
 command -v psql
-python3 - <<'PYTHON'
+python3 - <<'PY'
 import socket
 from pathlib import Path
 with socket.create_connection(('127.0.0.1',5433), timeout=5):
  print('Host TCP 127.0.0.1:5433 reachable')
 p=Path('.dockerized-postgres/18/docker/PG_VERSION')
 print('Host PG_VERSION:',p.read_text().strip())
-PYTHON
+PY
 docker compose ps -q postgres
 docker inspect rust-event-relay-postgres-1 --format '{{json .Mounts}}'
 docker compose exec -T postgres psql -U relay -d reliable_event_relay -v ON_ERROR_STOP=1 -c "CREATE TABLE milestone12_validation_20261007 (marker text); INSERT INTO milestone12_validation_20261007 VALUES ('survives-recreation');"
@@ -64,7 +200,7 @@ docker compose exec -T postgres psql -U relay -d reliable_event_relay -v ON_ERRO
 docker compose exec -T postgres psql -U relay -d reliable_event_relay -v ON_ERROR_STOP=1 -c "DROP TABLE milestone12_validation_20261007;"
 docker compose exec -T postgres psql -U relay -d reliable_event_relay -v ON_ERROR_STOP=1 -c "SELECT count(*) AS user_tables FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema');"
 git check-ignore .dockerized-postgres/ .cargo-cache/ target/
-python3 - <<'PYTHON'
+python3 - <<'PY'
 from pathlib import Path
 import re
 errors=[]; count=0
@@ -77,7 +213,7 @@ for p in [Path('README.md'),Path('README.pt-BR.md'),*Path('docs').rglob('*.md')]
 print(f'Checked {count} relative documentation links')
 if errors: raise SystemExit('\n'.join(errors))
 print('All relative documentation links resolve')
-PYTHON
+PY
 git diff --check
 ```
 
@@ -150,14 +286,14 @@ docker compose exec -T -d app bash -c 'exec /app/target/debug/reliable-event-rel
 curl --fail --include http://127.0.0.1:8080/health
 docker compose exec -T app bash -c 'id && rustc --version && cat /tmp/relay-live.log'
 docker compose down
-python3 - <<'PYTHON'
+python3 - <<'PY'
 from pathlib import Path
 import shutil
 for name in ['.cargo-cache', 'target']:
     p = Path(name)
     assert p.is_dir() and not p.is_symlink()
     shutil.rmtree(p)
-PYTHON
+PY
 docker compose up -d
 docker compose exec -T app bash -c 'cargo fetch --locked && cargo build --locked && cargo test --locked && cargo fmt --check && cargo clippy --locked --all-targets --all-features -- -D warnings'
 docker compose exec -T app cargo test

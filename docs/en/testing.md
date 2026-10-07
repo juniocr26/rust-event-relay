@@ -31,11 +31,11 @@ These are explicit local infrastructure checks, not application persistence inte
 ```bash
 docker compose up -d --build --wait --wait-timeout 120
 docker compose ps
-docker compose exec -T postgres pg_isready -h 127.0.0.1 -p 5432 -U relay -d reliable_event_relay
+docker compose exec -T postgres sh -c 'pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 docker compose exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT 1;"'
 docker compose port postgres 5432
 # Host psql, if installed; enter the local password when prompted:
-psql -h localhost -p 5433 -U relay -d reliable_event_relay -W -c "SELECT 1;"
+psql -h 127.0.0.1 -p 5433 -U change_me -d reliable_event_relay -W -c "SELECT 1;"
 docker compose exec -T app cargo fmt --check
 docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
 docker compose exec -T app cargo test --locked
@@ -49,10 +49,77 @@ Confirm PostgreSQL is healthy, host publication is `127.0.0.1:5433`, authenticat
 Only on your local development database: use a uniquely named disposable regular table (a SQL TEMP table cannot survive a session), insert a marker, recreate the PostgreSQL container without deleting host data, verify the marker and then drop the table. If the chosen name already exists, stop and choose another; never drop an unrelated object. The validation object is infrastructure-only and must not remain afterward:
 
 ```bash
-docker compose exec -T postgres psql -U relay -d reliable_event_relay -v ON_ERROR_STOP=1 -c "CREATE TABLE milestone12_validation_20261007 (marker text); INSERT INTO milestone12_validation_20261007 VALUES ('survives-recreation');"
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "CREATE TABLE milestone12_validation_20261007 (marker text); INSERT INTO milestone12_validation_20261007 VALUES ('\''survives-recreation'\'');"'
 docker compose up -d --force-recreate --no-deps --wait --wait-timeout 120 postgres
-docker compose exec -T postgres psql -U relay -d reliable_event_relay -v ON_ERROR_STOP=1 -c "SELECT marker FROM milestone12_validation_20261007;"
-docker compose exec -T postgres psql -U relay -d reliable_event_relay -v ON_ERROR_STOP=1 -c "DROP TABLE milestone12_validation_20261007;"
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT marker FROM milestone12_validation_20261007;"'
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "DROP TABLE milestone12_validation_20261007;"'
 ```
 
 Confirm the container ID changed and the mount still points at the same physical directory. Do not reset/delete the data directory as part of survival validation. This test says nothing about application transactions, crash recovery or delivery guarantees. See [actual results](validation-results.md) and [destructive reset instructions](docker-and-configuration.md).
+
+## Migration validation — Milestone 1.3
+
+These are tooling/infrastructure checks, not outbox integration tests. Rust tests still need no database. On a disposable local cluster, confirm PostgreSQL health, TCP authentication and migration status; apply, inspect, revert and re-apply. Revert only after reviewing the down SQL and confirming this is an appropriate local database.
+
+```bash
+docker compose up -d --build --wait --wait-timeout 120
+docker compose ps
+docker compose exec -T app sqlx --version
+docker compose exec -T app sqlx migrate info
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT nspname FROM pg_namespace;"'
+docker compose exec -T app sqlx migrate revert
+docker compose exec -T app sqlx migrate info
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT 1;"'
+docker compose port postgres 5432
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+```
+
+Expect installed/pending/installed status, relay schema present/absent/present, no relay tables and no duplicate application on the second run. SQLx metadata remains after revert. To test migration generation without adding project history, run `docker compose exec -T app sqlx migrate add -r --source /tmp/milestone13-generated create_relay_schema` and inspect the two generated files.
+
+### Isolated validation fixture
+
+When local credentials differ from persisted state or data must be preserved, use a separate Compose project and data directory. This fixture uses example-only credentials, including URI-reserved characters to test encoding. Choose an unused directory/project/port; never reuse unknown cluster data. A GUI is not required.
+
+```bash
+mkdir -p /tmp/relay-milestone13-validation
+cat > /tmp/relay-milestone13-validation/test.env <<'EOF'
+POSTGRES_USER=validation_user
+POSTGRES_PASSWORD='validation:p@ss/%?#'
+POSTGRES_DB=milestone13_validation
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+EOF
+cat > /tmp/relay-milestone13-validation/compose.yaml <<'EOF'
+services:
+  app:
+    image: rust-event-relay-app
+    pull_policy: never
+    ports: !reset []
+  postgres:
+    volumes:
+      - /tmp/relay-milestone13-validation/data:/var/lib/postgresql
+    ports: !override
+      - "127.0.0.1:15433:5432"
+EOF
+dc() {
+  docker compose -p relay-milestone13-validation --env-file /tmp/relay-milestone13-validation/test.env -f compose.yaml -f /tmp/relay-milestone13-validation/compose.yaml "$@"
+}
+dc up -d --wait --wait-timeout 120
+# Substitute dc for docker compose in the migration checks above.
+# Docker Desktop: test authentication through the host publication:
+dc exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h host.docker.internal -p 15433 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT 1;"'
+# Stop/remove only the fixture containers/network; preserve its data directory:
+dc down
+```
+
+The fixture requires Compose supporting `!override` (2.24.4+) and `!reset`. The custom image must already be built. host.docker.internal is Docker Desktop-specific; on Linux use an authenticated host psql query instead.
+
+For the initialization-variable reproduction, change only the fixture postgres environment through an additional override, recreate that container with health-gated `up --force-recreate --no-deps`, and verify the changed credentials fail while original app credentials still connect. Restore the original container environment and confirm the applied schema survives. Never reset the developer cluster to perform this experiment. For unavailability, stop only fixture postgres, expect `dc exec -T app sqlx migrate info --connect-timeout 2` to fail, then restart with `dc up -d --wait --wait-timeout 120 postgres` and confirm installed status. See [actual results](validation-results.md).

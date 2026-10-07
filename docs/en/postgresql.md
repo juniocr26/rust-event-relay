@@ -8,13 +8,13 @@ Milestone 1.2 adds only a local PostgreSQL service, configuration, healthcheck, 
 
 The [official image](https://hub.docker.com/_/postgres) uses `/var/lib/postgresql/18/docker` for PostgreSQL 18. Compose binds `.dockerized-postgres/` to `/var/lib/postgresql`, so files appear under `.dockerized-postgres/18/docker/` without named or anonymous data volumes. Container recreation and `docker compose down` preserve those files. This local directory is not a production backup strategy.
 
-The Rust binary does not read database settings or establish connections yet. Compose supplies `DATABASE_URL` as a future connection setting; no Rust database dependency or unused configuration type was added. `/health` remains HTTP liveness. `depends_on: service_healthy` gates development container startup, while `pg_isready` checks server acceptance, not application authentication, schema availability or continued readiness after startup.
+The Rust binary does not read database settings or establish connections yet. The SQLx wrapper builds `DATABASE_URL` from Compose settings for migration commands; no Rust database dependency or unused configuration type was added. `/health` remains HTTP liveness. `depends_on: service_healthy` gates development container startup, while `pg_isready` checks server acceptance, not application authentication, schema availability or continued readiness after startup.
 
 ## Useful for the intended architecture
 
 PostgreSQL fits the intended transactional outbox through ACID transactions and mature concurrency control. A business change and an outbox record can commit atomically when the producer writes both to the **same local PostgreSQL database transaction**. This does not bridge separate databases or a remote broker. PostgreSQL offers strong SQL, indexing, row-level locking and reliable transactional behavior; none of these has been wired into application persistence yet. See [transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html) and [locking](https://www.postgresql.org/docs/18/explicit-locking.html).
 
-Conceptual future boundary only (no tables or migrations exist):
+Conceptual future boundary only (no application tables exist):
 
 ```text
 BEGIN
@@ -36,3 +36,54 @@ JSON/JSONB can accommodate the envelope payload; JSONB supports indexing but cha
 - PostgreSQL-specific semantics reduce portability. Database portability is not a current project goal; this is a deliberate trade-off, not a claim of universal superiority.
 
 See [ADR 002](adr/002-use-postgresql-for-durable-event-storage.md), [Docker setup and DBeaver](docker-and-configuration.md), [infrastructure checks](testing.md) and [actual validation](validation-results.md).
+
+## Initialization and deliberate reset
+
+POSTGRES_DB, POSTGRES_USER and POSTGRES_PASSWORD are primarily **initialization variables** for the official image. They initialize roles/database/password only when the cluster data directory is empty. Changing `.env`, rebuilding or recreating containers does not mutate existing PostgreSQL roles, databases or passwords.
+
+```text
+Docker environment != already-created PostgreSQL roles/database state
+```
+
+Example: initialize with user `first_user`, then change `.env` to `second_user`. The container environment can report second_user while the persisted cluster still contains first_user, causing `FATAL: role "second_user" does not exist`. Changing only the password can similarly cause authentication failure. `pg_isready` may still report healthy; verify authenticated TCP SQL, not just environment values. Do not print passwords for debugging.
+
+Keep the original cluster credentials, or deliberately administer roles/databases through SQL with existing authorized access. In early development, intentionally recreating the cluster is another option, after backing up anything needed. No Compose operation or application entrypoint automatically deletes or reinitializes `.dockerized-postgres/`.
+
+**WARNING: this permanently deletes the local PostgreSQL database state.** These manual commands require an explicit decision to discard the cluster; they are never run automatically. Run them from the repository root and back up anything needed first.
+
+```bash
+# Only after explicitly deciding to discard all local database state:
+docker compose down
+rm -rf .dockerized-postgres/
+docker compose up -d --build --wait --wait-timeout 120
+docker compose exec app sqlx migrate run
+```
+
+Reset deletes all databases, roles and data in the cluster; migration rollback executes controlled down SQL in one database. **Database reset != migration rollback.** See [migrations](database-migrations.md).
+
+## Shell expansion and external clients
+
+Single quotes below keep variables from expanding in the host shell; `sh -c` expands them inside the container where Compose supplied them:
+
+```bash
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT 1;"'
+```
+
+The first command uses the local Unix socket and may not validate the password; the second authenticates over TCP. Writing `-U "$POSTGRES_USER"` directly in a host command expands host variables, which may be unset or different. Container environment values still need to match the initialized cluster.
+
+DBeaver external connection:
+
+```text
+Host: 127.0.0.1
+Port: 5433 (or POSTGRES_HOST_PORT)
+Database: value from POSTGRES_DB
+Username: value from POSTGRES_USER
+Password: value from POSTGRES_PASSWORD
+```
+
+Use 127.0.0.1 to match intentional IPv4 loopback publication and avoid localhost IPv4/IPv6 ambiguity. Containers use postgres:5432; host clients use 127.0.0.1:5433. Values from `.env` must match actual persisted credentials, not merely the current container environment.
+
+## Schema ownership
+
+[migrations/](../../migrations/) contains canonical source-controlled SQL history, managed by SQLx CLI 0.8.6 inside Docker. DBeaver is for inspection, querying and debugging; intended schema changes belong in migrations. Physical `.dockerized-postgres/18/docker/` data is ignored local state and survives up, down, build and container recreation. Migration rollback does not delete that directory. Milestone 1.3 creates only an empty relay namespace; no application tables or persistence exist.

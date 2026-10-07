@@ -2,7 +2,7 @@
 
 # Docker and configuration
 
-The Dockerfile is a development toolchain image, not a production deployment. It pins stable Rust 1.95.0 on Debian Bookworm, includes Bash, rustfmt and Clippy, and runs as `developer`. The version tag is pinned; the base image digest is not, so upstream image revisions may still change system packages. Compose uses an init process and a source bind mount. `sleep infinity` keeps the workspace usable even before dependencies have been downloaded.
+The Dockerfile is a development toolchain image, not a production deployment. It pins stable Rust 1.95.0 on Debian Bookworm, includes Bash, rustfmt, Clippy, Python 3 and SQLx CLI 0.8.6, and runs as `developer`. The version tag is pinned; the base image digest is not, so upstream image revisions may still change system packages. Compose uses an init process and a source bind mount. `sleep infinity` keeps the workspace usable even before dependencies have been downloaded.
 
 ```bash
 cp .env.example .env
@@ -30,7 +30,7 @@ Use Ctrl-C to stop the foreground application and `docker compose down` to stop 
 | CARGO_HOME | /app/.cargo-cache | Container Cargo source/download cache |
 | CARGO_TARGET_DIR | /app/target | Container compiled artifacts |
 
-The first three are application settings. The remaining settings belong to development tooling. There are no mandatory connection strings. Compose now supplies a PostgreSQL DATABASE_URL, but the Rust binary does not consume it. RabbitMQ/Redis URLs, worker concurrency, retry and batch settings remain planned.
+The first three are application settings. The remaining settings belong to development tooling. There are no mandatory connection strings. The SQLx wrapper constructs DATABASE_URL from Compose-injected PostgreSQL settings; the Rust binary does not consume it. RabbitMQ/Redis URLs, worker concurrency, retry and batch settings remain planned.
 
 The binary loads `.env` from its working directory or ancestors with dotenvy; already-set process variables win. Compose separately reads root `.env` for interpolation (ports/build IDs); it does not inject all values into the container. The source mount exposes `.env` for the binary to load at runtime. To override explicitly: `docker compose exec -e RUST_LOG=debug app cargo run --locked`. An absent `.env` is valid; malformed `.env`, empty APP_ENV, invalid HTTP_ADDR or RUST_LOG, and occupied sockets cause failure.
 
@@ -46,8 +46,9 @@ cp .env.example .env
 docker compose up -d --build --wait --wait-timeout 120
 docker compose ps
 docker compose logs postgres
-docker compose exec postgres pg_isready -h 127.0.0.1 -p 5432 -U relay -d reliable_event_relay
-docker compose exec postgres psql -U relay -d reliable_event_relay -c "SELECT 1;"
+docker compose exec postgres sh -c 'pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose exec postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;"'
+docker compose exec app sqlx migrate run
 docker compose exec app cargo fetch --locked
 docker compose exec app cargo build --locked
 docker compose exec app cargo run --locked
@@ -61,74 +62,68 @@ flowchart LR
     APP[Rust app container]
     DB[(PostgreSQL container)]
     DISK[.dockerized-postgres/]
-    DEV -->|localhost:5433| DB
-    APP -.->|postgres:5432 - available, not consumed yet| DB
+    DEV -->|127.0.0.1:5433| DB
+    APP -.->|postgres:5432 - SQLx tooling| DB
     DB -->|bind mount| DISK
 ```
 
 ## Database configuration and clients
 
-| Variable | Development default | Use |
+| Variable | Example-only default | Use |
 | --- | --- | --- |
-| POSTGRES_DB | reliable_event_relay | Database created at first initialization |
-| POSTGRES_USER | relay | Initial database user (official image creates a superuser) |
-| POSTGRES_PASSWORD | relay | Initial local-only password |
-| POSTGRES_HOST | postgres | Hostname used in the app container URL |
-| POSTGRES_PORT | 5432 | Port used in the app URL; keep the server's default |
-| POSTGRES_HOST_PORT | 5433 | Host loopback port publication |
-| DATABASE_URL | postgresql://relay:relay@postgres:5432/reliable_event_relay | Composed app environment setting, not consumed by Rust yet |
+| POSTGRES_DB | reliable_event_relay | Database initialized in an empty cluster |
+| POSTGRES_USER | change_me | Initial superuser |
+| POSTGRES_PASSWORD | change_me | Initial local-only password placeholder |
+| POSTGRES_HOST | postgres | Docker-internal hostname |
+| POSTGRES_PORT | 5432 | Docker-internal port |
+| POSTGRES_HOST_PORT | 5433 | Host loopback publication |
 
-Compose interpolates the six POSTGRES variables from `.env`, with defaults when absent, and explicitly injects initialization variables into `postgres`. It builds DATABASE_URL for `app`; setting DATABASE_URL in `.env` does not override this Compose-generated value. Keep POSTGRES_HOST=postgres and POSTGRES_PORT=5432 for this topology. If customizing credentials with URI-reserved characters, percent-encode their URL representation before a future client consumes it; these simple local defaults need no encoding.
+Set local credentials in ignored `.env` before first initialization. Compose injects DB/USER/PASSWORD into postgres and all five internal connection components into app. SQLx's Python wrapper percent-encodes user/password/database and constructs DATABASE_URL per invocation. No manual encoding or host Cargo is needed. The URL is passed to SQLx's process, not printed or stored in source. A host DATABASE_URL does not override this wrapper. Ordinary commands use postgres:5432; an explicit SQLx `--database-url` option overrides its connection as upstream CLI behavior, so use that option only deliberately. The Rust binary remains database-independent.
 
-In DBeaver, create a PostgreSQL connection:
+POSTGRES_DB/USER/PASSWORD are primarily initialization variables: **Docker environment != already-created PostgreSQL roles/database state**. For example, changing first_user to second_user in `.env` changes the environment but leaves first_user in a persisted cluster. Authentication can fail even with a healthy server. Changing .env does not rename roles, reset passwords or create a new database in an existing cluster. See the [full explanation and recovery options](postgresql.md#initialization-and-deliberate-reset).
 
-```text
-Database type: PostgreSQL
-Host: localhost
-Port: 5433
-Database: reliable_event_relay
-Username: relay
-Password: relay
-```
-
-These are development defaults, not production credentials. Publication is bound to `127.0.0.1`, avoiding LAN exposure; clients may use IPv4 explicitly if localhost resolves only to IPv6. DataGrip, TablePlus or any PostgreSQL-compatible client also works. No GUI is required:
+DBeaver uses **127.0.0.1**, port **5433**, database/user/password from POSTGRES_DB/USER/PASSWORD, matching actual initialized state. IPv4 explicitly avoids localhost IPv6 ambiguity. Host clients use 127.0.0.1:5433; containers use postgres:5432. PostgreSQL stays bound to loopback, never 0.0.0.0.
 
 ```bash
-psql -h localhost -p 5433 -U relay -d reliable_event_relay -W
-docker compose exec postgres psql -U relay -d reliable_event_relay
+# Variables expand inside the container, not the host shell:
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+# Host psql: supply configured database/user, then enter password when prompted:
+psql -h 127.0.0.1 -p 5433 -U change_me -d reliable_event_relay -W
 ```
 
-Host clients use localhost:5433; container clients use postgres:5432, never localhost for the other container.
+The host values above are placeholders. Direct `docker compose exec postgres psql -U "$POSTGRES_USER"` expands variables in the host shell; single-quoted `sh -c` uses the container environment. Local socket access does not necessarily validate passwords; use authenticated TCP queries from [testing](testing.md).
 
 ## Physical state and shutdown
 
-| Host directory | Contents | Reconstruction |
+| Host directory | Contents | Ownership |
 | --- | --- | --- |
-| `.cargo-cache/` | Cargo downloads and source cache | `cargo fetch --locked` in app |
-| `target/` | Compiled artifacts | `cargo build --locked` in app |
-| `.dockerized-postgres/` | PostgreSQL cluster under `18/docker/` | Official image initializes an empty application database if absent |
+| `.cargo-cache/` | Downloaded Cargo dependencies | Generated/ignored; reconstruct with cargo fetch --locked |
+| `target/` | Rust build artifacts | Generated/ignored; reconstruct with cargo build --locked |
+| `.dockerized-postgres/` | PostgreSQL cluster data under 18/docker/ | Local/ignored; contains persistent database state |
+| `migrations/` | Database schema SQL history | Source-controlled; must be committed |
 
-All are ignored physical bind-mounted directories; no named data volumes are used. They make local generated state visible and intentionally reconstructable, but database contents cannot be recovered by rebuilding source: retain or back them up if needed. `docker compose down` stops/removes containers and the network, **not database contents** or Cargo directories. Recreating containers also preserves data. No migrations exist, so a new database has only PostgreSQL's built-in structures and no application tables.
+The first three are generated/local state; migrations are source code. PostgreSQL data is not reconstructable merely by compiling code. Up, down, build and container recreation preserve the cluster; no entrypoint silently resets it. Migration history is never stored inside the data directory. SQLx CLI runs explicit commands, not automatic startup changes. DBeaver edits do not replace migration files as schema authority.
 
-## Reset only the local database
+## Deliberate destructive reset
 
-**Destructive: the following permanently deletes all local database contents. Back up anything needed first.** It leaves Cargo cache and build artifacts intact:
+**WARNING: this permanently deletes the local PostgreSQL database state.** Back up anything needed and explicitly decide to discard the cluster before running these manual commands from the repository root. No automated deletion helper is provided.
 
 ```bash
 docker compose down
 rm -rf .dockerized-postgres/
-docker compose up -d --wait --wait-timeout 120
+docker compose up -d --build --wait --wait-timeout 120
+docker compose exec app sqlx migrate run
 ```
 
-The image initializes a fresh database. Later milestones will add reproducible application schema creation; none exists today. This reset is documented, not performed automatically.
+Reset initializes new roles/database from current .env and deletes all previous databases and data. **Database reset != migration rollback**: `docker compose exec app sqlx migrate revert` executes the last controlled down migration, preserving other cluster state. It does not reset credentials.
 
 ## PostgreSQL troubleshooting
 
-- Inspect `docker compose ps` and `docker compose logs postgres` for initialization or health errors. `pg_isready` is not an authentication test; use an authenticated TCP SQL query too.
-- A busy host 5433 prevents publication. Change POSTGRES_HOST_PORT in `.env` and use that port in host clients; keep internal 5432 unchanged.
-- Changing POSTGRES_DB/USER/PASSWORD only affects initialization of an empty data directory. Existing credentials/state persist; change them through SQL deliberately or perform the destructive reset after backup.
-- On Linux the official entrypoint initializes ownership for its own postgres user, separate from LOCAL_UID/GID. Read-only mounts or restrictive filesystem permissions can prevent startup. Do not chmod all database files to world-writable. Docker Desktop file sharing must allow this checkout.
-- An incompatible PG_VERSION after a major image change requires a supported upgrade or backup/restore, not deleting files to silence an error.
-- Compose refuses to start app while the database is unhealthy; this is development orchestration. The Rust binary and its tests still work independently without PostgreSQL.
+- Check `docker compose ps` and `docker compose logs postgres`; pg_isready checks acceptance, not authentication.
+- Credentials changed after initialization: use existing authorized credentials, deliberate SQL administration, or the explicitly destructive reset above. Never delete data to silently repair startup.
+- Host 5433 occupied: change POSTGRES_HOST_PORT; keep internal 5432.
+- Mount permissions/read-only sharing can prevent initialization. Do not make database files world-writable. Linux postgres ownership differs from LOCAL_UID/GID.
+- Major-version incompatibility requires supported upgrade or backup/restore, not automatic deletion.
+- Compose gates app startup on health; later migration connection failures still fail clearly. Rust tests remain database-independent.
 
-See [PostgreSQL decision](postgresql.md), [testing](testing.md) and [validation results](validation-results.md).
+See [PostgreSQL](postgresql.md), [migrations](database-migrations.md), [testing](testing.md) and [validation results](validation-results.md).

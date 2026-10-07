@@ -8,7 +8,7 @@ This open-source engineering portfolio and study project investigates distribute
 
 ## Current status and scope
 
-**Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL infrastructure (no application persistence), CI checks and bilingual documentation.
+**Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure (no application persistence), CI checks and bilingual documentation.
 
 **Planned / future exploration:** durable outbox, PostgreSQL application persistence, RabbitMQ delivery, retries, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. No event is persisted or delivered today. The provisional roadmap is in [architecture](docs/en/architecture.md).
 
@@ -57,12 +57,13 @@ docker compose exec app cargo test --locked
 
 ## Local PostgreSQL
 
-PostgreSQL is available to host clients at `localhost:5433` and containers at `postgres:5432`. DBeaver: PostgreSQL, database `reliable_event_relay`, username/password `relay`/`relay` (local development only). No GUI is required. `.dockerized-postgres/` holds physical database state; `docker compose down` preserves it. New databases contain no application tables or migrations. See [setup, topology, clients, troubleshooting and destructive database reset](docs/en/docker-and-configuration.md).
+Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses POSTGRES_DB/USER/PASSWORD from your local configuration, matching persisted cluster credentials. Changing initialization variables does not update an existing cluster. `.dockerized-postgres/` persists through Compose down. SQLx CLI 0.8.6 provides explicit migrations creating only an empty relay namespace, without application tables. See [PostgreSQL and destructive reset](docs/en/postgresql.md) and [migration commands](docs/en/database-migrations.md).
 
 ## Documentation
 
 - [Architecture, trade-offs and roadmap](docs/en/architecture.md)
 - [PostgreSQL decision and trade-offs](docs/en/postgresql.md)
+- [Database migrations](docs/en/database-migrations.md)
 - [Dependency recovery](docs/en/development-dependencies.md)
 - [Docker and configuration](docs/en/docker-and-configuration.md)
 - [Project guide and dependency choices](docs/en/project-guide.md)
@@ -70,6 +71,7 @@ PostgreSQL is available to host clients at `localhost:5433` and containers at `p
 - [Validation results](docs/en/validation-results.md)
 - [ADR 001: Rust](docs/en/adr/001-use-rust-for-the-relay.md)
 - [ADR 002: PostgreSQL](docs/en/adr/002-use-postgresql-for-durable-event-storage.md)
+- [ADR 003: Versioned SQL migrations](docs/en/adr/003-use-versioned-sql-migrations.md)
 
 ## Limits and philosophy
 

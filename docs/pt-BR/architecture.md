@@ -37,7 +37,7 @@ JSON oferece uma fronteira flexível de transporte/armazenamento, sacrificando t
 
 ## Infraestrutura PostgreSQL local — Marco 1.2 implementado
 
-Compose fornece PostgreSQL com partida do workspace condicionada ao healthcheck, acesso em containers por postgres:5432, no loopback do host por localhost:5433 e armazenamento físico `.dockerized-postgres/`. O app recebe DATABASE_URL sem uso; ainda não estabelece conexão ao banco. Readiness Docker difere de readiness da aplicação. Consulte [topologia/setup](docker-and-configuration.md), [decisão PostgreSQL](postgresql.md) e [ADR 002](adr/002-use-postgresql-for-durable-event-storage.md). Persistência, migrações e processamento outbox continuam futuros.
+Compose fornece PostgreSQL com partida do workspace condicionada ao healthcheck, acesso em containers por postgres:5432, no loopback do host por 127.0.0.1:5433 e armazenamento físico `.dockerized-postgres/`. A ferramenta SQLx constrói DATABASE_URL; o binário Rust ainda não estabelece conexão ao banco. Readiness Docker difere de readiness da aplicação. Consulte [topologia/setup](docker-and-configuration.md), [decisão PostgreSQL](postgresql.md) e [ADR 002](adr/002-use-postgresql-for-durable-event-storage.md). SQLx CLI gerencia migrações explícitas; persistência e processamento outbox continuam futuros.
 
 ## Evolução pretendida (não implementada)
 
@@ -80,7 +80,7 @@ A futura entrega inicialmente mira semântica de pelo menos uma vez, sem entrega
 | Marco | Exploração |
 | --- | --- |
 | 0 — Fundação | Rust, Docker, configuração, tracing, encerramento, health, testes, documentação bilíngue (implementado) |
-| 1 — Modelo durável de eventos | **1.1 envelope e 1.2 PostgreSQL local implementados**; migrações, schema outbox, repositórios e testes de integração da persistência continuam planejados |
+| 1 — Modelo durável de eventos | **1.1 envelope, 1.2 PostgreSQL local e 1.3 infraestrutura de migrações implementados**; schema outbox, repositórios e testes de integração da persistência continuam planejados |
 | 2 — Primeiro adaptador | Publicador RabbitMQ, estado de entrega, tentativas, semântica de pelo menos uma vez |
 | 3 — Confiabilidade | Backoff exponencial, DLQ, idempotência, recuperação de crashes, mensagens problemáticas |
 | 4 — Concorrência | Canais limitados, pools de workers, limites de concorrência, contrapressão, drenagem no encerramento |
@@ -94,9 +94,13 @@ São marcos de estudo, não lançamentos prometidos. A arquitetura pode mudar qu
 
 - [x] 1.1 Envelope canônico de eventos
 - [x] 1.2 PostgreSQL local no Docker
-- [ ] 1.3 Migrações
+- [x] 1.3 Infraestrutura de migrações
 - [ ] 1.4 Schema outbox
 - [ ] 1.5 Abstração de persistência
 - [ ] 1.6 Repositório PostgreSQL
 - [ ] 1.7 Testes de integração
 - [ ] 1.8 Semântica de falhas e transações
+
+## Infraestrutura de migrações — Marco 1.3 concluído
+
+SQLx CLI 0.8.6 é apenas ferramenta Docker de desenvolvimento. SQL reversível versionado cria namespace `relay` vazio; sem tabelas da aplicação ou dependências Rust de banco. [Fluxo](database-migrations.md) e [ADR 003](adr/003-use-versioned-sql-migrations.md) definem responsabilidade e limites. Marco 1 continua incompleto; 1.4 schema outbox está planejado.

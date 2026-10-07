@@ -2,7 +2,7 @@
 
 # Docker e configuração
 
-O Dockerfile é uma imagem de ferramentas de desenvolvimento, não de implantação em produção. Fixa Rust estável 1.95.0 sobre Debian Bookworm, inclui Bash, rustfmt e Clippy e executa como `developer`. A tag de versão é fixa; o digest da imagem base não é, portanto revisões upstream ainda podem mudar pacotes de sistema. Compose usa um processo init e montagem do código do host. `sleep infinity` mantém o workspace utilizável antes do download das dependências.
+O Dockerfile é uma imagem de ferramentas de desenvolvimento, não de implantação em produção. Fixa Rust estável 1.95.0 sobre Debian Bookworm, inclui Bash, rustfmt, Clippy, Python 3 e SQLx CLI 0.8.6 e executa como `developer`. A tag de versão é fixa; o digest da imagem base não é, portanto revisões upstream ainda podem mudar pacotes de sistema. Compose usa um processo init e montagem do código do host. `sleep infinity` mantém o workspace utilizável antes do download das dependências.
 
 ```bash
 cp .env.example .env
@@ -30,7 +30,7 @@ Use Ctrl-C para parar a aplicação em primeiro plano e `docker compose down` pa
 | CARGO_HOME | /app/.cargo-cache | Cache de fontes/downloads Cargo no container |
 | CARGO_TARGET_DIR | /app/target | Artefatos compilados no container |
 
-As três primeiras são configurações da aplicação. As demais pertencem às ferramentas de desenvolvimento. Não há strings de conexão obrigatórias. Compose fornece DATABASE_URL do PostgreSQL, mas o binário Rust não a consome. URLs de RabbitMQ/Redis, concorrência de workers, tentativas e batches continuam planejados.
+As três primeiras são configurações da aplicação. As demais pertencem às ferramentas de desenvolvimento. Não há strings de conexão obrigatórias. O wrapper SQLx constrói DATABASE_URL com configurações PostgreSQL injetadas pelo Compose; o binário Rust não a consome. URLs de RabbitMQ/Redis, concorrência de workers, tentativas e batches continuam planejados.
 
 O binário carrega `.env` do diretório de trabalho ou ancestrais com dotenvy; variáveis já existentes no processo têm precedência. Compose lê separadamente o `.env` da raiz para interpolação (portas/IDs); não injeta todos os valores no container. A montagem do código expõe `.env` para leitura pelo binário em execução. Para sobrescrever explicitamente: `docker compose exec -e RUST_LOG=debug app cargo run --locked`. A ausência de `.env` é válida; `.env` malformado, APP_ENV vazio, HTTP_ADDR ou RUST_LOG inválidos e sockets ocupados causam falha.
 
@@ -46,8 +46,9 @@ cp .env.example .env
 docker compose up -d --build --wait --wait-timeout 120
 docker compose ps
 docker compose logs postgres
-docker compose exec postgres pg_isready -h 127.0.0.1 -p 5432 -U relay -d reliable_event_relay
-docker compose exec postgres psql -U relay -d reliable_event_relay -c "SELECT 1;"
+docker compose exec postgres sh -c 'pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose exec postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;"'
+docker compose exec app sqlx migrate run
 docker compose exec app cargo fetch --locked
 docker compose exec app cargo build --locked
 docker compose exec app cargo run --locked
@@ -61,74 +62,68 @@ flowchart LR
     APP[Container Rust]
     DB[(Container PostgreSQL)]
     DISK[.dockerized-postgres/]
-    DEV -->|localhost:5433| DB
-    APP -.->|postgres:5432 - disponível, ainda sem uso| DB
+    DEV -->|127.0.0.1:5433| DB
+    APP -.->|postgres:5432 - ferramenta SQLx| DB
     DB -->|bind mount| DISK
 ```
 
 ## Configuração do banco e clientes
 
-| Variável | Padrão de desenvolvimento | Uso |
+| Variável | Padrão apenas ilustrativo | Uso |
 | --- | --- | --- |
-| POSTGRES_DB | reliable_event_relay | Banco criado na primeira inicialização |
-| POSTGRES_USER | relay | Usuário inicial (a imagem oficial cria um superusuário) |
-| POSTGRES_PASSWORD | relay | Senha inicial apenas local |
-| POSTGRES_HOST | postgres | Hostname usado na URL do container app |
-| POSTGRES_PORT | 5432 | Porta usada na URL; manter o padrão do servidor |
-| POSTGRES_HOST_PORT | 5433 | Publicação da porta no loopback do host |
-| DATABASE_URL | postgresql://relay:relay@postgres:5432/reliable_event_relay | Configuração de ambiente montada pelo Compose, ainda não consumida pelo Rust |
+| POSTGRES_DB | reliable_event_relay | Banco inicializado em cluster vazio |
+| POSTGRES_USER | change_me | Superusuário inicial |
+| POSTGRES_PASSWORD | change_me | Placeholder de senha apenas local |
+| POSTGRES_HOST | postgres | Hostname interno Docker |
+| POSTGRES_PORT | 5432 | Porta interna Docker |
+| POSTGRES_HOST_PORT | 5433 | Publicação loopback no host |
 
-Compose interpola as seis variáveis POSTGRES do `.env`, com padrões quando ausentes, e injeta explicitamente as variáveis de inicialização em `postgres`. Monta DATABASE_URL para `app`; definir DATABASE_URL no `.env` não substitui esse valor gerado pelo Compose. Mantenha POSTGRES_HOST=postgres e POSTGRES_PORT=5432 nesta topologia. Ao personalizar credenciais com caracteres reservados de URI, codifique sua representação na URL antes de um cliente futuro consumi-la; os padrões locais simples dispensam isso.
+Defina credenciais locais no `.env` ignorado antes da primeira inicialização. Compose injeta DB/USER/PASSWORD no postgres e os cinco componentes internos no app. O wrapper Python SQLx aplica percent-encoding a usuário/senha/banco e constrói DATABASE_URL por chamada. Não exige encoding manual ou Cargo no host. A URL vai ao processo SQLx, sem ser impressa ou armazenada em código. DATABASE_URL do host não substitui o wrapper. Comandos normais usam postgres:5432; a opção explícita SQLx `--database-url` substitui a conexão conforme comportamento do CLI, portanto use-a apenas deliberadamente. O binário Rust permanece independente de banco.
 
-No DBeaver, crie uma conexão PostgreSQL:
+POSTGRES_DB/USER/PASSWORD são principalmente variáveis de inicialização: **ambiente Docker != usuários/bancos já criados no PostgreSQL**. Por exemplo, mudar first_user para second_user no `.env` altera o ambiente, mas mantém first_user no cluster persistido. Autenticação pode falhar com servidor saudável. Mudar .env não renomeia usuários, redefine senhas nem cria novo banco em cluster existente. Veja [explicação e recuperação](postgresql.md#inicialização-e-reset-deliberado).
 
-```text
-Tipo de banco: PostgreSQL
-Host: localhost
-Porta: 5433
-Banco: reliable_event_relay
-Usuário: relay
-Senha: relay
-```
-
-São padrões de desenvolvimento, não credenciais de produção. A publicação usa `127.0.0.1`, evitando exposição na LAN; clientes podem usar IPv4 explicitamente se localhost resolver apenas para IPv6. DataGrip, TablePlus ou qualquer cliente compatível com PostgreSQL também funciona. Nenhuma interface gráfica é obrigatória:
+DBeaver usa **127.0.0.1**, porta **5433**, banco/usuário/senha de POSTGRES_DB/USER/PASSWORD, correspondendo ao estado realmente inicializado. IPv4 explícito evita ambiguidade IPv6 de localhost. Host usa 127.0.0.1:5433; containers usam postgres:5432. PostgreSQL permanece publicado apenas no loopback, nunca 0.0.0.0.
 
 ```bash
-psql -h localhost -p 5433 -U relay -d reliable_event_relay -W
-docker compose exec postgres psql -U relay -d reliable_event_relay
+# Variáveis expandem no container, não no shell do host:
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+# psql no host: informe banco/usuário configurados e digite a senha solicitada:
+psql -h 127.0.0.1 -p 5433 -U change_me -d reliable_event_relay -W
 ```
 
-Clientes no host usam localhost:5433; clientes em containers usam postgres:5432, nunca localhost para o outro container.
+Valores do host acima são placeholders. `docker compose exec postgres psql -U "$POSTGRES_USER"` diretamente expande variáveis do host; `sh -c` com aspas simples usa ambiente do container. Socket local não necessariamente valida senha; use consulta TCP autenticada em [testes](testing.md).
 
 ## Estado físico e encerramento
 
-| Diretório no host | Conteúdo | Reconstrução |
+| Diretório no host | Conteúdo | Responsabilidade |
 | --- | --- | --- |
-| `.cargo-cache/` | Downloads e cache de fontes Cargo | `cargo fetch --locked` no app |
-| `target/` | Artefatos compilados | `cargo build --locked` no app |
-| `.dockerized-postgres/` | Cluster PostgreSQL em `18/docker/` | A imagem oficial inicializa um banco de aplicação vazio quando ausente |
+| `.cargo-cache/` | Dependências Cargo baixadas | Gerado/ignorado; reconstruir com cargo fetch --locked |
+| `target/` | Artefatos Rust | Gerado/ignorado; reconstruir com cargo build --locked |
+| `.dockerized-postgres/` | Dados do cluster em 18/docker/ | Local/ignorado; estado persistente do banco |
+| `migrations/` | Histórico SQL do schema | Código-fonte; deve ser commitado |
 
-Todos são diretórios físicos ignorados com bind mount; não há volumes de dados nomeados. Tornam o estado local gerado visível e intencionalmente reconstruível, mas conteúdos do banco não são recuperados reconstruindo fontes: preserve-os ou faça backup quando necessário. `docker compose down` para/remove containers e rede, **não os conteúdos do banco** ou diretórios Cargo. Recriar containers também preserva dados. Sem migrações, um banco novo tem apenas estruturas internas do PostgreSQL e nenhuma tabela da aplicação.
+Os três primeiros são estado gerado/local; migrações são código-fonte. Dados PostgreSQL não são reconstruídos apenas compilando código. Up, down, build e recriação preservam cluster; nenhum entrypoint o reinicializa silenciosamente. Histórico de migração nunca fica no diretório de dados. SQLx CLI executa comandos explícitos, não mudanças automáticas de startup. Alterações DBeaver não substituem migrações como autoridade do schema.
 
-## Reset apenas do banco local
+## Reset destrutivo deliberado
 
-**Destrutivo: os comandos abaixo apagam permanentemente todos os conteúdos do banco local. Faça backup do que precisar antes.** Cache Cargo e artefatos permanecem intactos:
+**AVISO: isto exclui permanentemente o estado do banco PostgreSQL local.** Faça backup do necessário e decida explicitamente descartar o cluster antes de executar comandos manuais na raiz. Não há helper de exclusão automática.
 
 ```bash
 docker compose down
 rm -rf .dockerized-postgres/
-docker compose up -d --wait --wait-timeout 120
+docker compose up -d --build --wait --wait-timeout 120
+docker compose exec app sqlx migrate run
 ```
 
-A imagem inicializa um banco novo. Marcos futuros adicionarão criação reproduzível do schema da aplicação; nada disso existe hoje. Esse reset é documentado, não executado automaticamente.
+Reset inicializa usuários/banco a partir do .env atual e exclui todos os bancos e dados anteriores. **Reset do banco != rollback de migração**: `docker compose exec app sqlx migrate revert` executa a última down controlada e preserva outro estado do cluster. Não redefine credenciais.
 
-## Solução de problemas do PostgreSQL
+## Solução de problemas PostgreSQL
 
-- Consulte `docker compose ps` e `docker compose logs postgres` para erros de inicialização ou health. `pg_isready` não testa autenticação; use também uma consulta SQL autenticada via TCP.
-- Host 5433 ocupado impede publicação. Altere POSTGRES_HOST_PORT no `.env` e use essa porta nos clientes do host; mantenha 5432 interna.
-- Alterar POSTGRES_DB/USER/PASSWORD afeta apenas a inicialização de um diretório vazio. Credenciais/estado existentes persistem; altere-os deliberadamente via SQL ou faça o reset destrutivo após backup.
-- No Linux o entrypoint oficial inicializa a propriedade para seu usuário postgres, separado de LOCAL_UID/GID. Montagens somente leitura ou permissões restritas podem impedir partida. Não torne todos os arquivos do banco graváveis por qualquer usuário. O compartilhamento do Docker Desktop precisa permitir este checkout.
-- PG_VERSION incompatível após mudar a versão principal exige upgrade suportado ou backup/restauração, não apagar arquivos para silenciar o erro.
-- Compose não inicia app enquanto o banco estiver unhealthy; isso é orquestração de desenvolvimento. O binário Rust e seus testes continuam funcionando independentemente sem PostgreSQL.
+- Examine `docker compose ps` e `docker compose logs postgres`; pg_isready verifica aceitação, não autenticação.
+- Credenciais mudadas após inicialização: use credenciais autorizadas existentes, administração SQL deliberada ou reset explicitamente destrutivo acima. Nunca exclua dados para corrigir startup silenciosamente.
+- Host 5433 ocupado: mude POSTGRES_HOST_PORT; mantenha 5432 interna.
+- Permissões/montagens somente leitura podem impedir inicialização. Não torne arquivos graváveis por todos. Propriedade postgres no Linux difere de LOCAL_UID/GID.
+- Incompatibilidade de versão principal exige upgrade suportado ou backup/restauração, não exclusão automática.
+- Compose condiciona partida ao health; falhas de conexão em migrações posteriores ainda falham claramente. Testes Rust permanecem independentes de banco.
 
-Consulte [decisão PostgreSQL](postgresql.md), [testes](testing.md) e [resultados de validação](validation-results.md).
+Veja [PostgreSQL](postgresql.md), [migrações](database-migrations.md), [testes](testing.md) e [validação](validation-results.md).

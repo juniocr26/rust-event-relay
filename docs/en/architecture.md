@@ -37,7 +37,7 @@ JSON provides a flexible transport/storage boundary while sacrificing compile-ti
 
 ## Local PostgreSQL infrastructure — Milestone 1.2 implemented
 
-Compose provides PostgreSQL with health-gated workspace startup, container access at postgres:5432, loopback host access at localhost:5433 and physical `.dockerized-postgres/` storage. The app receives an unused DATABASE_URL; it still establishes no database connection. Docker readiness is distinct from application readiness. See [topology/setup](docker-and-configuration.md), [PostgreSQL decision](postgresql.md) and [ADR 002](adr/002-use-postgresql-for-durable-event-storage.md). Persistence, migrations and outbox processing remain future work.
+Compose provides PostgreSQL with health-gated workspace startup, container access at postgres:5432, loopback host access at 127.0.0.1:5433 and physical `.dockerized-postgres/` storage. SQLx tooling constructs DATABASE_URL; the Rust binary still establishes no database connection. Docker readiness is distinct from application readiness. See [topology/setup](docker-and-configuration.md), [PostgreSQL decision](postgresql.md) and [ADR 002](adr/002-use-postgresql-for-durable-event-storage.md). SQLx CLI handles explicit migrations; persistence and outbox processing remain future work.
 
 ## Intended evolution (not implemented)
 
@@ -80,7 +80,7 @@ Future delivery initially targets at-least-once semantics, not exactly-once deli
 | Milestone | Exploration |
 | --- | --- |
 | 0 — Foundation | Rust, Docker, configuration, tracing, shutdown, health, tests, bilingual docs (implemented) |
-| 1 — Durable event model | **1.1 envelope and 1.2 local PostgreSQL implemented**; migrations, outbox schema, repositories and persistence integration tests remain planned |
+| 1 — Durable event model | **1.1 envelope, 1.2 local PostgreSQL and 1.3 migration infrastructure implemented**; outbox schema, repositories and persistence integration tests remain planned |
 | 2 — First delivery adapter | RabbitMQ publisher, delivery state, retries, at-least-once semantics |
 | 3 — Reliability | Exponential backoff, DLQ, idempotency, crash recovery, poison messages |
 | 4 — Concurrency | Bounded channels, worker pools, concurrency limits, backpressure, graceful draining |
@@ -94,9 +94,13 @@ These are study milestones, not promised releases. Architecture may change when 
 
 - [x] 1.1 Canonical Event Envelope
 - [x] 1.2 Local PostgreSQL in Docker
-- [ ] 1.3 Migrations
+- [x] 1.3 Migration Infrastructure
 - [ ] 1.4 Outbox schema
 - [ ] 1.5 Persistence abstraction
 - [ ] 1.6 PostgreSQL repository
 - [ ] 1.7 Integration tests
 - [ ] 1.8 Failure and transaction semantics
+
+## Migration infrastructure — Milestone 1.3 completed
+
+SQLx CLI 0.8.6 is Docker development tooling only. Versioned reversible SQL creates an empty `relay` namespace; no application tables or Rust database dependencies. [Migration workflow](database-migrations.md) and [ADR 003](adr/003-use-versioned-sql-migrations.md) define ownership and rollback limits. Milestone 1 remains incomplete; 1.4 outbox schema is planned.
