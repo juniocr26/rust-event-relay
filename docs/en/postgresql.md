@@ -87,3 +87,9 @@ Use 127.0.0.1 to match intentional IPv4 loopback publication and avoid localhost
 ## Schema ownership
 
 [migrations/](../../migrations/) contains canonical source-controlled SQL history, managed by SQLx CLI 0.8.6 inside Docker. DBeaver is for inspection, querying and debugging; intended schema changes belong in migrations. Physical `.dockerized-postgres/18/docker/` data is ignored local state and survives up, down, build and container recreation. Migration rollback does not delete that directory. Milestone 1.3 creates only an empty relay namespace; no application tables or persistence exist.
+
+## Authentication remediation on the real local cluster
+
+On 2026-10-07, authorized inspection confirmed the configured role was **absent** from the persisted cluster. TCP returned `password authentication failed`; server logs additionally reported `Role "<configured-user>" does not exist`. That TCP error alone does not prove a role exists or has a stale password. Check server details and actual `pg_roles` through authorized access; never expose password hashes or credentials.
+
+Both non-template databases had only public, no user relations/routines and no SQLx history or application data. This satisfied the developer's explicit condition for reset. The empty `.dockerized-postgres/` cluster was deleted after stopping Compose, recreated from the unchanged current `.env`, and received the existing namespace migration. The real cluster now authenticates with those credentials. No DBeaver credential changes were required.

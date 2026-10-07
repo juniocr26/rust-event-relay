@@ -123,3 +123,18 @@ dc down
 The fixture requires Compose supporting `!override` (2.24.4+) and `!reset`. The custom image must already be built. host.docker.internal is Docker Desktop-specific; on Linux use an authenticated host psql query instead.
 
 For the initialization-variable reproduction, change only the fixture postgres environment through an additional override, recreate that container with health-gated `up --force-recreate --no-deps`, and verify the changed credentials fail while original app credentials still connect. Restore the original container environment and confirm the applied schema survives. Never reset the developer cluster to perform this experiment. For unavailability, stop only fixture postgres, expect `dc exec -T app sqlx migrate info --connect-timeout 2` to fail, then restart with `dc up -d --wait --wait-timeout 120 postgres` and confirm installed status. See [actual results](validation-results.md).
+
+## Read-only authentication diagnostics
+
+```bash
+./scripts/check-postgres.sh
+docker compose exec -T app sqlx migrate info
+```
+
+[check-postgres.sh](../../scripts/check-postgres.sh) checks health, IPv4 loopback publication, current Compose/.env versus running app/postgres settings, authenticated identity and existing migration history. It prints neither the configured username nor password. It exits nonzero on configuration drift or authentication failure, and never changes roles, creates metadata, applies migrations or resets data. It uses Python inside the running app container; the host TCP probe uses nc or Python 3, explicitly reporting skipped if neither is available. SQLx connectivity is checked separately.
+
+Compose supplies POSTGRES_HOST/PORT to postgres for these client diagnostics; this does not change server listening settings. Host/DBeaver uses 127.0.0.1:5433 and current initialized POSTGRES_DB/USER/PASSWORD; containers use postgres:5432. DBeaver GUI was not tested.
+
+Changing `.env` does not update an initialized cluster. A missing role can produce generic TCP password-authentication failure. Inspect server details/roles to distinguish it from an existing role with a wrong password. The real-cluster repair inspected for data before the explicitly authorized destructive reset, then ran existing migrations. Normal Compose startup/shutdown remains non-destructive. Reset deletes all cluster state; migration rollback does not repair credentials.
+
+Raw Compose config, environment dumps and SQLx help can reveal secrets; inspect through a parser reporting only non-sensitive fields/equality checks and redact identifying credentials before sharing logs. See [PostgreSQL repair](postgresql.md#authentication-remediation-on-the-real-local-cluster) and [actual remediation results](validation-results.md#local-postgresql-authentication-remediation).

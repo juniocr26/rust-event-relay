@@ -87,3 +87,9 @@ Use 127.0.0.1 para corresponder à publicação IPv4 deliberada e evitar ambigui
 ## Responsabilidade pelo schema
 
 [migrations/](../../migrations/) contém o histórico SQL canônico versionado, gerenciado pelo SQLx CLI 0.8.6 no Docker. DBeaver serve para inspeção, consultas e depuração; mudanças pretendidas pertencem a migrações. Dados físicos `.dockerized-postgres/18/docker/` são estado local ignorado e sobrevivem a up, down, build e recriação. Rollback não exclui esse diretório. Marco 1.3 cria apenas namespace relay vazio; sem tabelas da aplicação ou persistência.
+
+## Correção de autenticação no cluster local real
+
+Em 2026-10-07, inspeção autorizada confirmou que o usuário configurado estava **ausente** do cluster persistido. TCP retornou `password authentication failed`; logs também indicaram `Role "<configured-user>" does not exist`. Esse erro TCP não comprova existência de usuário ou senha antiga. Verifique detalhes do servidor e `pg_roles` com acesso autorizado; nunca exponha hashes ou credenciais.
+
+Os dois bancos não-template tinham apenas public, sem relações/rotinas de usuário, histórico SQLx ou dados da aplicação. Isso satisfez a condição explícita de autorização de reset. O cluster vazio `.dockerized-postgres/` foi excluído após parar Compose, recriado pelo `.env` atual inalterado e recebeu a migração existente de namespace. O cluster real autentica com essas credenciais. Não foi necessário mudar credenciais DBeaver.

@@ -2,6 +2,96 @@
 
 # Resultados de validação
 
+## Correção de autenticação PostgreSQL local
+
+Data: 2026-10-07. Esta correção posterior preserva a falha original do Marco 1.3 e validação isolada abaixo.
+
+**Causa raiz:** o usuário configurado atual não existia no cluster inicializado. TCP retornou falha de senha; detalhes dos logs e inspeção autorizada por socket confirmaram ausência do usuário. Foi divergência de estado inicializado, não senha antiga comprovada em usuário existente. Nenhum hash foi consultado; credenciais reais foram omitidas.
+
+Antes do reset: PostgreSQL 18.6, diretório `/var/lib/postgresql/18/docker`, um superusuário antigo de login e usuários internos. Banco postgres e banco configurado tinham apenas public, zero relações/rotinas de usuário e nenhum histórico de migração ou dado da aplicação. A inspeção satisfez a autorização explícita de reset. Após parar Compose, apenas `.dockerized-postgres/` foi excluído. `.env`, cache Cargo e target foram preservados; sem exclusão automática.
+
+| Validação | Resultado observado |
+| --- | --- |
+| PostgreSQL real reinicializado | Saudável; containers correspondem ao Compose/.env atual |
+| Usuário/senha/banco atuais via TCP interno | SELECT current_user, current_database autenticado correspondeu aos valores configurados (identificadores omitidos) |
+| SQLx real info/run/info | Pending → applied → installed; version 20261007000000, success true |
+| Inspeção de schema | public e relay vazio; public._sqlx_migrations é a única tabela de usuário |
+| Porta loopback macOS | nc conectou em 127.0.0.1:5433 |
+| Autenticação SQL pela publicação | Passou via host.docker.internal:5433 com credenciais atuais |
+| Diagnóstico somente leitura | Passou: health, igualdade de configuração, autenticação e histórico existente |
+| Divergência sintética | Falha não-zero; sem recriação de container ou alteração de .env |
+| Senha sintética incorreta | Trecho de autenticação falhou com erro genérico sem credenciais |
+| Docker fmt, Clippy, test, build | Passou; warnings negados e 10 testes Rust passaram |
+| Sintaxe shell, git diff --check, links/âncoras relativos | Passou |
+| Interface DBeaver | Não testada diretamente |
+
+DBeaver: PostgreSQL, 127.0.0.1:5433, banco POSTGRES_DB e usuário POSTGRES_USER, com POSTGRES_PASSWORD atual inalterado. Sem necessidade de adivinhar/substituir credenciais. O cluster real aceita esses valores. Sem Marco 1.4, tabelas da aplicação, repositório, workers ou brokers. Sem commit ou push.
+
+### Comandos exatos da correção
+
+Wrappers Python temporários capturaram e removeram credenciais de `docker compose ps`, `docker compose config --format json`, `docker compose logs --tail=100 postgres`, publicação e POSTGRES_USER/DB/HOST/PORT do container. Configuração bruta não foi impressa por conter segredos. SQL por socket autorizado leu versão/data_directory, pg_roles sem hashes, pg_database e schemas/relações/rotinas de cada banco não-template. Identificadores reais de login foram omitidos.
+
+```bash
+python3 /tmp/relay-postgres-diagnose.py
+python3 /tmp/relay-postgres-inventory.py
+docker compose down
+```
+
+A exclusão usou o comando com verificações abaixo em vez de rm sem proteção:
+
+```bash
+python3 - <<'PY'
+from pathlib import Path
+import json
+import shutil
+inventory=json.loads(Path('/tmp/relay-postgres-inventory-result.json').read_text())
+assert len(inventory['inventory']) == 2
+for database in inventory['inventory']:
+    state=database['inventory']
+    assert state['schemas'] == ['public']
+    assert not state['relations']
+    assert state['routines'] == 0
+path=Path.cwd()/'.dockerized-postgres'
+assert path.is_dir() and not path.is_symlink()
+assert path.resolve() == path
+shutil.rmtree(path)
+print('Explicitly authorized empty-cluster reset completed; .env and Cargo directories preserved')
+PY
+docker compose up -d --build --wait --wait-timeout 120
+docker compose exec -T app sqlx migrate info
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate info
+./scripts/check-postgres.sh
+sh -n scripts/check-postgres.sh
+if POSTGRES_PASSWORD=deliberately-invalid-test ./scripts/check-postgres.sh; then exit 1; else echo 'Diagnostic rejects configuration drift as expected'; fi
+```
+
+O diagnóstico autentica via TCP e compara SELECT current_user, current_database à configuração sem imprimir identidade. Autenticação adicional pela publicação e inspeção de schema:
+
+```bash
+docker compose exec -T postgres sh -s <<'CONTAINER'
+set -eu
+export PGPASSWORD="$POSTGRES_PASSWORD"
+result=$(psql -X -h host.docker.internal -p 5433 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -At -F '|' -c 'SELECT current_user, current_database();')
+[ "$result" = "$POSTGRES_USER|$POSTGRES_DB" ]
+echo 'Authenticated query through host publication: current_user and current_database match configuration (identifiers redacted).'
+psql -X -h postgres -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname <> 'information_schema'; SELECT schemaname, tablename FROM pg_tables WHERE schemaname NOT LIKE 'pg_%' AND schemaname <> 'information_schema'; SELECT version, success FROM public._sqlx_migrations;"
+CONTAINER
+```
+
+Teste subprocess Python temporário extraiu o trecho de container do diagnóstico, executou com `docker compose exec -T -e POSTGRES_PASSWORD=deliberately-invalid-test postgres sh -s` e confirmou saída não-zero e mensagem genérica de falha. Credenciais armazenadas não mudaram. Comandos de qualidade:
+
+```bash
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+git diff --check
+git check-ignore .env
+```
+
+Links/âncoras usaram a mesma varredura Python pathlib/re do Marco 1.3. Limitações: interface DBeaver não testada manualmente; autenticação pela publicação usou gateway Docker Desktop em vez de psql no host. Portabilidade Linux e recuperação em produção não testadas. Desvios: exclusão Python com verificações substituiu rm bruto; saída de diagnóstico omitiu credenciais em vez de expor configuração. Sem outros desvios.
+
 ## Marco 1.3 — Validação da infraestrutura de migrações
 
 Data: 2026-10-07. Docker Desktop no macOS, container app Linux ARM64. SQLx informa `sqlx-cli 0.8.6`; instalação usou `--locked --no-default-features --features rustls,postgres`. Nenhuma dependência da aplicação ou código de domínio mudou.
