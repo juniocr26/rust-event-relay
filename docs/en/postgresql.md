@@ -8,7 +8,7 @@ Milestone 1.2 adds only a local PostgreSQL service, configuration, healthcheck, 
 
 The [official image](https://hub.docker.com/_/postgres) uses `/var/lib/postgresql/18/docker` for PostgreSQL 18. Compose binds `.dockerized-postgres/` to `/var/lib/postgresql`, so files appear under `.dockerized-postgres/18/docker/` without named or anonymous data volumes. Container recreation and `docker compose down` preserve those files. This local directory is not a production backup strategy.
 
-The Rust binary does not read database settings or establish connections yet. The SQLx wrapper builds `DATABASE_URL` from Compose settings for migration commands; no Rust database dependency or unused configuration type was added. `/health` remains HTTP liveness. `depends_on: service_healthy` gates development container startup, while `pg_isready` checks server acceptance, not application authentication, schema availability or continued readiness after startup.
+The Rust binary does not read database settings or establish connections yet. The SQLx wrapper builds `DATABASE_URL` from Compose settings for migration commands; no Rust database dependency or unused configuration type was added. `/health` remains HTTP liveness. `depends_on: service_healthy` gates development container startup, and the healthcheck executes `SELECT 1` over TCP with the configured credentials. It uses the network address `POSTGRES_HOST`, avoiding loopback with its `trust` rule, and suppresses output. This validates authentication and database access, without checking schema availability or continued readiness after startup.
 
 ## Useful for the intended architecture
 
@@ -93,3 +93,8 @@ Use 127.0.0.1 to match intentional IPv4 loopback publication and avoid localhost
 On 2026-10-07, authorized inspection confirmed the configured role was **absent** from the persisted cluster. TCP returned `password authentication failed`; server logs additionally reported `Role "<configured-user>" does not exist`. That TCP error alone does not prove a role exists or has a stale password. Check server details and actual `pg_roles` through authorized access; never expose password hashes or credentials.
 
 Both non-template databases had only public, no user relations/routines and no SQLx history or application data. This satisfied the developer's explicit condition for reset. The empty `.dockerized-postgres/` cluster was deleted after stopping Compose, recreated from the unchanged current `.env`, and received the existing namespace migration. The real cluster now authenticates with those credentials. No DBeaver credential changes were required.
+
+
+### Focused authentication revalidation
+
+During revalidation on 2026-10-07, the container was stopped. After `docker compose start postgres`, the existing cluster accepted the exact current `.env` credentials through the Docker network and published host port. An incorrect password was rejected on both routes, confirming actual authentication rather than a `trust` rule. The historical failure was not reproduced; this revalidation did not change passwords, create roles, reset the cluster or run migrations. The healthcheck now tests authenticated SQL; loopback `pg_isready` did not prove password validity.

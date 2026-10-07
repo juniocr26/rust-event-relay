@@ -8,7 +8,7 @@ O Marco 1.2 adiciona apenas um serviço PostgreSQL local, configuração, health
 
 A [imagem oficial](https://hub.docker.com/_/postgres) usa `/var/lib/postgresql/18/docker` no PostgreSQL 18. Compose monta `.dockerized-postgres/` em `/var/lib/postgresql`, deixando os arquivos em `.dockerized-postgres/18/docker/`, sem volumes de dados nomeados ou anônimos. Recriar containers e executar `docker compose down` preserva esses arquivos. Esse diretório local não é uma estratégia de backup de produção.
 
-O binário Rust ainda não lê configurações de banco nem estabelece conexões. O wrapper SQLx constrói `DATABASE_URL` com configurações Compose para comandos de migração; nenhuma dependência Rust de banco ou tipo de configuração sem uso foi adicionado. `/health` continua indicando liveness HTTP. `depends_on: service_healthy` condiciona a partida do container de desenvolvimento, enquanto `pg_isready` verifica aceitação pelo servidor, não autenticação da aplicação, disponibilidade do schema ou readiness contínua após a partida.
+O binário Rust ainda não lê configurações de banco nem estabelece conexões. O wrapper SQLx constrói `DATABASE_URL` com configurações Compose para comandos de migração; nenhuma dependência Rust de banco ou tipo de configuração sem uso foi adicionado. `/health` continua indicando liveness HTTP. `depends_on: service_healthy` condiciona a partida do container de desenvolvimento, e o healthcheck executa `SELECT 1` via TCP com as credenciais configuradas. Usa o endereço de rede `POSTGRES_HOST`, evitando o loopback com regra `trust`, e suprime a saída. Valida autenticação e acesso ao banco, sem verificar disponibilidade do schema ou readiness contínua após a partida.
 
 ## Útil para a arquitetura pretendida
 
@@ -93,3 +93,8 @@ Use 127.0.0.1 para corresponder à publicação IPv4 deliberada e evitar ambigui
 Em 2026-10-07, inspeção autorizada confirmou que o usuário configurado estava **ausente** do cluster persistido. TCP retornou `password authentication failed`; logs também indicaram `Role "<configured-user>" does not exist`. Esse erro TCP não comprova existência de usuário ou senha antiga. Verifique detalhes do servidor e `pg_roles` com acesso autorizado; nunca exponha hashes ou credenciais.
 
 Os dois bancos não-template tinham apenas public, sem relações/rotinas de usuário, histórico SQLx ou dados da aplicação. Isso satisfez a condição explícita de autorização de reset. O cluster vazio `.dockerized-postgres/` foi excluído após parar Compose, recriado pelo `.env` atual inalterado e recebeu a migração existente de namespace. O cluster real autentica com essas credenciais. Não foi necessário mudar credenciais DBeaver.
+
+
+### Revalidação focada da autenticação
+
+Na revalidação de 2026-10-07, o contêiner estava parado. Após `docker compose start postgres`, o cluster existente aceitou exatamente as credenciais atuais do `.env` pela rede Docker e pela porta publicada no host. Uma senha incorreta foi rejeitada nas duas rotas, confirmando autenticação real, não uma regra `trust`. A falha histórica não foi reproduzida; não houve alteração de senha, criação de usuário, reset ou execução de migrações nesta revalidação. O healthcheck foi corrigido para testar SQL autenticado; `pg_isready` no loopback não comprovava a senha.

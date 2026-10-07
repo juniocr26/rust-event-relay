@@ -35,7 +35,7 @@ services:
     volumes:
       - ./.dockerized-postgres:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", 'pg_isready -h 127.0.0.1 -p 5432 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      test: ["CMD-SHELL", 'PGPASSWORD="$$POSTGRES_PASSWORD" PGCONNECT_TIMEOUT=3 psql -X -w -h "$$POSTGRES_HOST" -p "$$POSTGRES_PORT" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -Atqc "SELECT 1" >/dev/null 2>&1']
       interval: 5s
       timeout: 5s
       retries: 12
