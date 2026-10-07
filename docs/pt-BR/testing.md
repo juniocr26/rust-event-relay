@@ -82,7 +82,7 @@ docker compose exec -T app cargo test --locked
 docker compose exec -T app cargo build --locked
 ```
 
-Espere installed/pending/installed, schema relay presente/ausente/presente, nenhuma tabela relay e nenhuma reaplicação duplicada na segunda execução. Metadados SQLx permanecem após rollback. Para testar geração sem adicionar histórico, execute `docker compose exec -T app sqlx migrate add -r --source /tmp/milestone13-generated create_relay_schema` e inspecione os dois arquivos.
+No histórico atual, espere installed/pending/installed na última migração outbox e tabela presente/ausente/presente, preservando schema relay e histórico anterior. Validação inicial de rollback do namespace no Marco 1.3 é histórica; revert atual não exclui relay. Execução repetida não aplica nada. Metadados SQLx permanecem após rollback. Para testar geração sem adicionar histórico, execute `docker compose exec -T app sqlx migrate add -r --source /tmp/milestone13-generated create_relay_schema` e inspecione os dois arquivos.
 
 ### Ambiente isolado de validação
 
@@ -138,3 +138,27 @@ Compose fornece POSTGRES_HOST/PORT ao postgres para diagnósticos de cliente, se
 Mudar `.env` não atualiza cluster inicializado. Usuário ausente pode gerar erro TCP genérico de senha. Inspecione detalhes do servidor/usuários para distinguir de usuário existente com senha incorreta. A correção real verificou ausência de dados antes do reset destrutivo explicitamente autorizado e executou migrações existentes. Startup/shutdown Compose normal continua não destrutivo. Reset exclui todo estado; rollback de migração não corrige credenciais.
 
 Configuração Compose bruta, dumps de ambiente e ajuda SQLx podem revelar segredos; use parser que informe apenas campos não sensíveis/comparações e remova credenciais dos logs compartilhados. Veja [correção PostgreSQL](postgresql.md#correção-de-autenticação-no-cluster-local-real) e [resultados reais](validation-results.md#correção-de-autenticação-postgresql-local).
+
+## Validação do schema outbox — Marco 1.4
+
+São fixtures de schema, não testes de integração de repositório Rust. O [fixture SQL versionado](../../tests/sql/outbox_schema.sql) usa transação e ROLLBACK final: ON_ERROR_STOP=1 também encerra sessão com falha e desfaz transação, preservando linhas preexistentes. Usa UUIDs sintéticos reservados; colisão falha com segurança, portanto use banco local apropriado. Nenhum seed é adicionado.
+
+Verifica 25 casos: envelope/defaults válidos, identidade duplicada, 11 campos NOT NULL, strings obrigatórias vazias, versões 0/-1/acima de u32, tentativas negativas, status inválido, coerência do timestamp de conclusão, máximo u32/UUIDs opcionais/JSON null/offsets e representação de retry pending/falha terminal. Tipo do payload é inspecionado como JSONB. Sem broker, loop de retry ou claim de worker.
+
+```bash
+docker compose exec -T app sqlx migrate info
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/outbox_schema.sql
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT count(*) AS outbox_rows FROM relay.outbox_events;"'
+```
+
+Use catálogos para colunas/tipos/nullability/defaults, pg_constraint para PK/CHECKs, pg_indexes para definições e _sqlx_migrations para versão/sucesso. Consultas exatas executadas e resultados estão em [validação](validation-results.md).
+
+**Rollback destrutivo:** somente após confirmar ausência de dados importantes e última migração create_outbox_events, execute migrate revert, inspecione ausência da tabela e preservação relay/histórico, depois migrate run e info. Não deixe schema revertido. Após dados reais, rollback perde todas as linhas; sem garantia de recuperação em produção. Execute quatro verificações Cargo Docker documentadas acima. A tabela final teve zero linhas após fixtures e reaplicação.
+
+A [inspeção de catálogo somente leitura](../../tests/sql/inspect_outbox_schema.sql) verifica colunas, constraints, índices, histórico e contagem:
+
+```bash
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql
+```

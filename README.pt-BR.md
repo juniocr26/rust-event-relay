@@ -8,9 +8,9 @@ Este projeto de código aberto, estudo e portfólio investiga entrega distribuí
 
 ## Estado atual e escopo
 
-**Implementado hoje:** configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas (sem persistência da aplicação), verificações de CI e documentação bilíngue.
+**Implementado hoje:** configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial (sem persistência da aplicação), verificações de CI e documentação bilíngue.
 
-**Planejado / exploração futura:** outbox durável, persistência da aplicação em PostgreSQL, entrega RabbitMQ, tentativas, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. Nenhum evento é persistido ou entregue hoje. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture.md).
+**Planejado / exploração futura:** persistência e processamento outbox, persistência da aplicação em PostgreSQL, entrega RabbitMQ, tentativas, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. A aplicação Rust não persiste nem entrega eventos hoje. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture.md).
 
 ## Arquitetura
 
@@ -57,13 +57,14 @@ docker compose exec app cargo test --locked
 
 ## PostgreSQL local
 
-Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver usa POSTGRES_DB/USER/PASSWORD da configuração local, correspondendo às credenciais persistidas. Mudar variáveis de inicialização não atualiza cluster existente. `.dockerized-postgres/` persiste após Compose down. SQLx CLI 0.8.6 fornece migrações explícitas criando apenas namespace relay vazio, sem tabelas da aplicação. Veja [PostgreSQL e reset destrutivo](docs/pt-BR/postgresql.md) e [comandos de migração](docs/pt-BR/database-migrations.md).
+Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver usa POSTGRES_DB/USER/PASSWORD da configuração local, correspondendo às credenciais persistidas. Mudar variáveis de inicialização não atualiza cluster existente. `.dockerized-postgres/` persiste após Compose down. SQLx CLI 0.8.6 fornece migrações explícitas criando namespace relay e relay.outbox_events; gravação pela aplicação e entrega permanecem futuras. Veja [PostgreSQL e reset destrutivo](docs/pt-BR/postgresql.md) e [comandos de migração](docs/pt-BR/database-migrations.md).
 
 ## Documentação
 
 - [Arquitetura, escolhas e roteiro](docs/pt-BR/architecture.md)
 - [Decisão PostgreSQL e trade-offs](docs/pt-BR/postgresql.md)
 - [Migrações de banco](docs/pt-BR/database-migrations.md)
+- [Schema outbox](docs/pt-BR/outbox-schema.md)
 - [Recuperação de dependências](docs/pt-BR/development-dependencies.md)
 - [Docker e configuração](docs/pt-BR/docker-and-configuration.md)
 - [Guia do projeto e dependências](docs/pt-BR/project-guide.md)
@@ -72,6 +73,7 @@ Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver
 - [ADR 001: Rust](docs/pt-BR/adr/001-use-rust-for-the-relay.md)
 - [ADR 002: PostgreSQL](docs/pt-BR/adr/002-use-postgresql-for-durable-event-storage.md)
 - [ADR 003: Migrações SQL versionadas](docs/pt-BR/adr/003-use-versioned-sql-migrations.md)
+- [ADR 004: Schema outbox transacional](docs/pt-BR/adr/004-use-postgresql-transactional-outbox-schema.md)
 
 ## Limites e filosofia
 

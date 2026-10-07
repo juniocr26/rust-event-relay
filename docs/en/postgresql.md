@@ -14,12 +14,12 @@ The Rust binary does not read database settings or establish connections yet. Th
 
 PostgreSQL fits the intended transactional outbox through ACID transactions and mature concurrency control. A business change and an outbox record can commit atomically when the producer writes both to the **same local PostgreSQL database transaction**. This does not bridge separate databases or a remote broker. PostgreSQL offers strong SQL, indexing, row-level locking and reliable transactional behavior; none of these has been wired into application persistence yet. See [transactions](https://www.postgresql.org/docs/18/tutorial-transactions.html) and [locking](https://www.postgresql.org/docs/18/explicit-locking.html).
 
-Conceptual future boundary only (no application tables exist):
+Future write transaction (the outbox table exists, but application writes are not implemented):
 
 ```text
 BEGIN
 update business_state ...
-insert into outbox_events ...
+insert into relay.outbox_events ...
 COMMIT
 ```
 
@@ -86,7 +86,7 @@ Use 127.0.0.1 to match intentional IPv4 loopback publication and avoid localhost
 
 ## Schema ownership
 
-[migrations/](../../migrations/) contains canonical source-controlled SQL history, managed by SQLx CLI 0.8.6 inside Docker. DBeaver is for inspection, querying and debugging; intended schema changes belong in migrations. Physical `.dockerized-postgres/18/docker/` data is ignored local state and survives up, down, build and container recreation. Migration rollback does not delete that directory. Milestone 1.3 creates only an empty relay namespace; no application tables or persistence exist.
+[migrations/](../../migrations/) contains canonical source-controlled SQL history, managed by SQLx CLI 0.8.6 inside Docker. DBeaver is for inspection, querying and debugging; intended schema changes belong in migrations. Physical `.dockerized-postgres/18/docker/` data is ignored local state and survives up, down, build and container recreation. Migration rollback does not delete that directory. Milestone 1.3 creates only an empty relay namespace; Milestone 1.4 adds the outbox schema; application persistence remains future work.
 
 ## Authentication remediation on the real local cluster
 

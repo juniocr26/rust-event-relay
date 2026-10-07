@@ -14,12 +14,12 @@ O binário Rust ainda não lê configurações de banco nem estabelece conexões
 
 PostgreSQL se adequa à outbox transacional pretendida por suas transações ACID e controle maduro de concorrência. Uma mudança de negócio e um registro outbox podem confirmar atomicamente quando o produtor grava ambos na **mesma transação local do banco PostgreSQL**. Isso não abrange bancos distintos ou um broker remoto. PostgreSQL oferece SQL robusto, índices, bloqueio por linha e comportamento transacional confiável; nenhuma dessas capacidades foi integrada à persistência da aplicação. Consulte [transações](https://www.postgresql.org/docs/18/tutorial-transactions.html) e [bloqueios](https://www.postgresql.org/docs/18/explicit-locking.html).
 
-Fronteira futura apenas conceitual (não existem tabelas da aplicação):
+Transação futura de escrita (tabela outbox existe, mas gravação pela aplicação não foi implementada):
 
 ```text
 BEGIN
 update business_state ...
-insert into outbox_events ...
+insert into relay.outbox_events ...
 COMMIT
 ```
 
@@ -86,7 +86,7 @@ Use 127.0.0.1 para corresponder à publicação IPv4 deliberada e evitar ambigui
 
 ## Responsabilidade pelo schema
 
-[migrations/](../../migrations/) contém o histórico SQL canônico versionado, gerenciado pelo SQLx CLI 0.8.6 no Docker. DBeaver serve para inspeção, consultas e depuração; mudanças pretendidas pertencem a migrações. Dados físicos `.dockerized-postgres/18/docker/` são estado local ignorado e sobrevivem a up, down, build e recriação. Rollback não exclui esse diretório. Marco 1.3 cria apenas namespace relay vazio; sem tabelas da aplicação ou persistência.
+[migrations/](../../migrations/) contém o histórico SQL canônico versionado, gerenciado pelo SQLx CLI 0.8.6 no Docker. DBeaver serve para inspeção, consultas e depuração; mudanças pretendidas pertencem a migrações. Dados físicos `.dockerized-postgres/18/docker/` são estado local ignorado e sobrevivem a up, down, build e recriação. Rollback não exclui esse diretório. Marco 1.3 cria apenas namespace relay vazio; Marco 1.4 adiciona schema outbox; persistência pela aplicação permanece futura.
 
 ## Correção de autenticação no cluster local real
 

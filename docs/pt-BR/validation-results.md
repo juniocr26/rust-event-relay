@@ -2,6 +2,55 @@
 
 # Resultados de validação
 
+## Marco 1.4 — Validação do schema outbox
+
+Data: 2026-10-07. Cluster real PostgreSQL 18.6, SQLx CLI 0.8.6, Docker Desktop/Linux ARM64, Rust 1.95.0. Diagnóstico de autenticação passou antes do trabalho. Sem reset do cluster. Inspeção inicial mostrou ausência da tabela outbox e somente migração 20261007000000 instalada; rollback da nova tabela vazia era seguro.
+
+| Validação | Resultado observado |
+| --- | --- |
+| Geração reversível | CLI criou par up/down 20261007175358_create_outbox_events |
+| info/run/info real | Pending → applied → installed |
+| Inspeção de catálogos | 15 colunas, tipos/defaults/nullability corretos, PK UUID, sete CHECKs nomeados, 11 constraints NOT NULL |
+| Inspeção de índices | B-tree PK e parcial pending (available_at, created_at, id); sem índices payload/agregado |
+| Fixture SQL | 25 casos passaram; envelope/defaults/JSONB válidos, ID duplicado, falhas NULL obrigatório, strings vazias, limites de versão/tentativas/status/conclusão inválidos e representação estendida do envelope/ciclo |
+| Limpeza fixture | ROLLBACK concluído; count(*) = 0 |
+| migrate revert real | Outbox absent=true, relay preserved=true, history preserved=true; nova migração pending |
+| Reaplicação real | Outbox recriada, ambas versões installed com success=true |
+| Inspeção final somente leitura | Tabela/índices/constraints presentes; outbox_rows=0 |
+| Docker fmt / Clippy / test / build | Passou; warnings negados; 2 unitários + 6 envelope + 2 ciclo de vida (10) |
+| git diff --check / links e âncoras Markdown locais | Passou |
+
+Fixture SQL valida schema, não integração de persistência Rust. Falhas são capturadas/verificadas em subtransações PL/pgSQL, incluindo nomes esperados; linhas ficam em transação externa desfeita. Sem eventos de validação ou seeds restantes. Banco final mantém schema/migração aplicada. Migrações anteriores e Rust/dependências inalterados; sem repositório, publicador, worker, consulta claim ou retries executados.
+
+### Comandos exatos executados
+
+```bash
+./scripts/check-postgres.sh
+docker compose exec -T app sqlx migrate add -r create_outbox_events
+# Generated version: 20261007175358; edited SQL before applying.
+docker compose exec -T app sqlx migrate info
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/outbox_schema.sql
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT count(*) AS outbox_rows FROM relay.outbox_events;"'
+docker compose exec -T app sqlx migrate revert
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT to_regclass('\''relay.outbox_events'\'') IS NULL AS outbox_absent, to_regnamespace('\''relay'\'') IS NOT NULL AS relay_preserved, to_regclass('\''public._sqlx_migrations'\'') IS NOT NULL AS history_preserved;"'
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT count(*) AS outbox_rows FROM relay.outbox_events;"'
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+git diff --check
+```
+
+Inspeção inicial SELECT to_regclass('relay.outbox_events') e SELECT version, description, success FROM public._sqlx_migrations confirmou ausência/histórico anterior. Antes do rollback, consultas equivalentes ao arquivo versionado foram executadas inline pelo psql para colunas, pg_constraint, pg_indexes e histórico. Arquivo final repetiu verificações somente leitura após reaplicar, com contagem explícita. Método Python pathlib/re resolveu links e âncoras locais.
+
+Desvio do tipo sugerido: schema_version usa BIGINT CHECK BETWEEN 1 AND 4294967295 porque INTEGER assinado não representa todo NonZeroU32 Rust. Sem mudança no envelope. Sem benchmarks de produção, claims concorrentes, garantias de entrega ou integração de repositório; interface DBeaver não testada. Rollback validado somente com tabela vazia. Sem commit/push. Resultados anteriores abaixo foram preservados como histórico.
+
 ## Correção de autenticação PostgreSQL local
 
 Data: 2026-10-07. Esta correção posterior preserva a falha original do Marco 1.3 e validação isolada abaixo.

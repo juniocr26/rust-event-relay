@@ -2,6 +2,55 @@
 
 # Validation results
 
+## Milestone 1.4 — Outbox schema validation
+
+Date: 2026-10-07. Real developer PostgreSQL 18.6 cluster, SQLx CLI 0.8.6, Docker Desktop/Linux ARM64, Rust 1.95.0. Existing authentication diagnostic passed before schema work. No cluster reset was performed. The preflight catalog showed no outbox table and only namespace migration 20261007000000 installed, so rollback of the new empty table was safe.
+
+| Validation | Observed result |
+| --- | --- |
+| Reversible migration generation | CLI created 20261007175358_create_outbox_events up/down pair |
+| Real info/run/info | Pending → applied → installed |
+| Catalog inspection | 15 columns, correct native types/defaults/nullability, UUID primary key, seven named CHECKs, 11 NOT NULL constraints |
+| Index inspection | Primary-key B-tree and pending partial B-tree (available_at, created_at, id); no payload/aggregate indexes |
+| SQL fixture | 25 cases passed; valid envelope/defaults/JSONB, duplicate ID, required NULL failures, empty strings, invalid version bounds/attempts/status/completion and extended envelope/lifecycle representation |
+| SQL fixture cleanup | ROLLBACK completed; count(*) = 0 |
+| Real migrate revert | Outbox absent=true, relay preserved=true, history preserved=true; new migration pending |
+| Real reapplication | Outbox recreated, both versions installed with success=true |
+| Final read-only inspection | Table/indexes/constraints present; outbox_rows=0 |
+| Docker fmt / Clippy / test / build | Passed; Clippy warnings denied; 2 unit + 6 envelope + 2 lifecycle tests (10) |
+| git diff --check / local Markdown links and anchors | Passed |
+
+The SQL fixture is schema-level validation, not Rust persistence integration. Constraint failures are caught/asserted in PL/pgSQL subtransactions, including intended check names; fixture rows remain inside an outer transaction that rolls back. No validation events or seed data remain. The final developer database keeps the applied migration and schema. Existing migration files and Rust code/dependencies are unchanged; no repository, publisher, worker, claim query or retry execution was introduced.
+
+### Exact commands executed
+
+```bash
+./scripts/check-postgres.sh
+docker compose exec -T app sqlx migrate add -r create_outbox_events
+# Generated version: 20261007175358; edited SQL before applying.
+docker compose exec -T app sqlx migrate info
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/outbox_schema.sql
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT count(*) AS outbox_rows FROM relay.outbox_events;"'
+docker compose exec -T app sqlx migrate revert
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT to_regclass('\''relay.outbox_events'\'') IS NULL AS outbox_absent, to_regnamespace('\''relay'\'') IS NOT NULL AS relay_preserved, to_regclass('\''public._sqlx_migrations'\'') IS NOT NULL AS history_preserved;"'
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT count(*) AS outbox_rows FROM relay.outbox_events;"'
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+git diff --check
+```
+
+A preflight SELECT to_regclass('relay.outbox_events') and SELECT version, description, success FROM public._sqlx_migrations confirmed absence/prior history. Before rollback, catalog queries matching the source-controlled inspection file were also executed inline through psql for columns, pg_constraint, pg_indexes and SQLx history. The final inspection file repeated those read-only checks after reapplication, with explicit row count. The repository's Python pathlib/re method resolved local Markdown links and heading anchors.
+
+Design deviation from the suggested type: schema_version uses BIGINT CHECK BETWEEN 1 AND 4294967295 because signed INTEGER cannot represent all Rust NonZeroU32 values. No envelope change was needed. No production benchmarks, concurrent claims, delivery guarantees or repository integration were validated; DBeaver GUI was not tested. Rollback was validated only while the outbox was empty. No commit or push was made. Earlier validation/repair results below are preserved as history.
+
 ## Local PostgreSQL authentication remediation
 
 Date: 2026-10-07. This later remediation preserves the original Milestone 1.3 failure and isolated validation below.

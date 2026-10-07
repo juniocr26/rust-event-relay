@@ -16,15 +16,17 @@ O healthcheck existente condiciona a partida do app; não há sleeps fixos. Heal
 migrations/
   20261007000000_create_relay_schema.up.sql
   20261007000000_create_relay_schema.down.sql
+  20261007175358_create_outbox_events.up.sql
+  20261007175358_create_outbox_events.down.sql
 ```
 
-Opção B: criar o namespace vazio `relay`, reservado para futuros objetos do relay. Define uma fronteira arquitetural e demonstra migração reversível sem tabelas de negócio. Migrações futuras devem qualificar objetos com `relay.`; o search_path padrão permanece inalterado. A migração up falha se já existir namespace sem gerenciamento. A down usa RESTRICT, recusando destruir objetos dependentes. SQLx mantém `_sqlx_migrations` no schema public padrão para controle interno; não é armazenamento da aplicação. Não há outbox, repositórios, inserts ou workers.
+Opção B: criar o namespace vazio `relay`, reservado para futuros objetos do relay. Define uma fronteira arquitetural e demonstra migração reversível sem tabelas de negócio. Migrações futuras devem qualificar objetos com `relay.`; o search_path padrão permanece inalterado. A migração up falha se já existir namespace sem gerenciamento. A down usa RESTRICT, recusando destruir objetos dependentes. SQLx mantém `_sqlx_migrations` no schema public padrão para controle interno; não é armazenamento da aplicação. Marco 1.4 adiciona relay.outbox_events por migração separada; sem repositórios Rust, inserts ou workers.
 
 Migrações são código-fonte e devem ser commitadas com o código relacionado. `.dockerized-postgres/` é estado local ignorado, nunca histórico de migrações. Reconstruir containers preserva dados; um cluster novo exige `sqlx migrate run` explicitamente. Nem entrypoint nem partida da aplicação executam migrações ou reset automático.
 
 ## Fluxo de desenvolvimento
 
-Crie uma migração, revise SQL up/down, aplique, inspecione o schema, execute testes, teste rollback, reaplique e faça commit junto com o código. SQLx prefixa arquivos com timestamp; use nomes claros como `add_relay_namespace_comment`. `create_outbox_events` pertence ao futuro Marco 1.4. Evite `migration1`, `update_db` e `changes`. `-r` pede explicitamente arquivos up/down. Não é necessário Makefile.
+Crie uma migração, revise SQL up/down, aplique, inspecione o schema, execute testes, teste rollback, reaplique e faça commit junto com o código. SQLx prefixa arquivos com timestamp; use nomes claros como `add_relay_namespace_comment`. `create_outbox_events` é a migração do Marco 1.4; siga nomes igualmente descritivos. Evite `migration1`, `update_db` e `changes`. `-r` pede explicitamente arquivos up/down. Não é necessário Makefile.
 
 ```bash
 docker compose up -d --build --wait --wait-timeout 120
@@ -84,3 +86,5 @@ Compose fornece POSTGRES_HOST/PORT ao postgres para diagnósticos de cliente, se
 Mudar `.env` não atualiza cluster inicializado. Usuário ausente pode gerar erro TCP genérico de senha. Inspecione detalhes do servidor/usuários para distinguir de usuário existente com senha incorreta. A correção real verificou ausência de dados antes do reset destrutivo explicitamente autorizado e executou migrações existentes. Startup/shutdown Compose normal continua não destrutivo. Reset exclui todo estado; rollback de migração não corrige credenciais.
 
 Configuração Compose bruta, dumps de ambiente e ajuda SQLx podem revelar segredos; use parser que informe apenas campos não sensíveis/comparações e remova credenciais dos logs compartilhados. Veja [correção PostgreSQL](postgresql.md#correção-de-autenticação-no-cluster-local-real) e [resultados reais](validation-results.md#correção-de-autenticação-postgresql-local).
+
+A última migração atual é create_outbox_events. Revert exclui só essa tabela e seus índices/constraints, preservando relay; inspecione dados antes. Reaplique com migrate run. [Schema outbox](outbox-schema.md) documenta mapeamento e limites do rollback destrutivo.

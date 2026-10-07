@@ -82,7 +82,7 @@ docker compose exec -T app cargo test --locked
 docker compose exec -T app cargo build --locked
 ```
 
-Expect installed/pending/installed status, relay schema present/absent/present, no relay tables and no duplicate application on the second run. SQLx metadata remains after revert. To test migration generation without adding project history, run `docker compose exec -T app sqlx migrate add -r --source /tmp/milestone13-generated create_relay_schema` and inspect the two generated files.
+With current history, expect installed/pending/installed for the latest outbox migration and outbox table present/absent/present, preserving the relay schema and earlier history. The initial Milestone 1.3 validation of namespace rollback is historical; do not expect current revert to drop relay. A repeated run applies nothing. SQLx metadata remains after revert. To test migration generation without adding project history, run `docker compose exec -T app sqlx migrate add -r --source /tmp/milestone13-generated create_relay_schema` and inspect the two generated files.
 
 ### Isolated validation fixture
 
@@ -138,3 +138,27 @@ Compose supplies POSTGRES_HOST/PORT to postgres for these client diagnostics; th
 Changing `.env` does not update an initialized cluster. A missing role can produce generic TCP password-authentication failure. Inspect server details/roles to distinguish it from an existing role with a wrong password. The real-cluster repair inspected for data before the explicitly authorized destructive reset, then ran existing migrations. Normal Compose startup/shutdown remains non-destructive. Reset deletes all cluster state; migration rollback does not repair credentials.
 
 Raw Compose config, environment dumps and SQLx help can reveal secrets; inspect through a parser reporting only non-sensitive fields/equality checks and redact identifying credentials before sharing logs. See [PostgreSQL repair](postgresql.md#authentication-remediation-on-the-real-local-cluster) and [actual remediation results](validation-results.md#local-postgresql-authentication-remediation).
+
+## Outbox schema validation — Milestone 1.4
+
+These are database schema fixtures, not Rust repository integration tests. The source-controlled [SQL fixture](../../tests/sql/outbox_schema.sql) uses a transaction and final ROLLBACK: ON_ERROR_STOP=1 also causes a failed connection/session to roll back, preserving preexisting rows. It uses reserved synthetic UUIDs; a collision fails safely, so use an appropriate local database. No seed data is introduced.
+
+It asserts 25 cases: valid envelope/defaults, duplicate identity, all 11 NOT NULL fields, empty required strings, versions 0/-1/above u32, negative attempts, invalid status, completion timestamp consistency, full u32 maximum/optional UUIDs/JSON null/time offsets, and representable pending retry/terminal failure. Payload type is inspected as JSONB. No broker, retry loop or worker claim executes.
+
+```bash
+docker compose exec -T app sqlx migrate info
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app sqlx migrate info
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/outbox_schema.sql
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT count(*) AS outbox_rows FROM relay.outbox_events;"'
+```
+
+Use catalog queries for columns/types/nullability/defaults, pg_constraint for the primary key/checks, pg_indexes for index definitions and _sqlx_migrations for version/success. Exact executed queries and results are in [validation results](validation-results.md).
+
+**Destructive rollback:** only after confirming the outbox has no important data and the last migration is create_outbox_events, run migrate revert, inspect outbox absence and relay/history preservation, then migrate run and info. Do not leave the local schema reverted. Rollback loses all table rows after real data exists; it is not a production recovery guarantee. Run the four Docker Cargo checks documented above. This milestone's final developer table had zero rows after fixtures and after reapplication.
+
+The reusable [read-only catalog inspection](../../tests/sql/inspect_outbox_schema.sql) checks all columns, constraints, indexes, history and row count:
+
+```bash
+docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql
+```

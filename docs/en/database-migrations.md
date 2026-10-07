@@ -16,15 +16,17 @@ Compose's existing healthcheck gates app startup; commands do not use fixed slee
 migrations/
   20261007000000_create_relay_schema.up.sql
   20261007000000_create_relay_schema.down.sql
+  20261007175358_create_outbox_events.up.sql
+  20261007175358_create_outbox_events.down.sql
 ```
 
-Option B: create an empty `relay` namespace reserved for future relay database objects. This establishes an architectural schema boundary and demonstrates a reversible migration without business tables. Future migrations should explicitly qualify objects with `relay.`; the default search_path is unchanged. The up migration fails if an unmanaged namespace already exists. The down migration uses RESTRICT, refusing to destroy dependent objects. SQLx maintains its own `_sqlx_migrations` bookkeeping table in the default public schema; it is tooling metadata, not application storage. No outbox, repository, inserts or workers exist.
+Option B: create an empty `relay` namespace reserved for future relay database objects. This establishes an architectural schema boundary and demonstrates a reversible migration without business tables. Future migrations should explicitly qualify objects with `relay.`; the default search_path is unchanged. The up migration fails if an unmanaged namespace already exists. The down migration uses RESTRICT, refusing to destroy dependent objects. SQLx maintains its own `_sqlx_migrations` bookkeeping table in the default public schema; it is tooling metadata, not application storage. Milestone 1.4 adds relay.outbox_events through a separate migration; no Rust repository, inserts or workers exist.
 
 Migration files are source code and must be committed with the relevant code. `.dockerized-postgres/` is ignored local cluster data, never migration history. Rebuilding a container preserves data; a fresh cluster needs `sqlx migrate run` explicitly. Neither entrypoint nor application startup runs migrations or resets the database automatically.
 
 ## Development workflow
 
-Create a migration, review its up/down SQL, apply it, inspect the schema, run tests, test rollback, re-apply and commit the migration with code. SQLx uses timestamp-prefixed filenames; use clear names such as `add_relay_namespace_comment`. `create_outbox_events` belongs to future Milestone 1.4. Avoid `migration1`, `update_db` and `changes`. `-r` explicitly requests paired up/down files. No Makefile is required.
+Create a migration, review its up/down SQL, apply it, inspect the schema, run tests, test rollback, re-apply and commit the migration with code. SQLx uses timestamp-prefixed filenames; use clear names such as `add_relay_namespace_comment`. `create_outbox_events` is the Milestone 1.4 migration; use similarly descriptive names. Avoid `migration1`, `update_db` and `changes`. `-r` explicitly requests paired up/down files. No Makefile is required.
 
 ```bash
 docker compose up -d --build --wait --wait-timeout 120
@@ -84,3 +86,5 @@ Compose supplies POSTGRES_HOST/PORT to postgres for these client diagnostics; th
 Changing `.env` does not update an initialized cluster. A missing role can produce generic TCP password-authentication failure. Inspect server details/roles to distinguish it from an existing role with a wrong password. The real-cluster repair inspected for data before the explicitly authorized destructive reset, then ran existing migrations. Normal Compose startup/shutdown remains non-destructive. Reset deletes all cluster state; migration rollback does not repair credentials.
 
 Raw Compose config, environment dumps and SQLx help can reveal secrets; inspect through a parser reporting only non-sensitive fields/equality checks and redact identifying credentials before sharing logs. See [PostgreSQL repair](postgresql.md#authentication-remediation-on-the-real-local-cluster) and [actual remediation results](validation-results.md#local-postgresql-authentication-remediation).
+
+The current last migration is create_outbox_events. Revert drops only that table (and its own indexes/constraints), preserving relay; inspect for data first. Re-apply with migrate run. [Outbox schema](outbox-schema.md) documents the full mapping and destructive rollback limitations.

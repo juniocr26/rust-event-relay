@@ -80,7 +80,7 @@ Future delivery initially targets at-least-once semantics, not exactly-once deli
 | Milestone | Exploration |
 | --- | --- |
 | 0 — Foundation | Rust, Docker, configuration, tracing, shutdown, health, tests, bilingual docs (implemented) |
-| 1 — Durable event model | **1.1 envelope, 1.2 local PostgreSQL and 1.3 migration infrastructure implemented**; outbox schema, repositories and persistence integration tests remain planned |
+| 1 — Durable event model | **1.1 envelope, 1.2 local PostgreSQL and 1.3 migration infrastructure and 1.4 outbox schema implemented**; repositories and persistence integration tests remain planned |
 | 2 — First delivery adapter | RabbitMQ publisher, delivery state, retries, at-least-once semantics |
 | 3 — Reliability | Exponential backoff, DLQ, idempotency, crash recovery, poison messages |
 | 4 — Concurrency | Bounded channels, worker pools, concurrency limits, backpressure, graceful draining |
@@ -95,7 +95,7 @@ These are study milestones, not promised releases. Architecture may change when 
 - [x] 1.1 Canonical Event Envelope
 - [x] 1.2 Local PostgreSQL in Docker
 - [x] 1.3 Migration Infrastructure
-- [ ] 1.4 Outbox schema
+- [x] 1.4 Outbox schema
 - [ ] 1.5 Persistence abstraction
 - [ ] 1.6 PostgreSQL repository
 - [ ] 1.7 Integration tests
@@ -103,4 +103,25 @@ These are study milestones, not promised releases. Architecture may change when 
 
 ## Migration infrastructure — Milestone 1.3 completed
 
-SQLx CLI 0.8.6 is Docker development tooling only. Versioned reversible SQL creates an empty `relay` namespace; no application tables or Rust database dependencies. [Migration workflow](database-migrations.md) and [ADR 003](adr/003-use-versioned-sql-migrations.md) define ownership and rollback limits. Milestone 1 remains incomplete; 1.4 outbox schema is planned.
+SQLx CLI 0.8.6 is Docker development tooling only. The initial migration creates the `relay` namespace; Milestone 1.4 adds the outbox table through a new migration. No Rust database dependencies. [Migration workflow](database-migrations.md) and [ADR 003](adr/003-use-versioned-sql-migrations.md) define ownership and rollback limits. Milestone 1 remains incomplete; 1.5+ persistence and processing remain planned.
+
+## Outbox schema — Milestone 1.4 completed
+
+`relay.outbox_events` maps the unchanged canonical envelope to UUID/TEXT/BIGINT/TIMESTAMPTZ/JSONB with nullable UUID metadata, plus minimal lifecycle fields. NonZeroU32 needs bounded BIGINT to preserve its full range. The schema exists; Rust writes, producer business transactions, claims and delivery do not. See [columns/invariants/trade-offs](outbox-schema.md) and [ADR 004](adr/004-use-postgresql-transactional-outbox-schema.md).
+
+```mermaid
+flowchart LR
+    PRODUCER[Producer application - future writes]
+    TX[Same local transaction: business change + outbox insert]
+    DB[(PostgreSQL)]
+    OUTBOX[(relay.outbox_events - schema exists)]
+    RELAY[Relay readers and workers - future]
+    DEST[Destinations - future]
+    PRODUCER -.-> TX
+    TX -.-> DB
+    DB --- OUTBOX
+    OUTBOX -.-> RELAY
+    RELAY -.-> DEST
+```
+
+The producer writes durable outbox events with its own business change in one database transaction; the relay later delivers those durable events. Conceptually: BEGIN → update business state → insert relay.outbox_events (...) → COMMIT. A separate database or remote broker is outside this atomic boundary. At-least-once delivery and idempotency remain future concerns; the table alone does not guarantee exactly-once effects.

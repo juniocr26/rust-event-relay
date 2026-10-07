@@ -80,7 +80,7 @@ A futura entrega inicialmente mira semântica de pelo menos uma vez, sem entrega
 | Marco | Exploração |
 | --- | --- |
 | 0 — Fundação | Rust, Docker, configuração, tracing, encerramento, health, testes, documentação bilíngue (implementado) |
-| 1 — Modelo durável de eventos | **1.1 envelope, 1.2 PostgreSQL local e 1.3 infraestrutura de migrações implementados**; schema outbox, repositórios e testes de integração da persistência continuam planejados |
+| 1 — Modelo durável de eventos | **1.1 envelope, 1.2 PostgreSQL local e 1.3 infraestrutura de migrações e 1.4 schema outbox implementados**; repositórios e testes de integração da persistência continuam planejados |
 | 2 — Primeiro adaptador | Publicador RabbitMQ, estado de entrega, tentativas, semântica de pelo menos uma vez |
 | 3 — Confiabilidade | Backoff exponencial, DLQ, idempotência, recuperação de crashes, mensagens problemáticas |
 | 4 — Concorrência | Canais limitados, pools de workers, limites de concorrência, contrapressão, drenagem no encerramento |
@@ -95,7 +95,7 @@ São marcos de estudo, não lançamentos prometidos. A arquitetura pode mudar qu
 - [x] 1.1 Envelope canônico de eventos
 - [x] 1.2 PostgreSQL local no Docker
 - [x] 1.3 Infraestrutura de migrações
-- [ ] 1.4 Schema outbox
+- [x] 1.4 Schema outbox
 - [ ] 1.5 Abstração de persistência
 - [ ] 1.6 Repositório PostgreSQL
 - [ ] 1.7 Testes de integração
@@ -103,4 +103,25 @@ São marcos de estudo, não lançamentos prometidos. A arquitetura pode mudar qu
 
 ## Infraestrutura de migrações — Marco 1.3 concluído
 
-SQLx CLI 0.8.6 é apenas ferramenta Docker de desenvolvimento. SQL reversível versionado cria namespace `relay` vazio; sem tabelas da aplicação ou dependências Rust de banco. [Fluxo](database-migrations.md) e [ADR 003](adr/003-use-versioned-sql-migrations.md) definem responsabilidade e limites. Marco 1 continua incompleto; 1.4 schema outbox está planejado.
+SQLx CLI 0.8.6 é apenas ferramenta Docker de desenvolvimento. A migração inicial cria namespace `relay`; Marco 1.4 adiciona tabela outbox por nova migração. Sem dependências Rust de banco. [Fluxo](database-migrations.md) e [ADR 003](adr/003-use-versioned-sql-migrations.md) definem responsabilidade e limites. Marco 1 continua incompleto; 1.5+ persistência e processamento continuam planejados.
+
+## Schema outbox — Marco 1.4 concluído
+
+`relay.outbox_events` mapeia envelope canônico inalterado para UUID/TEXT/BIGINT/TIMESTAMPTZ/JSONB com metadados UUID nullable e campos mínimos de ciclo de vida. NonZeroU32 exige BIGINT limitado para preservar intervalo completo. Schema existe; gravações Rust, transações de negócio do produtor, claims e entrega ainda não. Veja [colunas/invariantes/trade-offs](outbox-schema.md) e [ADR 004](adr/004-use-postgresql-transactional-outbox-schema.md).
+
+```mermaid
+flowchart LR
+    PRODUCER[Aplicação produtora - gravação futura]
+    TX[Mesma transação local: negócio + inserção outbox]
+    DB[(PostgreSQL)]
+    OUTBOX[(relay.outbox_events - schema existente)]
+    RELAY[Leitores e workers relay - futuros]
+    DEST[Destinos - futuros]
+    PRODUCER -.-> TX
+    TX -.-> DB
+    DB --- OUTBOX
+    OUTBOX -.-> RELAY
+    RELAY -.-> DEST
+```
+
+Produtor grava eventos duráveis com sua mudança de negócio em uma transação do banco; relay entrega esses eventos depois. Conceitualmente: BEGIN → atualizar estado de negócio → inserir relay.outbox_events (...) → COMMIT. Outro banco ou broker remoto está fora da fronteira atômica. Entrega pelo menos uma vez e idempotência são preocupações futuras; tabela sozinha não garante efeitos exatamente uma vez.
