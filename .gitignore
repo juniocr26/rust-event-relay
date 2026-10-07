@@ -1,0 +1,10 @@
+/.env
+/.env.*
+!/.env.example
+/target/
+/.cargo-cache/
+/.vscode/
+/.idea/
+.DS_Store
+*.swp
+/.dockerized-postgres/

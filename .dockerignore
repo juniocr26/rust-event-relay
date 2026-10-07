@@ -1,0 +1,9 @@
+target
+.cargo-cache
+.git
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+.dockerized-postgres
