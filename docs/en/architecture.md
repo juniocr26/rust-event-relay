@@ -80,7 +80,7 @@ Future delivery initially targets at-least-once semantics, not exactly-once deli
 | Milestone | Exploration |
 | --- | --- |
 | 0 — Foundation | Rust, Docker, configuration, tracing, shutdown, health, tests, bilingual docs (implemented) |
-| 1 — Durable event model | **1.1 envelope, 1.2 local PostgreSQL and 1.3 migration infrastructure, 1.4 outbox schema and 1.5 persistence abstraction and 1.6 PostgreSQL repository implemented**; persistence integration tests remain planned |
+| 1 — Durable event model | **Closed: 1.1-1.8 implemented and validated within their documented scope**; see [closure review](milestone-1-review.md) |
 | 2 — First delivery adapter | RabbitMQ publisher, delivery state, retries, at-least-once semantics |
 | 3 — Reliability | Exponential backoff, DLQ, idempotency, crash recovery, poison messages |
 | 4 — Concurrency | Bounded channels, worker pools, concurrency limits, backpressure, graceful draining |
@@ -90,7 +90,7 @@ Future delivery initially targets at-least-once semantics, not exactly-once deli
 
 These are study milestones, not promised releases. Architecture may change when implementation evidence suggests a better design.
 
-## Milestone 1 progress (incomplete)
+## Milestone 1 progress (closed)
 
 - [x] 1.1 Canonical Event Envelope
 - [x] 1.2 Local PostgreSQL in Docker
@@ -99,11 +99,11 @@ These are study milestones, not promised releases. Architecture may change when 
 - [x] 1.5 Persistence abstraction
 - [x] 1.6 PostgreSQL repository
 - [x] 1.7 Integration tests
-- [ ] 1.8 Failure and transaction semantics
+- [x] 1.8 Failure and transaction semantics
 
 ## Migration infrastructure — Milestone 1.3 completed
 
-SQLx CLI 0.8.6 handles Docker migrations; SQLx 0.8.6 separately backs application reads. The initial migration creates the `relay` namespace; Milestone 1.4 adds the outbox table through a new migration. SQLx 0.8.6 is now an application dependency for the read adapter. [Migration workflow](database-migrations.md) and [ADR 003](adr/003-use-versioned-sql-migrations.md) define ownership and rollback limits. Milestone 1 remains incomplete; 1.6 PostgreSQL reading is implemented; processing remains planned.
+SQLx CLI 0.8.6 handles Docker migrations; SQLx 0.8.6 separately backs application reads. The initial migration creates the `relay` namespace; Milestone 1.4 adds the outbox table through a new migration. SQLx 0.8.6 is now an application dependency for the read adapter. [Migration workflow](database-migrations.md) and [ADR 003](adr/003-use-versioned-sql-migrations.md) define ownership and rollback limits. Milestone 1 is closed; PostgreSQL reading is implemented; processing remains planned.
 
 ## Outbox schema — Milestone 1.4 completed
 
@@ -115,7 +115,7 @@ flowchart LR
     TX[Same local transaction: business change + outbox insert]
     DB[(PostgreSQL)]
     OUTBOX[(relay.outbox_events - schema exists)]
-    RELAY[Relay readers and workers - future]
+    RELAY[Read adapter exists; workers future]
     DEST[Destinations - future]
     PRODUCER -.-> TX
     TX -.-> DB
@@ -143,10 +143,10 @@ flowchart LR
 
 Logic/adapter arrows to PORT mean compile-time dependency, not a runtime call sequence. Generic future callers invoke an implementation through that port; no PostgreSQL types flow inward. Producer writing remains with the producer's business transaction, not an independently committing relay append API. Snapshots are not claims: lifecycle mutation/ownership/recovery APIs are deferred, and no concurrent delivery safety or exactly-once behavior is asserted. The producer/relay handoff diagram above remains conceptual for writes and delivery.
 
-See [full contracts and open questions](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) and [test coverage](testing.md). Milestone 1 remains incomplete; 1.6 and 1.7 are implemented; 1.8 failure/transaction semantics is next.
+See [full contracts and open questions](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) and [test coverage](testing.md). Milestone 1 is closed, including 1.8 [failure/transaction semantics](failure-and-transaction-semantics.md).
 
 ## PostgreSQL repository — Milestone 1.6 implemented
 
 `src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
 
-See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.
+See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](failure-and-transaction-semantics.md). Milestone 1 is closed; later delivery work has not begun.

@@ -529,3 +529,41 @@ Additional deliberate failure probes selected only `eligibility_bounds_and_adapt
 Every successful harness case closes its test pool, drops its exact controlled database name and verifies absence by parameterized catalog query, including cases intentionally panicking or returning an ordinary error. Final read-only catalog query `SELECT count(*) FROM pg_database WHERE datname ~ '^relay_it_[0-9a-f]{32}$'` returned 0 after all runs and probes. No unrelated database was dropped or reset. Abrupt process termination or failed cleanup can still leave an isolated fixture; this is documented with exact-name manual cleanup guidance.
 
 Initial harness compilation rejected an SQLx raw_sql after_connect closure's lifetime; session deadlines were moved to PgConnectOptions startup options. No production fix was needed. All final checks passed. A dedicated PostgreSQL 18.6 CI job was added with disposable credentials; no remote GitHub run was executed. Native host execution and abrupt-process/crash recovery were not validated. Milestone 1.7 is implemented; Milestone 1.8 is next for broader failure/recovery and transaction analysis. Two-reader observation does not establish safe concurrent delivery or every concurrent-write snapshot schedule.
+
+## Milestone 1.8 and Milestone 1 closure (2026-10-08)
+
+Current execution began from clean `7cba38d`, the committed Milestone 1.7 integration suite. No applicable AGENTS.md exists. The earlier 1.7 records above are historical; every check below was executed again for this closing tree. Milestone 1.8 is documentation/review, not a crash recovery implementation. Milestone 1 is closed within acceptance criteria 1.1-1.8; no blockers remain and Milestone 2 was not begun. Closing changes are uncommitted; no commit, push or remote CI run occurred.
+
+The [review](milestone-1-review.md) found three medium documentation inconsistencies (stale status, lock-free implication, source SQL versus database migration metadata) and two low coverage/validation improvements. They were corrected in both languages. No production defect was confirmed, so no production code, dependency, Cargo.lock or migration changes were required. The complex JSON case now asserts the entire explicit fixture, normalizing only the exponent representation. One ignored case runs the unchanged 25-case schema SQL fixture in the existing isolated harness and verifies rollback leaves zero rows.
+
+### Commands and current results
+
+Cargo commands used the running app via `docker compose exec -T app`; strict rustdoc used `docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps`. Formatting was applied once with `cargo fmt` before the checks.
+
+| Executed command | Result in this execution |
+| --- | --- |
+| `docker compose exec -T app rustc --version` | Rust 1.95.0 |
+| `./scripts/check-postgres.sh` | Passed: healthy PostgreSQL, 127.0.0.1:5433 TCP probe, current/running configuration equality, authenticated role/database equality, two successful history entries |
+| `docker compose exec -T app sqlx migrate info` | Both 20261007000000 and 20261007175358 installed; no migration application necessary |
+| `cargo fmt --check` | Passed |
+| `cargo clippy --locked --all-targets --all-features -- -D warnings` | Passed |
+| `cargo test --locked` | Passed: 23 database-independent tests; 15 database cases ignored |
+| `cargo test --locked --test postgres_repository -- --ignored --test-threads=1` | Passed: 15 opt-in cases |
+| `cargo test --locked --test postgres_repository -- --ignored --test-threads=4` | Passed: 15 cases, parallel isolated databases |
+| `cargo build --locked` | Passed |
+| `RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps` | Passed |
+| `git diff --check` | Passed |
+
+The committed `tests/sql/inspect_outbox_schema.sql` was run read-only with `docker compose exec -T postgres sh -c 'PGCONNECT_TIMEOUT=5 PGOPTIONS="-c statement_timeout=5000" psql -X -w -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql`. It reported 15 columns, 11 NOT NULL fields, primary key/seven checks (PostgreSQL 18 also exposes NOT NULL as catalog constraints), identity/pending indexes, both successful migrations and zero application outbox rows. All schema fixture writes ran in a generated test database; no writes touched the application outbox. No shared database reset/rollback, credentials change or PostgreSQL restart occurred.
+
+A bounded read-only query observed PostgreSQL `18.6 (Debian 18.6-1.pgdg12+2)`, transaction isolation `read committed`, and fsync/synchronous_commit/full_page_writes `on`. These are session/configuration observations, not a power-loss or storage durability test. `SELECT count(*) FROM pg_database WHERE datname ~ '^relay_it_[0-9a-f]{32}$'` returned 0 after the final integration runs. Each harness case additionally verifies absence of its exact parameterized database name after closing pools/dropping it, including assertion/error cleanup cases. No unrelated database was removed.
+
+### Documentation and PDF checks
+
+[Failure/transaction semantics](failure-and-transaction-semantics.md) uses PostgreSQL major-version 18 and SQLx 0.8.6 official documentation; tested behavior, inspected code, published semantics and future engineering inference are labeled separately. ADRs 001-005 were retained without changing their historical decisions. README/status, architecture, project guides, storage/contract/repository/testing pages and closing review were reconciled in both languages; historical validation sections were preserved.
+
+`HANDOFF_MARCO_1.pdf` is generated from `docs/pt-BR/handoff-marco-1.md` by `scripts/generate_handoff.py` using ReportLab in an isolated temporary Python environment, without adding Rust or Dockerfile dependencies. Poppler 22.12.0 was installed only in the running development container for QA. PDF metadata and strict pypdf reopening passed; all eight A4 pages have selectable text and Portuguese accents. All pages were rendered at 110 dpi with pdftoppm and visually inspected. An initial orphan reference paragraph created a ninth page; the reference table was condensed, regenerated, and the final eight-page layout checked. Text extraction, page bounds, page numbering, relative documentation links and diff whitespace were checked. The reviewed base and uncommitted status are explicit; no credentials, personal paths or raw logs appear in the handoff.
+
+### Limits of the closing evidence
+
+The dedicated CI job was reviewed against the tested command and PostgreSQL 18.6 service; no GitHub-hosted execution was performed. Native host Rust, Windows behavior, production deployment, benchmark/performance, backup/restore exercises, abrupt-process cleanup/crash recovery, publisher/ack failure injection, query-cancellation timing, exhausted-pool integration injection and every concurrent-write schedule were not validated. No current acceptance check was blocked or skipped. These future limits do not convert persistence/observation into a working delivery guarantee; see the failure matrix and open decisions.

@@ -188,7 +188,7 @@ Distinguish Milestone 1.4 SQL schema fixtures above, these Milestone 1.5 contrac
 
 ## PostgreSQL repository integration — Milestone 1.7
 
-`cargo test --locked` remains database-independent: 14 PostgreSQL cases are ignored; the closed-pool/oversized-limit case needs no server. Opt in explicitly:
+`cargo test --locked` remains database-independent: 15 PostgreSQL cases are ignored; the closed-pool/oversized-limit case needs no server. Opt in explicitly:
 
 ```bash
 docker compose exec -T app cargo test --locked --test postgres_repository -- --ignored --test-threads=1
@@ -207,4 +207,10 @@ Coverage: empty tables and empty reads with future/terminal rows; inclusive cuto
 
 Repeated reads and two readers observe identical unchanged snapshots; complete stored rows match before/after. Selected blank required fields, infinite timestamps, negative-infinite availability and a finite date outside Chrono fail the entire batch with sources retained; correcting fixtures restores valid reads. Malformed future/terminal rows are excluded safely. Closed-pool and missing-table failures preserve typed SQLx sources and sanitized formatting. An oversized representable usize limit fails before closed-pool access. Constraints remain unchanged; unreachable negative counters, invalid versions and malformed JSONB bytes stay in unit/schema tests.
 
-These cases do not establish safety of concurrent delivery, business ordering, or snapshot behavior under every concurrent write schedule. Milestone 1.8 is next: broader failure/recovery and transaction semantics. Producer writes, claims, leases, delivery, retries and lifecycle transitions remain outside this suite.
+These cases do not establish safety of concurrent delivery, business ordering, or snapshot behavior under every concurrent write schedule. Milestone 1.8 documents [failure/recovery and transaction semantics](failure-and-transaction-semantics.md); crash injection remains unvalidated. Producer writes, claims, leases, delivery, retries and lifecycle transitions remain outside this suite.
+
+## Milestone 1 closure checks
+
+The ignored `committed_schema_fixture_validates_constraints_and_rolls_back` case executes the existing 25-case SQL fixture only in its isolated database and verifies zero rows after rollback. It does not add production writes or modify shared application state. The nested JSON fixture is compared to explicit expected content, normalizing only the large exponent spelling. The suite now has 15 opt-in cases plus one database-independent case.
+
+Run `./scripts/check-postgres.sh` and `docker compose exec -T app sqlx migrate info` before the Cargo checks above. The catalog script `tests/sql/inspect_outbox_schema.sql` is read-only; fixture writes belong to the isolated Rust case. See [review](milestone-1-review.md), [semantics](failure-and-transaction-semantics.md) and [actual closing results](validation-results.md).

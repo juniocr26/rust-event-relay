@@ -102,7 +102,7 @@ The host values above are placeholders. Direct `docker compose exec postgres psq
 | `.dockerized-postgres/` | PostgreSQL cluster data under 18/docker/ | Local/ignored; contains persistent database state |
 | `migrations/` | Database schema SQL history | Source-controlled; must be committed |
 
-The first three are generated/local state; migrations are source code. PostgreSQL data is not reconstructable merely by compiling code. Up, down, build and container recreation preserve the cluster; no entrypoint silently resets it. Migration history is never stored inside the data directory. SQLx CLI runs explicit commands, not automatic startup changes. DBeaver edits do not replace migration files as schema authority.
+The first three are generated/local state; migrations are source code. PostgreSQL data is not reconstructable merely by compiling code. Up, down, build and container recreation preserve the cluster; no entrypoint silently resets it. Versioned SQL files live in migrations/; applied public._sqlx_migrations metadata lives in PostgreSQL and physically persists in the cluster data directory. Down migrations can destroy table data even though the cluster remains. SQLx CLI runs explicit commands, not automatic startup changes. DBeaver edits do not replace migration files as schema authority.
 
 ## Deliberate destructive reset
 

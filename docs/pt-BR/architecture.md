@@ -80,7 +80,7 @@ A futura entrega inicialmente mira semântica de pelo menos uma vez, sem entrega
 | Marco | Exploração |
 | --- | --- |
 | 0 — Fundação | Rust, Docker, configuração, tracing, encerramento, health, testes, documentação bilíngue (implementado) |
-| 1 — Modelo durável de eventos | **1.1 envelope, 1.2 PostgreSQL local e 1.3 infraestrutura de migrações, 1.4 schema outbox e 1.5 abstração de persistência e 1.6 repositório PostgreSQL implementados**; testes de integração da persistência continuam planejados |
+| 1 — Modelo durável de eventos | **Fechado: 1.1-1.8 implementados e validados no escopo documentado**; veja [revisão de fechamento](milestone-1-review.md) |
 | 2 — Primeiro adaptador | Publicador RabbitMQ, estado de entrega, tentativas, semântica de pelo menos uma vez |
 | 3 — Confiabilidade | Backoff exponencial, DLQ, idempotência, recuperação de crashes, mensagens problemáticas |
 | 4 — Concorrência | Canais limitados, pools de workers, limites de concorrência, contrapressão, drenagem no encerramento |
@@ -90,7 +90,7 @@ A futura entrega inicialmente mira semântica de pelo menos uma vez, sem entrega
 
 São marcos de estudo, não lançamentos prometidos. A arquitetura pode mudar quando a implementação indicar uma solução melhor.
 
-## Progresso do Marco 1 (incompleto)
+## Progresso do Marco 1 (fechado)
 
 - [x] 1.1 Envelope canônico de eventos
 - [x] 1.2 PostgreSQL local no Docker
@@ -99,11 +99,11 @@ São marcos de estudo, não lançamentos prometidos. A arquitetura pode mudar qu
 - [x] 1.5 Abstração de persistência
 - [x] 1.6 Repositório PostgreSQL
 - [x] 1.7 Testes de integração
-- [ ] 1.8 Semântica de falhas e transações
+- [x] 1.8 Semântica de falhas e transações
 
 ## Infraestrutura de migrações — Marco 1.3 concluído
 
-SQLx CLI 0.8.6 executa migrações Docker; SQLx 0.8.6 também executa leituras da aplicação. A migração inicial cria namespace `relay`; Marco 1.4 adiciona tabela outbox por nova migração. SQLx 0.8.6 agora é dependência da aplicação para o adapter de leitura. [Fluxo](database-migrations.md) e [ADR 003](adr/003-use-versioned-sql-migrations.md) definem responsabilidade e limites. Marco 1 continua incompleto; 1.6 leitura PostgreSQL implementada; processamento posterior continua planejado.
+SQLx CLI 0.8.6 executa migrações Docker; SQLx 0.8.6 também executa leituras da aplicação. A migração inicial cria namespace `relay`; Marco 1.4 adiciona tabela outbox por nova migração. SQLx 0.8.6 agora é dependência da aplicação para o adapter de leitura. [Fluxo](database-migrations.md) e [ADR 003](adr/003-use-versioned-sql-migrations.md) definem responsabilidade e limites. Marco 1 fechado; leitura PostgreSQL implementada; processamento posterior permanece planejado.
 
 ## Schema outbox — Marco 1.4 concluído
 
@@ -115,7 +115,7 @@ flowchart LR
     TX[Mesma transação local: negócio + inserção outbox]
     DB[(PostgreSQL)]
     OUTBOX[(relay.outbox_events - schema existente)]
-    RELAY[Leitores e workers relay - futuros]
+    RELAY[Adapter existe; workers futuross]
     DEST[Destinos - futuros]
     PRODUCER -.-> TX
     TX -.-> DB
@@ -143,10 +143,10 @@ flowchart LR
 
 Setas para PORT significam dependência de compilação, não sequência de chamadas. Chamadores genéricos invocarão implementação pelo contrato; tipos PostgreSQL não entram nessa fronteira. Escrita permanece na transação de negócio do produtor, sem append relay com commit independente. Snapshots não são claims: mutações/propriedade/recuperação estão adiadas, sem afirmar segurança concorrente ou exatamente uma vez. Diagrama produtor/relay acima permanece conceitual para escrita/entrega.
 
-Veja [contratos e questões abertas](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) e [testes](testing.md). Marco 1 segue incompleto; 1.6 e 1.7 implementados; próximo passo é 1.8, falhas/transações.
+Veja [contratos e questões abertas](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) e [testes](testing.md). Marco 1 fechado, incluindo 1.8 [falhas/transações](failure-and-transaction-semantics.md).
 
 ## Repositório PostgreSQL — Marco 1.6 implementado
 
 `src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
 
-Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marco 1.7 cobre suíte completa de integração e 1.8 análise mais ampla de falhas/transações.
+Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marcos 1.7 e 1.8 concluídos: integração e [semântica de falhas/transações](failure-and-transaction-semantics.md). Marco 1 fechado; entrega futura não iniciada.

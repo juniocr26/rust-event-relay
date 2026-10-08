@@ -188,7 +188,7 @@ Distinga fixtures SQL do Marco 1.4 acima, testes Rust de contrato/modelo do 1.5 
 
 ## Integração do repositório PostgreSQL — Marco 1.7
 
-`cargo test --locked` continua independente de banco: 14 casos PostgreSQL são ignorados; pool fechado/limite excessivo dispensa servidor. Execução opt-in explícita:
+`cargo test --locked` continua independente de banco: 15 casos PostgreSQL são ignorados; pool fechado/limite excessivo dispensa servidor. Execução opt-in explícita:
 
 ```bash
 docker compose exec -T app cargo test --locked --test postgres_repository -- --ignored --test-threads=1
@@ -207,4 +207,10 @@ Cobertura: tabela vazia e leitura vazia com linhas futuras/terminais; corte incl
 
 Leituras repetidas e dois leitores observam snapshots iguais sem alterações; linhas completas coincidem antes/depois. Campos obrigatórios em branco, tempos infinitos, disponibilidade -infinity e data finita fora do Chrono falham lote inteiro com fontes preservadas; correção restaura leitura válida. Linhas inválidas futuras/terminais são excluídas. Pool fechado e tabela ausente preservam fontes SQLx tipadas e formatação sanitizada. Limite usize excessivo representável falha antes de acessar pool fechado. Constraints não mudam; contadores negativos, versões inválidas e bytes JSONB malformados permanecem nos testes unitários/de schema.
 
-Não comprova entrega concorrente segura, ordem de negócio nem snapshots sob toda sequência de escritas concorrentes. Próximo passo: Marco 1.8, análise ampla de falhas/recuperação e semântica transacional. Escritas de produtores, claims, leases, entrega, retries e transições permanecem fora desta suíte.
+Não comprova entrega concorrente segura, ordem de negócio nem snapshots sob toda sequência de escritas concorrentes. Marco 1.8 documenta [falhas/recuperação e semântica transacional](failure-and-transaction-semantics.md); injeção de crash permanece não validada. Escritas de produtores, claims, leases, entrega, retries e transições permanecem fora desta suíte.
+
+## Verificações de fechamento do Marco 1
+
+Caso ignorado `committed_schema_fixture_validates_constraints_and_rolls_back` executa fixture SQL existente de 25 casos somente no banco isolado e verifica zero linhas após rollback. Não adiciona escrita produtiva nem altera dados compartilhados. Fixture JSON aninhada é comparada ao conteúdo esperado explícito, normalizando somente grafia do expoente grande. Suíte tem 15 casos opt-in e um sem banco.
+
+Execute `./scripts/check-postgres.sh` e `docker compose exec -T app sqlx migrate info` antes das verificações Cargo acima. Script `tests/sql/inspect_outbox_schema.sql` é somente leitura; gravações fixture pertencem ao caso Rust isolado. Veja [revisão](milestone-1-review.md), [semântica](failure-and-transaction-semantics.md) e [resultados reais](validation-results.md).

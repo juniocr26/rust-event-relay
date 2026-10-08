@@ -83,4 +83,4 @@ Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses 
 
 MIT licensed; see [LICENSE](LICENSE).
 
-[PostgreSQL repository — Milestone 1.6](docs/en/postgres-repository.md). Milestone 1.7 repository integration tests are implemented and validated. Next: 1.8, broader failure/transaction analysis. See [opt-in testing](docs/en/testing.md).
+[Milestone 1 is closed](docs/en/milestone-1-review.md): envelope, PostgreSQL, migrations, schema, contracts, repository, integration and [failure/transaction semantics](docs/en/failure-and-transaction-semantics.md). Milestone 2 has not begun. [Portuguese handoff PDF](HANDOFF_MARCO_1.pdf) | [Markdown source](docs/pt-BR/handoff-marco-1.md).

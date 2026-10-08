@@ -83,4 +83,4 @@ Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver
 
 Licença MIT; consulte [LICENSE](LICENSE).
 
-[Repositório PostgreSQL — Marco 1.6](docs/pt-BR/postgres-repository.md). Testes de integração do Marco 1.7 implementados e validados. Próximo: 1.8, análise ampla de falhas/transações. Veja [testes opt-in](docs/pt-BR/testing.md).
+[Marco 1 fechado](docs/pt-BR/milestone-1-review.md): envelope, PostgreSQL, migrações, schema, contratos, repositório, integração e [semântica de falhas/transações](docs/pt-BR/failure-and-transaction-semantics.md). Marco 2 não iniciado. [PDF de handoff](HANDOFF_MARCO_1.pdf) | [Fonte Markdown](docs/pt-BR/handoff-marco-1.md).

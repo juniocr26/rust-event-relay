@@ -529,3 +529,41 @@ Probes deliberados selecionaram somente `eligibility_bounds_and_adapter_tie_brea
 Cada caso bem-sucedido fecha pool, remove seu banco pelo nome controlado exato e verifica ausência por consulta parametrizada, incluindo casos com panic ou erro retornado intencionais. Consulta final somente leitura `SELECT count(*) FROM pg_database WHERE datname ~ '^relay_it_[0-9a-f]{32}$'` retornou 0 após todas execuções/probes. Nenhum banco não relacionado removido ou resetado. Término abrupto ou limpeza malsucedida ainda pode deixar fixture isolada; documentação explica limpeza manual pelo nome exato.
 
 Compilação inicial rejeitou lifetime de closure SQLx raw_sql em after_connect; prazos de sessão foram movidos para opções de inicialização PgConnectOptions. Nenhuma correção produtiva necessária. Todas verificações finais passaram. Job CI PostgreSQL 18.6 adicionado com credenciais descartáveis; nenhuma execução remota GitHub realizada. Execução nativa no host e recuperação de término abrupto/crash não validadas. Marco 1.7 implementado; próximo é 1.8, análise ampla de falhas/recuperação e transações. Observação por dois leitores não comprova entrega concorrente segura nem snapshots sob toda sequência de escritas concorrentes.
+
+## Marco 1.8 e fechamento do Marco 1 (2026-10-08)
+
+Execução atual começou em `7cba38d` limpo, suíte 1.7 commitada. Sem AGENTS.md aplicável. Registros anteriores de 1.7 acima são históricos; todas verificações abaixo foram executadas novamente nesta árvore de fechamento. Marco 1.8 é documentação/revisão, sem implementação de recuperação de crash. Marco 1 fechado nos critérios 1.1-1.8, sem bloqueadores; Marco 2 não iniciado. Mudanças de fechamento não commitadas; sem commit, push ou execução remota de CI.
+
+[Revisão](milestone-1-review.md) encontrou três inconsistências documentais médias (status antigo, sugestão de ausência de locks, SQL fonte versus metadados no banco) e duas melhorias baixas de cobertura/validação. Corrigidas nos dois idiomas. Nenhum defeito produtivo confirmado; sem alteração produtiva, dependências, Cargo.lock ou migrações. Caso JSON complexo agora compara fixture inteira explicitamente, normalizando somente representação do expoente. Novo caso ignorado executa fixture SQL existente de 25 assertions no harness isolado e verifica zero linhas após rollback.
+
+### Comandos e resultados atuais
+
+Cargo pelo app existente via `docker compose exec -T app`; rustdoc estrito com `docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps`. Formatação aplicada uma vez com `cargo fmt` antes das verificações.
+
+| Comando executado | Resultado nesta execução |
+| --- | --- |
+| `docker compose exec -T app rustc --version` | Rust 1.95.0 |
+| `./scripts/check-postgres.sh` | Passou: health, TCP 127.0.0.1:5433, igualdade de configuração atual/containers, identidade autenticada e duas entradas de histórico bem-sucedidas |
+| `docker compose exec -T app sqlx migrate info` | 20261007000000 e 20261007175358 instaladas; nenhuma aplicação necessária |
+| `cargo fmt --check` | Passou |
+| `cargo clippy --locked --all-targets --all-features -- -D warnings` | Passou |
+| `cargo test --locked` | Passou: 23 testes sem banco; 15 casos de banco ignorados |
+| `cargo test --locked --test postgres_repository -- --ignored --test-threads=1` | Passou: 15 casos opt-in |
+| `cargo test --locked --test postgres_repository -- --ignored --test-threads=4` | Passou: 15 casos com isolamento paralelo |
+| `cargo build --locked` | Passou |
+| `RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps` | Passou |
+| `git diff --check` | Passou |
+
+Script versionado `tests/sql/inspect_outbox_schema.sql` executado somente leitura por `docker compose exec -T postgres sh -c 'PGCONNECT_TIMEOUT=5 PGOPTIONS="-c statement_timeout=5000" psql -X -w -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql`. Confirmou 15 colunas, 11 NOT NULL, chave primária/sete checks (PostgreSQL 18 também expõe NOT NULL como constraints do catálogo), índices de identidade/pending, ambas migrações e zero linhas outbox da aplicação. Todas gravações fixture ocorreram em banco gerado; nenhuma na outbox compartilhada. Sem reset/rollback compartilhado, mudança de credenciais ou restart PostgreSQL.
+
+Consulta somente leitura com prazos observou PostgreSQL `18.6 (Debian 18.6-1.pgdg12+2)`, isolamento `read committed` e fsync/synchronous_commit/full_page_writes `on`. São observações da sessão/configuração, sem teste de energia/storage. `SELECT count(*) FROM pg_database WHERE datname ~ '^relay_it_[0-9a-f]{32}$'` retornou 0 após execuções finais. Cada harness também verifica ausência do nome exato parametrizado após fechar pools/remover banco, incluindo limpeza após assertion/erro. Nenhum banco não relacionado removido.
+
+### Documentação e PDF
+
+[Semântica de falhas/transações](failure-and-transaction-semantics.md) usa documentação oficial PostgreSQL major 18 e SQLx 0.8.6, distinguindo testes, código inspecionado, semântica publicada e inferência futura. ADRs 001-005 preservados sem mudar decisões históricas. READMEs/status, arquitetura, guias, armazenamento/contratos/repositório/testes e revisão reconciliados nos dois idiomas; registros históricos preservados.
+
+`HANDOFF_MARCO_1.pdf` gerado de `docs/pt-BR/handoff-marco-1.md` por `scripts/generate_handoff.py`, com ReportLab em ambiente Python temporário isolado, sem dependências Rust/Dockerfile. Poppler 22.12.0 instalado somente no container de desenvolvimento para QA. Metadados e reabertura pypdf estrita passaram; oito páginas A4 têm texto selecionável e acentos. Todas renderizadas a 110 dpi via pdftoppm e inspecionadas visualmente. Parágrafo de referências inicialmente órfão gerou nona página; tabela condensada, PDF regenerado e layout final de oito páginas conferido. Extração textual, limites de página, numeração, links relativos e whitespace verificados. Base revisada e estado não commitado explícitos; sem credenciais, caminhos pessoais ou logs brutos no handoff.
+
+### Limites da evidência
+
+Job CI dedicado revisado frente ao comando testado e serviço PostgreSQL 18.6; nenhuma execução GitHub remota. Rust nativo no host, Windows, deploy produtivo, benchmark/desempenho, exercícios de backup/restore, limpeza/recuperação após término abrupto, injeção de falhas publisher/ack, prazo de cancelamento, pool esgotado na integração e toda sequência de escritas concorrentes não validados. Nenhum check de aceitação atual bloqueado ou pulado. Limitações futuras não transformam persistência/observação em garantia de entrega funcional; veja matriz de falhas e decisões abertas.

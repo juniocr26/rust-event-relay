@@ -102,7 +102,7 @@ Valores do host acima são placeholders. `docker compose exec postgres psql -U "
 | `.dockerized-postgres/` | Dados do cluster em 18/docker/ | Local/ignorado; estado persistente do banco |
 | `migrations/` | Histórico SQL do schema | Código-fonte; deve ser commitado |
 
-Os três primeiros são estado gerado/local; migrações são código-fonte. Dados PostgreSQL não são reconstruídos apenas compilando código. Up, down, build e recriação preservam cluster; nenhum entrypoint o reinicializa silenciosamente. Histórico de migração nunca fica no diretório de dados. SQLx CLI executa comandos explícitos, não mudanças automáticas de startup. Alterações DBeaver não substituem migrações como autoridade do schema.
+Os três primeiros são estado gerado/local; migrações são código-fonte. Dados PostgreSQL não são reconstruídos apenas compilando código. Up, down, build e recriação preservam cluster; nenhum entrypoint o reinicializa silenciosamente. Arquivos SQL versionados ficam em migrations/; metadados aplicados public._sqlx_migrations ficam no PostgreSQL e persistem fisicamente no diretório do cluster. Migrações down podem destruir dados de tabelas mesmo preservando o cluster. SQLx CLI executa comandos explícitos, não mudanças automáticas de startup. Alterações DBeaver não substituem migrações como autoridade do schema.
 
 ## Reset destrutivo deliberado
 

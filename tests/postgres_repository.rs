@@ -87,6 +87,11 @@ async fn restores_every_envelope_field_and_pending_metadata() {
             // JSONB normalizes exponent spelling. Compare against the stored semantic value.
             let stored: Value = checked(sqlx::query_scalar("SELECT payload FROM relay.outbox_events WHERE id=$1").bind(event.id()).fetch_one(&pool).await,"read stored payload");
             assert_eq!(event.payload(),&stored);
+            let mut expected: Value = serde_json::from_str(payloads[index]).unwrap();
+            if index == 0 {
+                expected["exponent"] = serde_json::from_str(&format!("1{}", "0".repeat(1000))).unwrap();
+            }
+            assert_eq!(event.payload(), &expected);
             if index==0 {
                 assert_eq!(stored["integer"].to_string(),"18446744073709551617");
                 assert_eq!(stored["decimal"].to_string(),"0.12345678901234567890123456789");
@@ -257,4 +262,27 @@ async fn harness_cleans_up_after_assertion_failure() {
 async fn harness_cleans_up_after_returned_error() {
     isolated(|_pool| async move { Err(std::io::Error::other("private fixture details").into()) })
         .await;
+}
+
+// Exercise the committed schema checks in disposable state, never application data.
+#[tokio::test]
+#[ignore = "requires PostgreSQL and CREATE DATABASE"]
+async fn committed_schema_fixture_validates_constraints_and_rolls_back() {
+    isolated(|pool| async move {
+        checked(
+            sqlx::raw_sql(include_str!("sql/outbox_schema.sql"))
+                .execute(&pool)
+                .await,
+            "committed schema assertions",
+        );
+        let rows: i64 = checked(
+            sqlx::query_scalar("SELECT count(*) FROM relay.outbox_events")
+                .fetch_one(&pool)
+                .await,
+            "verify schema fixture rollback",
+        );
+        assert_eq!(rows, 0);
+        Ok(())
+    })
+    .await;
 }

@@ -83,7 +83,7 @@ PersistenceError preserva fonte opcional `Box<dyn Error + Send + Sync>` em Error
 
 ## Async e dispatch
 
-Usa impl Future nativo estável em retorno de trait com Send explícito; implementações podem usar async fn. OutboxReader é Send + Sync. Permite chamadores genéricos e futures Send em Tokio sem async-trait ou future boxed. Dispatch estático R: OutboxReader basta para fakes e adapter planejado; não exige troca em runtime. Essa forma deliberadamente não suporta dyn. Dispatch dinâmico futuro exigirá desenho explícito de API/boxing. Veja [orientação Rust sobre traits async](https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits/).
+Usa impl Future nativo estável em retorno de trait com Send explícito; implementações podem usar async fn. OutboxReader é Send + Sync. Permite chamadores genéricos e futures Send em Tokio sem async-trait ou future boxed. Dispatch estático R: OutboxReader basta para fakes e adapter implementado; não exige troca em runtime. Essa forma deliberadamente não suporta dyn. Dispatch dinâmico futuro exigirá desenho explícito de API/boxing. Veja [orientação Rust sobre traits async](https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits/).
 
 Send é decisão de API com custo de compatibilidade se mudar depois. Dispatch estático pode aumentar código monomorfizado; evita boxing obrigatório e infraestrutura de injeção dinâmica aqui. Sem afirmação de desempenho.
 
@@ -113,4 +113,6 @@ Veja [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md), [test
 
 `src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
 
-Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marco 1.7 cobre suíte completa de integração e 1.8 análise mais ampla de falhas/transações.
+Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marcos 1.7 e 1.8 concluídos: integração e [semântica de falhas/transações](failure-and-transaction-semantics.md). Marco 1 fechado; entrega futura não iniciada.
+
+Marco 1 fechado. [Semântica de falhas/transações](failure-and-transaction-semantics.md) registra COMMIT incerto do produtor, bloqueio por dados inválidos, limites de cancelamento e janelas futuras publicação/confirmação, sem novos contratos.
