@@ -8,7 +8,7 @@ This open-source engineering portfolio and study project investigates distribute
 
 ## Current status and scope
 
-**Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a read-only PostgreSQL repository (no application writes), CI checks and bilingual documentation.
+**Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a read-only PostgreSQL repository (no application writes), isolated opt-in PostgreSQL repository integration tests, CI checks and bilingual documentation.
 
 **Planned / future exploration:** outbox writes and processing, RabbitMQ delivery, retries, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The Rust application does not persist or deliver events today. The provisional roadmap is in [architecture](docs/en/architecture.md).
 
@@ -83,4 +83,4 @@ Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses 
 
 MIT licensed; see [LICENSE](LICENSE).
 
-[PostgreSQL repository — Milestone 1.6](docs/en/postgres-repository.md). Full integration tests (1.7) and broader failure/transaction analysis (1.8) remain deferred.
+[PostgreSQL repository — Milestone 1.6](docs/en/postgres-repository.md). Milestone 1.7 repository integration tests are implemented and validated. Next: 1.8, broader failure/transaction analysis. See [opt-in testing](docs/en/testing.md).

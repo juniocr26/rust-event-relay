@@ -14,7 +14,7 @@
 │   ├── domain/event.rs
 │   ├── infrastructure/postgres/mod.rs
 │   └── persistence/ (mod.rs, model.rs, error.rs)
-├── tests/ (lifecycle.rs, event_envelope.rs, persistence_contract.rs, postgres_read_smoke.rs, sql/)
+├── tests/ (lifecycle.rs, event_envelope.rs, persistence_contract.rs, postgres_repository.rs, support/, sql/)
 ├── docs/
 │   ├── en/ (architecture, dependencies, Docker, guide, testing, validation, adr/)
 │   └── pt-BR/ (documentos equivalentes)
@@ -71,4 +71,6 @@ EventEnvelope é evento canônico; migração outbox é representação SQL dur�
 
 `src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
 
-Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes e smoke](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marco 1.7 cobre suíte completa de integração e 1.8 análise mais ampla de falhas/transações.
+Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marco 1.7 cobre suíte completa de integração e 1.8 análise mais ampla de falhas/transações.
+
+Marco 1.7 adiciona job CI dedicado PostgreSQL 18.6 com credenciais descartáveis, mantendo verificações sem banco.

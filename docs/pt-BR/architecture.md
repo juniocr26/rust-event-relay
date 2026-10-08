@@ -98,7 +98,7 @@ São marcos de estudo, não lançamentos prometidos. A arquitetura pode mudar qu
 - [x] 1.4 Schema outbox
 - [x] 1.5 Abstração de persistência
 - [x] 1.6 Repositório PostgreSQL
-- [ ] 1.7 Testes de integração
+- [x] 1.7 Testes de integração
 - [ ] 1.8 Semântica de falhas e transações
 
 ## Infraestrutura de migrações — Marco 1.3 concluído
@@ -143,10 +143,10 @@ flowchart LR
 
 Setas para PORT significam dependência de compilação, não sequência de chamadas. Chamadores genéricos invocarão implementação pelo contrato; tipos PostgreSQL não entram nessa fronteira. Escrita permanece na transação de negócio do produtor, sem append relay com commit independente. Snapshots não são claims: mutações/propriedade/recuperação estão adiadas, sem afirmar segurança concorrente ou exatamente uma vez. Diagrama produtor/relay acima permanece conceitual para escrita/entrega.
 
-Veja [contratos e questões abertas](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) e [testes](testing.md). Marco 1 segue incompleto; 1.6 implementado; 1.7 integração e 1.8 falhas/transações planejados.
+Veja [contratos e questões abertas](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) e [testes](testing.md). Marco 1 segue incompleto; 1.6 e 1.7 implementados; próximo passo é 1.8, falhas/transações.
 
 ## Repositório PostgreSQL — Marco 1.6 implementado
 
 `src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
 
-Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes e smoke](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marco 1.7 cobre suíte completa de integração e 1.8 análise mais ampla de falhas/transações.
+Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marco 1.7 cobre suíte completa de integração e 1.8 análise mais ampla de falhas/transações.

@@ -14,11 +14,11 @@ docker compose exec app cargo fmt --check
 docker compose exec app cargo clippy --locked --all-targets --all-features -- -D warnings
 ```
 
-`cargo test` also works without `--locked`; use the flag for reproducible validation. Run `cargo fmt` to apply formatting. CI uses the same checks on Rust 1.95.0. No tests need databases or brokers.
+`cargo test` also works without `--locked`; use the flag for reproducible validation. Run `cargo fmt` to apply formatting. CI uses the same checks on Rust 1.95.0. Default tests need no database or broker; PostgreSQL tests are opt-in.
 
 Current unit tests verify defaults and rejection of invalid addresses/empty environment without modifying process environment. Integration tests start a real listener on an ephemeral port, check HTTP 200 and body, request graceful shutdown and verify the listener closes. A Unix subprocess test loads an isolated `.env`, checks the startup environment log and separately sends SIGTERM/SIGINT, expecting successful exit and a final shutdown log. It requires the OS `kill` command (included in the Docker image). Its temporary files live outside the source tree. Windows skips only that Unix test. Server/process waits have deadlines; there are no external services or fixed test ports.
 
-These tests establish bootstrap correctness, not event reliability. Future milestones will add persistence/broker integration, publication/acknowledgement crash windows, retries, idempotency, poison messages, concurrency bounds and backpressure. Infrastructure tests should isolate state and inject failures; benchmarks must publish workload, hardware, methodology and measured limitations. See [validation results](validation-results.md) for commands actually executed; CI configuration is not proof of a completed GitHub run.
+These tests establish bootstrap correctness, not event reliability. Repository integration is implemented in Milestone 1.7. Future milestones will add broker integration, publication/acknowledgement crash windows, retries, idempotency, poison messages, concurrency bounds and backpressure. Infrastructure tests should isolate state and inject failures; benchmarks must publish workload, hardware, methodology and measured limitations. See [validation results](validation-results.md) for commands actually executed; CI configuration is not proof of a completed GitHub run.
 
 ## Canonical envelope tests
 
@@ -173,7 +173,7 @@ docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES
 - Generic OutboxReader usage with a one-response scripted fake, captured request and Tokio-spawned Send future.
 - Successful empty snapshots and typed unavailable failure propagation through a generic caller.
 
-The fake holds only one prepared result; it is not an in-memory engine and does not simulate eligibility filtering, locks, durability or claims. The tests do not query PostgreSQL, instantiate pools, read .env or execute SQL. Milestone 1.6 adds adapter tests and a focused smoke check; the full integration suite remains deferred to 1.7. Pending metadata uses unsigned u32; checked signed-width decoding is implemented in the adapter.
+The fake holds only one prepared result; it is not an in-memory engine and does not simulate eligibility filtering, locks, durability or claims. The tests do not query PostgreSQL, instantiate pools, read .env or execute SQL. Milestone 1.6 adds adapter tests and a focused smoke check; the integration suite is implemented in 1.7. Pending metadata uses unsigned u32; checked signed-width decoding is implemented in the adapter.
 
 ```bash
 docker compose exec -T app cargo test --locked --test persistence_contract
@@ -184,22 +184,27 @@ docker compose exec -T app cargo build --locked
 docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
 ```
 
-Distinguish Milestone 1.4 SQL schema fixtures above, these Milestone 1.5 contract/model tests, and future Milestone 1.7 PostgreSQL repository integration tests. The existing schema fixtures are unchanged and were not rerun for this Rust-only milestone. See [contract requirements](persistence-abstraction.md) and [actual validation](validation-results.md).
+Distinguish Milestone 1.4 SQL schema fixtures above, these Milestone 1.5 contract/model tests, and Milestone 1.7 PostgreSQL repository integration tests. The existing schema fixtures are unchanged and were not rerun for this Rust-only milestone. See [contract requirements](persistence-abstraction.md) and [actual validation](validation-results.md).
 
-## PostgreSQL read repository — Milestone 1.6
+## PostgreSQL repository integration — Milestone 1.7
 
-Database-independent unit tests cover faithful restoration including null JSON, preserved whitespace/IDs/time/UUIDs, version/counter ranges, timestamp infinity/overflow, exact numeric JSON and invalid JSONB versions/contents, atomic batch failure, checked LIMIT, conservative SQLSTATE classification and typed sanitized sources. The default suite skips the database smoke and needs no PostgreSQL or environment variables.
-
-The opt-in smoke creates a uniquely named database using the running container's POSTGRES variables and CREATE DATABASE privilege. Fixture DDL uses the unchanged migrations; fixture writes are outside the production repository. It closes its pool and drops only that database, including when the spawned check panics. Abrupt process termination can still require manual removal of that uniquely named fixture database. No existing outbox rows are modified. The full integration matrix is deferred to 1.7; concurrency/recovery/transaction analysis to 1.8.
+`cargo test --locked` remains database-independent: 14 PostgreSQL cases are ignored; the closed-pool/oversized-limit case needs no server. Opt in explicitly:
 
 ```bash
-docker compose exec -T app sqlx migrate info
-# Apply only if pending; never reset or rewrite migration history:
-docker compose exec -T app sqlx migrate run
-docker compose exec -T app cargo test --locked --test postgres_read_smoke -- --ignored
-docker compose exec -T app cargo fmt --check
-docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
-docker compose exec -T app cargo test --locked
-docker compose exec -T app cargo build --locked
-docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
+docker compose exec -T app cargo test --locked --test postgres_repository -- --ignored --test-threads=1
+docker compose exec -T app cargo test --locked --test postgres_repository -- --ignored --test-threads=4
+# Native/CI equivalent, with POSTGRES variables explicitly exported:
+cargo test --locked --test postgres_repository -- --ignored --test-threads=4
 ```
+
+Required variables: POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB (existing database for the administrative connection). POSTGRES_HOST defaults to postgres; POSTGRES_PORT defaults to 5432. Host execution uses 127.0.0.1 and the published port (default 5433); CI uses 127.0.0.1:5432. The harness does not load .env itself; Compose supplies it. Missing configuration or unavailable PostgreSQL fails explicitly. The role needs CREATEDB and ownership of its generated databases. CI uses PostgreSQL 18.6 with disposable test credentials in a dedicated job; its initialization role can create databases. Existing database-independent checks remain separate.
+
+Shared support creates one `relay_it_<UUID hex>` database per case, safely quotes the controlled name, and applies the two committed up migrations in chronological order. Fixtures use explicit IDs/timestamps and SQL outside the production API. It never seeds the administrative/application database. Spawned cases preserve assertion diagnostics; returned driver errors are redacted with operation/SQLSTATE diagnostics for fixture operations. Connection/acquisition waits are 10 seconds, server statements 5 seconds, locks 3 seconds, cases 45 seconds, and pool closure/drop waits 10 seconds. Cases use a barrier for independent-reader synchronization, with no fixed sleeps.
+
+After success, panic or returned error, support closes the test pool before dropping exactly its database and verifies catalog absence. Two dedicated cases exercise assertion-failure and returned-error cleanup. Abrupt process termination, server unavailability during cleanup or deadline failure may leave an isolated database; logs identify its exact generated name. Inspect ownership and remove only that exact fixture manually after closing its connections; never reset data or broadly delete databases.
+
+Coverage: empty tables and empty reads with future/terminal rows; inclusive cutoff; pending/processed/dead-letter filtering; bounded backlogs and available_at/created_at/id tie-breakers as adapter behavior. Restoration checks every envelope field and pending metadata, versions 1/u32::MAX, attempts 0/i32::MAX, optional IDs, preserved whitespace, historical timestamps, offsets and microseconds, nested/null/array/scalar JSON and exact large numbers including 1e1000. JSON comparisons use stored semantic values, allowing JSONB formatting/key normalization; timestamps compare UTC instants, not offset spelling or nanoseconds.
+
+Repeated reads and two readers observe identical unchanged snapshots; complete stored rows match before/after. Selected blank required fields, infinite timestamps, negative-infinite availability and a finite date outside Chrono fail the entire batch with sources retained; correcting fixtures restores valid reads. Malformed future/terminal rows are excluded safely. Closed-pool and missing-table failures preserve typed SQLx sources and sanitized formatting. An oversized representable usize limit fails before closed-pool access. Constraints remain unchanged; unreachable negative counters, invalid versions and malformed JSONB bytes stay in unit/schema tests.
+
+These cases do not establish safety of concurrent delivery, business ordering, or snapshot behavior under every concurrent write schedule. Milestone 1.8 is next: broader failure/recovery and transaction semantics. Producer writes, claims, leases, delivery, retries and lifecycle transitions remain outside this suite.

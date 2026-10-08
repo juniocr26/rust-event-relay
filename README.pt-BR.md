@@ -8,7 +8,7 @@ Este projeto de código aberto, estudo e portfólio investiga entrega distribuí
 
 ## Estado atual e escopo
 
-**Implementado hoje:** configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial e contratos de persistência da aplicação e repositório PostgreSQL somente leitura (sem gravações pela aplicação), verificações de CI e documentação bilíngue.
+**Implementado hoje:** configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial e contratos de persistência da aplicação e repositório PostgreSQL somente leitura (sem gravações pela aplicação), testes opt-in isolados de integração PostgreSQL, verificações de CI e documentação bilíngue.
 
 **Planejado / exploração futura:** gravação e processamento outbox, entrega RabbitMQ, tentativas, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. A aplicação Rust não persiste nem entrega eventos hoje. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture.md).
 
@@ -83,4 +83,4 @@ Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver
 
 Licença MIT; consulte [LICENSE](LICENSE).
 
-[Repositório PostgreSQL — Marco 1.6](docs/pt-BR/postgres-repository.md). Suíte completa de integração (1.7) e análise ampla de falhas/transações (1.8) permanecem adiadas.
+[Repositório PostgreSQL — Marco 1.6](docs/pt-BR/postgres-repository.md). Testes de integração do Marco 1.7 implementados e validados. Próximo: 1.8, análise ampla de falhas/transações. Veja [testes opt-in](docs/pt-BR/testing.md).

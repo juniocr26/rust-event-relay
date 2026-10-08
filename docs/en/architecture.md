@@ -98,7 +98,7 @@ These are study milestones, not promised releases. Architecture may change when 
 - [x] 1.4 Outbox schema
 - [x] 1.5 Persistence abstraction
 - [x] 1.6 PostgreSQL repository
-- [ ] 1.7 Integration tests
+- [x] 1.7 Integration tests
 - [ ] 1.8 Failure and transaction semantics
 
 ## Migration infrastructure — Milestone 1.3 completed
@@ -143,10 +143,10 @@ flowchart LR
 
 Logic/adapter arrows to PORT mean compile-time dependency, not a runtime call sequence. Generic future callers invoke an implementation through that port; no PostgreSQL types flow inward. Producer writing remains with the producer's business transaction, not an independently committing relay append API. Snapshots are not claims: lifecycle mutation/ownership/recovery APIs are deferred, and no concurrent delivery safety or exactly-once behavior is asserted. The producer/relay handoff diagram above remains conceptual for writes and delivery.
 
-See [full contracts and open questions](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) and [test coverage](testing.md). Milestone 1 remains incomplete; 1.6 is implemented; 1.7 integration tests and 1.8 failure/transaction semantics are planned.
+See [full contracts and open questions](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) and [test coverage](testing.md). Milestone 1 remains incomplete; 1.6 and 1.7 are implemented; 1.8 failure/transaction semantics is next.
 
 ## PostgreSQL repository — Milestone 1.6 implemented
 
 `src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
 
-See [query, restoration, bounds and errors](postgres-repository.md), [checks and smoke guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.
+See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.

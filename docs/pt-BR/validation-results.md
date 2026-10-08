@@ -506,3 +506,26 @@ Comandos Cargo executados via `docker compose exec -T app`; rustdoc recebeu flag
 Smoke inicial revelou panic do decoder Chrono SQLx 0.8.6 em infinity. Decoder privado com aritmética verificada corrigiu isso. Primeiro panic deixou banco fixture, removido explicitamente pelo nome gerado exato. Teste agora executa verificação em task e limpa banco inclusive após panic. Comparação posterior revelou normalização PostgreSQL da grafia de expoentes; fixture final usa grafia numérica armazenada exata e testes unitários cobrem expoentes grandes. Erro temporário de compilação de teste com fonte boxed também foi corrigido antes das verificações finais. Falhas fixture exibem texto estático, sem fontes brutas/credenciais.
 
 Inspeção final encontrou zero bancos relay_smoke_* e zero linhas na outbox do desenvolvedor. Fixtures não gravaram nessa outbox. Nenhuma validação bloqueada. Smoke não conclui matriz completa de integração/concorrência do 1.7 nem análise ampla de falhas/transações/recuperação do 1.8; sem processamento/entrega implementados. Seções históricas descrevem escopo dos marcos originais, não dependências atuais.
+
+## Marco 1.7 — Integração do repositório PostgreSQL (2026-10-08)
+
+Checkout inicialmente limpo em `c771f62`; nenhum AGENTS.md aplicável. App Docker existente informa Rust 1.95.0. Smoke histórico do Marco 1.6 substituído por `tests/postgres_repository.rs` e suporte `tests/support/mod.rs`: 14 casos PostgreSQL ignorados por padrão e um caso de falha pelo contrato público sem banco. Nenhum defeito produtivo encontrado; código produtivo, dependências, migrações, credenciais inicializadas e dados da aplicação permaneceram inalterados. Sem commit ou push.
+
+Comandos finais via `docker compose exec -T app` (flags rustdoc por `-e`):
+
+| Comando | Resultado real |
+| --- | --- |
+| `cargo fmt --check` | Passou |
+| `cargo clippy --locked --all-targets --all-features -- -D warnings` | Passou |
+| `cargo test --locked` | Passou: 23 testes; 14 casos de banco ignorados |
+| `cargo test --locked --test postgres_repository -- --ignored --test-threads=1` | Passou: 14 casos |
+| `cargo test --locked --test postgres_repository -- --ignored --test-threads=4` | Passou: 14 casos; isolamento paralelo verificado |
+| `cargo build --locked` | Passou |
+| `RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps` | Passou |
+| `git diff --check` | Passou |
+
+Probes deliberados selecionaram somente `eligibility_bounds_and_adapter_tie_breakers -- --ignored --exact`: `docker compose exec -T app env -u POSTGRES_USER cargo test --locked --test postgres_repository ...` saiu 101 com `missing required POSTGRES_USER`; sobrescrever somente POSTGRES_HOST=127.0.0.1 e POSTGRES_PORT=1 nesse comando saiu 101 após 10 segundos com falha administrativa sanitizada. Falhas esperadas comprovam que execução explícita não ignora configuração ausente/infraestrutura indisponível. Não criaram bancos nem alteraram configuração do container/servidor.
+
+Cada caso bem-sucedido fecha pool, remove seu banco pelo nome controlado exato e verifica ausência por consulta parametrizada, incluindo casos com panic ou erro retornado intencionais. Consulta final somente leitura `SELECT count(*) FROM pg_database WHERE datname ~ '^relay_it_[0-9a-f]{32}$'` retornou 0 após todas execuções/probes. Nenhum banco não relacionado removido ou resetado. Término abrupto ou limpeza malsucedida ainda pode deixar fixture isolada; documentação explica limpeza manual pelo nome exato.
+
+Compilação inicial rejeitou lifetime de closure SQLx raw_sql em after_connect; prazos de sessão foram movidos para opções de inicialização PgConnectOptions. Nenhuma correção produtiva necessária. Todas verificações finais passaram. Job CI PostgreSQL 18.6 adicionado com credenciais descartáveis; nenhuma execução remota GitHub realizada. Execução nativa no host e recuperação de término abrupto/crash não validadas. Marco 1.7 implementado; próximo é 1.8, análise ampla de falhas/recuperação e transações. Observação por dois leitores não comprova entrega concorrente segura nem snapshots sob toda sequência de escritas concorrentes.

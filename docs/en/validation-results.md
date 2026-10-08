@@ -506,3 +506,26 @@ All Cargo commands ran via `docker compose exec -T app` (rustdoc flags injected 
 Initial smoke exposed a panic in SQLx 0.8.6 Chrono decoding of infinity. Checked private timestamp decoding fixed it. The first panic left a fixture database, which was explicitly removed by its exact generated name. The test now runs the check in a spawned task and performs database cleanup even after a panic. A later numeric fixture comparison exposed PostgreSQL's normalization of exponent spelling; final fixture uses exact stored numeric spelling while unit tests cover large exponents. A temporary boxed-source test compile error was also corrected before final checks. Public fixture failure output is static; no raw sources or credentials are printed.
 
 Final catalog inspection found zero remaining relay_smoke_* databases and zero rows in the developer outbox. No fixture writes touched that outbox. No validation remains blocked. This smoke does not complete 1.7's full integration/concurrency matrix or 1.8's broader failure/transaction/recovery analysis; no processing or delivery is implemented. Existing historical validation sections below/above describe their original milestones, not current dependency scope.
+
+## Milestone 1.7 — PostgreSQL repository integration (2026-10-08)
+
+Started from clean `c771f62`; no applicable AGENTS.md exists. The running Docker app reports Rust 1.95.0. Replaced the historical Milestone 1.6 smoke with `tests/postgres_repository.rs` and shared `tests/support/mod.rs`: 14 ignored PostgreSQL cases plus one database-independent public-contract failure case. No production defect was found; production code, dependencies, migrations, initialized credentials and application data were unchanged. No commit or push was performed.
+
+Final commands ran through `docker compose exec -T app` (rustdoc flags supplied with `-e`):
+
+| Command | Actual result |
+| --- | --- |
+| `cargo fmt --check` | Passed |
+| `cargo clippy --locked --all-targets --all-features -- -D warnings` | Passed |
+| `cargo test --locked` | Passed: 23 tests; 14 database cases ignored |
+| `cargo test --locked --test postgres_repository -- --ignored --test-threads=1` | Passed: 14 cases |
+| `cargo test --locked --test postgres_repository -- --ignored --test-threads=4` | Passed: 14 cases; parallel isolation verified |
+| `cargo build --locked` | Passed |
+| `RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps` | Passed |
+| `git diff --check` | Passed |
+
+Additional deliberate failure probes selected only `eligibility_bounds_and_adapter_tie_breakers -- --ignored --exact`: `docker compose exec -T app env -u POSTGRES_USER cargo test --locked --test postgres_repository ...` exited 101 with `missing required POSTGRES_USER`; overriding only the command's POSTGRES_HOST=127.0.0.1 and POSTGRES_PORT=1 exited 101 after 10 seconds with sanitized administrative connection failure. These expected failures prove explicit opt-in does not silently skip missing/unavailable infrastructure. They did not create databases or change the container/server configuration.
+
+Every successful harness case closes its test pool, drops its exact controlled database name and verifies absence by parameterized catalog query, including cases intentionally panicking or returning an ordinary error. Final read-only catalog query `SELECT count(*) FROM pg_database WHERE datname ~ '^relay_it_[0-9a-f]{32}$'` returned 0 after all runs and probes. No unrelated database was dropped or reset. Abrupt process termination or failed cleanup can still leave an isolated fixture; this is documented with exact-name manual cleanup guidance.
+
+Initial harness compilation rejected an SQLx raw_sql after_connect closure's lifetime; session deadlines were moved to PgConnectOptions startup options. No production fix was needed. All final checks passed. A dedicated PostgreSQL 18.6 CI job was added with disposable credentials; no remote GitHub run was executed. Native host execution and abrupt-process/crash recovery were not validated. Milestone 1.7 is implemented; Milestone 1.8 is next for broader failure/recovery and transaction analysis. Two-reader observation does not establish safe concurrent delivery or every concurrent-write snapshot schedule.

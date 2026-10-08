@@ -14,7 +14,7 @@
 │   ├── domain/event.rs
 │   ├── infrastructure/postgres/mod.rs
 │   └── persistence/ (mod.rs, model.rs, error.rs)
-├── tests/ (lifecycle.rs, event_envelope.rs, persistence_contract.rs, postgres_read_smoke.rs, sql/)
+├── tests/ (lifecycle.rs, event_envelope.rs, persistence_contract.rs, postgres_repository.rs, support/, sql/)
 ├── docs/
 │   ├── en/ (architecture, dependencies, Docker, guide, testing, validation, adr/)
 │   └── pt-BR/ (equivalent documents)
@@ -42,7 +42,7 @@
 - Cargo manifest/lock: declared dependencies and exact resolution. `Cargo.lock` is tracked for this binary.
 - Dockerfile/Compose: development toolchain, mounted source, host loopback HTTP/PostgreSQL ports, database bind mount and UID/GID build arguments. `.dockerignore` excludes caches, secrets and local metadata from builds.
 - `.env.example`: safe defaults; copy it to ignored `.env`. `.gitignore` also excludes `.cargo-cache/`, `target/`, editor and OS artifacts. These generated directories are not source and should never be committed.
-- CI: format, Clippy and tests on pushes/pull requests. GitHub execution is separate from local validation.
+- CI: format, Clippy and database-independent tests on pushes/pull requests, plus a dedicated PostgreSQL 18.6 integration job using disposable credentials. GitHub execution is separate from local validation.
 - README files: entry points; LICENSE: MIT permission terms.
 
 ## Runtime dependencies
@@ -72,4 +72,4 @@ EventEnvelope describes the canonical event; the outbox migration defines durabl
 
 `src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
 
-See [query, restoration, bounds and errors](postgres-repository.md), [checks and smoke guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.
+See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.

@@ -14,11 +14,11 @@ docker compose exec app cargo fmt --check
 docker compose exec app cargo clippy --locked --all-targets --all-features -- -D warnings
 ```
 
-`cargo test` também funciona sem `--locked`; use a opção para validação reproduzível. Execute `cargo fmt` para aplicar formatação. CI usa as mesmas verificações em Rust 1.95.0. Nenhum teste exige banco ou broker.
+`cargo test` também funciona sem `--locked`; use a opção para validação reproduzível. Execute `cargo fmt` para aplicar formatação. CI usa as mesmas verificações em Rust 1.95.0. Testes padrão dispensam banco ou broker; testes PostgreSQL são opt-in.
 
 Os testes unitários atuais verificam padrões e rejeição de endereços inválidos/ambiente vazio sem mudar o ambiente do processo. Testes de integração abrem um listener real em porta efêmera, verificam HTTP 200 e corpo, solicitam encerramento gracioso e confirmam o fechamento do listener. Um teste de subprocesso Unix carrega `.env` isolado, confere o ambiente no log de partida e envia separadamente SIGTERM/SIGINT, esperando saída bem-sucedida e log final. Ele exige o comando de sistema `kill` (incluído na imagem Docker). Arquivos temporários ficam fora das fontes. Windows ignora apenas esse teste Unix. Esperas por servidor/processo têm prazos; não há serviços externos nem portas fixas nos testes.
 
-Esses testes comprovam bootstrap, não confiabilidade de eventos. Os próximos marcos adicionarão integração de persistência/broker, janelas de crash entre publicação/confirmação, tentativas, idempotência, mensagens problemáticas, limites de concorrência e contrapressão. Testes de infraestrutura devem isolar estado e injetar falhas; benchmarks precisam publicar carga, hardware, metodologia e limitações medidas. Consulte [resultados de validação](validation-results.md) para comandos executados; configurar CI não comprova uma execução concluída no GitHub.
+Esses testes comprovam bootstrap, não confiabilidade de eventos. A integração do repositório está implementada no Marco 1.7. Os próximos marcos adicionarão integração com broker, janelas de crash entre publicação/confirmação, tentativas, idempotência, mensagens problemáticas, limites de concorrência e contrapressão. Testes de infraestrutura devem isolar estado e injetar falhas; benchmarks precisam publicar carga, hardware, metodologia e limitações medidas. Consulte [resultados de validação](validation-results.md) para comandos executados; configurar CI não comprova uma execução concluída no GitHub.
 
 ## Testes do envelope canônico
 
@@ -173,7 +173,7 @@ docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES
 - Chamador OutboxReader genérico com fake de uma resposta, captura da requisição e future Send em Tokio spawn.
 - Snapshot vazio bem-sucedido e propagação de erro Unavailable pelo chamador genérico.
 
-Fake mantém um resultado preparado; não é engine em memória nem simula filtros, locks, durabilidade ou claims. Testes não consultam PostgreSQL, instanciam pools, leem .env ou executam SQL. Marco 1.6 adiciona testes do adapter e smoke focado; suíte completa fica para 1.7. Metadados usam u32 unsigned; conversão de largura assinada é implementada pelo adapter.
+Fake mantém um resultado preparado; não é engine em memória nem simula filtros, locks, durabilidade ou claims. Testes não consultam PostgreSQL, instanciam pools, leem .env ou executam SQL. Marco 1.6 adiciona testes do adapter e smoke focado; suíte completa implementada no 1.7. Metadados usam u32 unsigned; conversão de largura assinada é implementada pelo adapter.
 
 ```bash
 docker compose exec -T app cargo test --locked --test persistence_contract
@@ -184,22 +184,27 @@ docker compose exec -T app cargo build --locked
 docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
 ```
 
-Distinga fixtures SQL do Marco 1.4 acima, testes Rust de contrato/modelo do 1.5 e integração PostgreSQL futura do 1.7. Fixtures de schema permanecem inalterados e não foram reexecutados neste marco Rust. Veja [requisitos do contrato](persistence-abstraction.md) e [validação real](validation-results.md).
+Distinga fixtures SQL do Marco 1.4 acima, testes Rust de contrato/modelo do 1.5 e integração PostgreSQL do 1.7. Fixtures de schema permanecem inalterados e não foram reexecutados neste marco Rust. Veja [requisitos do contrato](persistence-abstraction.md) e [validação real](validation-results.md).
 
-## Repositório de leitura PostgreSQL — Marco 1.6
+## Integração do repositório PostgreSQL — Marco 1.7
 
-Testes unitários sem banco cobrem restauração fiel, JSON null, espaços/IDs/tempo/UUIDs preservados, intervalos de versão/tentativas, infinity/overflow temporal, JSON numérico exato e versões/conteúdo JSONB inválidos, falha integral do lote, LIMIT verificado, SQLSTATE conservador e fontes tipadas sanitizadas. Suíte padrão ignora smoke e dispensa PostgreSQL/ambiente.
-
-Smoke opt-in cria banco com nome único usando variáveis POSTGRES do container e privilégio CREATE DATABASE. DDL fixture usa migrações inalteradas; gravações ficam fora da API produtiva. Fecha pool e remove somente esse banco, inclusive se a verificação em task entrar em panic. Interrupção abrupta pode exigir limpeza manual desse banco fixture identificado. Linhas existentes não são alteradas. Matriz completa de integração fica para 1.7; concorrência/recuperação/transações para 1.8.
+`cargo test --locked` continua independente de banco: 14 casos PostgreSQL são ignorados; pool fechado/limite excessivo dispensa servidor. Execução opt-in explícita:
 
 ```bash
-docker compose exec -T app sqlx migrate info
-# Apply only if pending; never reset or rewrite migration history:
-docker compose exec -T app sqlx migrate run
-docker compose exec -T app cargo test --locked --test postgres_read_smoke -- --ignored
-docker compose exec -T app cargo fmt --check
-docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
-docker compose exec -T app cargo test --locked
-docker compose exec -T app cargo build --locked
-docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
+docker compose exec -T app cargo test --locked --test postgres_repository -- --ignored --test-threads=1
+docker compose exec -T app cargo test --locked --test postgres_repository -- --ignored --test-threads=4
+# Equivalente nativo/CI, com variáveis POSTGRES exportadas:
+cargo test --locked --test postgres_repository -- --ignored --test-threads=4
 ```
+
+Obrigatórias: POSTGRES_USER, POSTGRES_PASSWORD e POSTGRES_DB (banco existente para conexão administrativa). POSTGRES_HOST padrão postgres; POSTGRES_PORT padrão 5432. No host use 127.0.0.1 e porta publicada (padrão 5433); CI usa 127.0.0.1:5432. Harness não carrega .env; Compose fornece variáveis. Configuração ausente ou PostgreSQL indisponível falha explicitamente. Papel exige CREATEDB e propriedade dos bancos gerados. Job dedicado usa PostgreSQL 18.6 e credenciais descartáveis, com papel de inicialização capaz de criar bancos. Verificações sem banco permanecem separadas.
+
+Suporte compartilhado cria um banco `relay_it_<UUID hexadecimal>` por caso, cita com segurança o nome controlado e aplica as duas migrações up versionadas em ordem cronológica. Fixtures usam IDs/tempos explícitos e SQL fora da API produtiva. Banco administrativo/aplicativo nunca recebe fixtures. Task preserva diagnósticos de assertions; erros retornados são sanitizados, com operação/SQLSTATE para SQL fixture. Prazos: conexão/aquisição 10 segundos, instrução 5 segundos, lock 3 segundos, caso 45 segundos, fechamento de pool/remoção 10 segundos. Barreira sincroniza leitores independentes, sem sleeps fixos.
+
+Após sucesso, panic ou erro retornado, fecha pool antes de remover somente seu banco e verifica ausência no catálogo. Dois casos verificam limpeza após assertion e erro retornado. Término abrupto, indisponibilidade durante limpeza ou prazo excedido pode deixar banco isolado; log identifica nome exato. Confira propriedade e remova manualmente somente essa fixture após fechar conexões; nunca faça reset nem remoção ampla de bancos.
+
+Cobertura: tabela vazia e leitura vazia com linhas futuras/terminais; corte inclusivo; filtros pending/processed/dead_letter; backlog limitado e desempates available_at/created_at/id como comportamento do adapter. Restauração verifica todos os campos e metadados, versões 1/u32::MAX, tentativas 0/i32::MAX, UUIDs opcionais, espaços preservados, tempos históricos/offsets/microssegundos, JSON aninhado/null/arrays/escalares e números exatos, incluindo 1e1000. Comparações usam valores semânticos armazenados, permitindo normalização JSONB; timestamps comparam instante UTC, não grafia do offset ou nanossegundos.
+
+Leituras repetidas e dois leitores observam snapshots iguais sem alterações; linhas completas coincidem antes/depois. Campos obrigatórios em branco, tempos infinitos, disponibilidade -infinity e data finita fora do Chrono falham lote inteiro com fontes preservadas; correção restaura leitura válida. Linhas inválidas futuras/terminais são excluídas. Pool fechado e tabela ausente preservam fontes SQLx tipadas e formatação sanitizada. Limite usize excessivo representável falha antes de acessar pool fechado. Constraints não mudam; contadores negativos, versões inválidas e bytes JSONB malformados permanecem nos testes unitários/de schema.
+
+Não comprova entrega concorrente segura, ordem de negócio nem snapshots sob toda sequência de escritas concorrentes. Próximo passo: Marco 1.8, análise ampla de falhas/recuperação e semântica transacional. Escritas de produtores, claims, leases, entrega, retries e transições permanecem fora desta suíte.
