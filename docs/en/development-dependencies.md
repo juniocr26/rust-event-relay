@@ -8,16 +8,15 @@
 
 `CARGO_HOME` contains registry indexes, downloaded crate archives, extracted sources and git checkouts when used. It may also contain Cargo configuration or credentials; do not commit it or store secrets in tracked files. Compiled output does not belong there. `target/` contains compiled dependencies, binaries and incremental state; it does not replace the dependency source cache.
 
-Docker uses `CARGO_HOME=/app/.cargo-cache` and `CARGO_TARGET_DIR=/app/target`. The entire repository is mounted at `/app`, so both directories are physically visible on the host. No named volumes are used. The entrypoint creates absent directories as the non-root developer user. On Linux, first align UID/GID; see [Docker](docker-and-configuration.md).
+Docker uses `CARGO_HOME=/app/.cargo-cache` and `CARGO_TARGET_DIR=/app/target`. The entire repository is mounted at `/app`, so both directories are physically visible on the host. Cargo uses no named volumes; RabbitMQ separately uses its persistent named data volume. The entrypoint creates absent directories as the non-root developer user. On Linux, first align UID/GID; see [Docker](docker-and-configuration.md).
 
 If only `.cargo-cache/` is deleted, run `docker compose exec app cargo fetch --locked`; if only `target/` is deleted, run `docker compose exec app cargo build --locked`. Stop active Cargo/application processes before deleting their directories. A clean rebuild from the repository root is:
 
 ```bash
 docker compose down
 rm -rf .cargo-cache target
-docker compose up -d
-docker compose exec app cargo fetch --locked
-docker compose exec app cargo build --locked
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 docker compose exec app cargo test --locked
 ```
 
@@ -31,4 +30,6 @@ PostgreSQL follows the same visible-state philosophy through `.dockerized-postgr
 
 `src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
 
-See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](failure-and-transaction-semantics.md). Milestone 1 is closed; later delivery work has not begun.
+See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](failure-and-transaction-semantics.md). Milestone 1 is closed; [Milestone 2.1](milestone-2-1.md) adds the publisher while worker delivery remains deferred.
+
+[Milestone 2.1](milestone-2-1.md) adds Lapin 4.12.0 (Tokio, local plaintext AMQP) and URL encoding. After rebuilding artifacts, start the `http` child with `supervisorctl start http`.

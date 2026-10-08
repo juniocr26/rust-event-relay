@@ -6,8 +6,20 @@ services:
         LOCAL_UID: ${LOCAL_UID:-1000}
         LOCAL_GID: ${LOCAL_GID:-1000}
     init: true
+    # Supervisor allows HTTP 30s to drain; Docker must allow the manager to finish.
+    stop_grace_period: 35s
     working_dir: /app
     environment:
+      RABBITMQ_CONNECT_TIMEOUT_MS: ${RABBITMQ_CONNECT_TIMEOUT_MS:-10000}
+      RABBITMQ_PUBLISH_TIMEOUT_MS: ${RABBITMQ_PUBLISH_TIMEOUT_MS:-10000}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-relay.events}
+      RABBITMQ_QUEUE: ${RABBITMQ_QUEUE:-relay.local}
+      RABBITMQ_ROUTING_KEY: ${RABBITMQ_ROUTING_KEY:-event}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-relay}
       CARGO_HOME: /app/.cargo-cache
       CARGO_TARGET_DIR: /app/target
       POSTGRES_USER: ${POSTGRES_USER:-change_me}
@@ -17,6 +29,8 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     volumes:
       - .:/app
@@ -40,3 +54,23 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+  rabbitmq:
+    image: rabbitmq:4.3.6-management
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_DEFAULT_VHOST:-relay}
+    ports:
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 15s
+volumes:
+  rabbitmq-data:

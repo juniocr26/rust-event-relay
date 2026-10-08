@@ -214,3 +214,7 @@ These cases do not establish safety of concurrent delivery, business ordering, o
 The ignored `committed_schema_fixture_validates_constraints_and_rolls_back` case executes the existing 25-case SQL fixture only in its isolated database and verifies zero rows after rollback. It does not add production writes or modify shared application state. The nested JSON fixture is compared to explicit expected content, normalizing only the large exponent spelling. The suite now has 15 opt-in cases plus one database-independent case.
 
 Run `./scripts/check-postgres.sh` and `docker compose exec -T app sqlx migrate info` before the Cargo checks above. The catalog script `tests/sql/inspect_outbox_schema.sql` is read-only; fixture writes belong to the isolated Rust case. See [review](milestone-1-review.md), [semantics](failure-and-transaction-semantics.md) and [actual closing results](validation-results.md).
+
+## Milestone 2.1 tests
+
+[RabbitMQ integration, Supervisor lifecycle and management validation commands](milestone-2-1.md#test-commands-and-evidence) are opt-in. Default tests remain database/broker-independent. The real-broker proxy checks acceptance uncertainty on confirm timeout/cancellation without broker restarts.

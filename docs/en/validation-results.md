@@ -567,3 +567,28 @@ A bounded read-only query observed PostgreSQL `18.6 (Debian 18.6-1.pgdg12+2)`, t
 ### Limits of the closing evidence
 
 The dedicated CI job was reviewed against the tested command and PostgreSQL 18.6 service; no GitHub-hosted execution was performed. Native host Rust, Windows behavior, production deployment, benchmark/performance, backup/restore exercises, abrupt-process cleanup/crash recovery, publisher/ack failure injection, query-cancellation timing, exhausted-pool integration injection and every concurrent-write schedule were not validated. No current acceptance check was blocked or skipped. These future limits do not convert persistence/observation into a working delivery guarantee; see the failure matrix and open decisions.
+
+## Milestone 2.1 — 2026-10-08
+
+Executed on the user's Docker Desktop host with Rust 1.95.0, Lapin 4.12.0, RabbitMQ 4.3.6 management and preserved PostgreSQL 18.6. Changes were implemented directly without commit/push. The Milestone 1 handoff was not edited. [Milestone 2.1 scope and commands](milestone-2-1.md) supersede earlier runtime/setup descriptions.
+
+| Check | Actual result |
+| --- | --- |
+| App image rebuild and real binary build | Passed, developer user and writable Cargo mounts retained |
+| Format / strict Clippy / strict rustdoc / diff whitespace | Passed |
+| Default Rust suite | 27 passed, 18 opt-in cases ignored; no PostgreSQL/RabbitMQ needed |
+| Existing PostgreSQL integration | All 15 ignored cases passed with 4 threads |
+| RabbitMQ integration target | 2 passed: exact envelope/properties, routed ack, ack-with-return failure, confirmation timeout and post-send cancellation through isolated proxy, no retry |
+| Closed owned RabbitMQ connection | 1 opt-in library case passed |
+| Bounded stalled handshake / refused transport / typed sanitized sources | Passed in default unit tests |
+| Host management endpoint | HTTP 200 login page at exactly http://localhost:15672/ |
+| Authenticated management | `/api/whoami` and visible project vhost passed with `.env` credentials and management tag; scoped configure/write/read permissions verified with node CLI |
+| Management-port conflict detection | Temporary occupied host port reported; neither shared service nor default port changed |
+| Supervisor control | `status`, collective stop/start and named stop/start/restart passed using direct supervisorctl, executable supervisor alias and both interactive consoles |
+| Child lifecycle | HTTP unavailable while stopped and healthy after start/restart; manager PID unchanged; private developer-owned socket modes verified |
+| Unexpected child exit | SIGKILL only to managed HTTP child; automatic restart and health recovery passed |
+| Graceful shutdown | Direct binary SIGTERM/SIGINT tests passed; managed intentional stops logged shutdown requested/application stopped and expected exit 0; app recreation retained broker/database data |
+
+An initial management diagnostic attempted the permission-listing API and received 401 because the management-only tag does not grant administrative permission listing. `/api/whoami` authenticated successfully; the diagnostic was corrected to validate visible vhosts via API and actual permission regex through the node CLI. No password, tag or broker data was reset to resolve that diagnostic error.
+
+**Not directly tested:** browser form login (no host browser-control tool available), remote GitHub CI, production TLS/HA, broker power loss, real broker nack injection, prolonged HTTP drain beyond Supervisor's budget, exhausted publication-admission load, or abrupt integration-harness death. Publisher serialization failure is a defensive category, not a deliberately injected failure of the validated current envelope. HTTP/API verification is not reported as browser login. At-least-once worker delivery remains incomplete.

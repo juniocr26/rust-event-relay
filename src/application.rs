@@ -1,3 +1,4 @@
+pub mod publisher;
 use axum::{Router, routing::get};
 use std::{future::Future, io};
 use tokio::net::TcpListener;

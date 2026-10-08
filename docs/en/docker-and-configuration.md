@@ -2,12 +2,15 @@
 
 # Docker and configuration
 
-The Dockerfile is a development toolchain image, not a production deployment. It pins stable Rust 1.95.0 on Debian Bookworm, includes Bash, rustfmt, Clippy, Python 3 and SQLx CLI 0.8.6, and runs as `developer`. The version tag is pinned; the base image digest is not, so upstream image revisions may still change system packages. Compose uses an init process and a source bind mount. `sleep infinity` keeps the workspace usable even before dependencies have been downloaded.
+The Dockerfile is a development toolchain image, not a production deployment. It pins stable Rust 1.95.0 on Debian Bookworm, includes Bash, rustfmt, Clippy, Python 3, Supervisor and SQLx CLI 0.8.6, and runs as `developer`. The version tag is pinned; the base image digest is not, so upstream image revisions may still change system packages. Compose uses an init process and a source bind mount. Foreground Supervisor manages the compiled `http` child and keeps the workspace available when it is stopped. See [RabbitMQ management and Supervisor](milestone-2-1.md).
 
 ```bash
 cp .env.example .env
 # On Linux: set LOCAL_UID=$(id -u) and LOCAL_GID=$(id -g) values in .env.
-docker compose up -d --build
+# Edit RABBITMQ_DEFAULT_USER / RABBITMQ_DEFAULT_PASS in .env.
+docker compose build app
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 docker compose exec app bash
 # Inside the shell:
 cargo fetch --locked
@@ -15,10 +18,10 @@ cargo build --locked
 cargo test --locked
 cargo fmt
 cargo clippy --locked --all-targets --all-features -- -D warnings
-cargo run --locked
+supervisorctl status
 ```
 
-Use Ctrl-C to stop the foreground application and `docker compose down` to stop the development environment. Changes to source need a new run; changes to UID/GID or Dockerfile need image rebuild. On Linux the mount root must be writable by the configured UID/GID. Do not run initial Cargo commands as root. Numeric IDs default to 1000; choose a non-root ID. Existing IDs in the base image may cause user/group creation to fail: choose compatible IDs or adapt the user creation for your environment. Docker Desktop translates macOS/Windows mounts differently; Linux ownership behavior has not been tested on those systems. Windows contributors should use a shell supporting the documented commands (e.g. WSL). Bash is available via `docker compose exec app bash`.
+Use `supervisorctl stop http` inside app to stop the managed child and `docker compose down` to stop the development environment. Source changes need stop/build/start; changes to UID/GID or Dockerfile need image rebuild. On Linux the mount root must be writable by the configured UID/GID. Do not run initial Cargo commands as root. Numeric IDs default to 1000; choose a non-root ID. Existing IDs in the base image may cause user/group creation to fail: choose compatible IDs or adapt the user creation for your environment. Docker Desktop translates macOS/Windows mounts differently; Linux ownership behavior has not been tested on those systems. Windows contributors should use a shell supporting the documented commands (e.g. WSL). Bash is available via `docker compose exec app bash`.
 
 | Variable | Default | Use |
 | --- | --- | --- |
@@ -30,9 +33,9 @@ Use Ctrl-C to stop the foreground application and `docker compose down` to stop 
 | CARGO_HOME | /app/.cargo-cache | Container Cargo source/download cache |
 | CARGO_TARGET_DIR | /app/target | Container compiled artifacts |
 
-The first three are application settings. The remaining settings belong to development tooling. There are no mandatory connection strings. The SQLx wrapper constructs DATABASE_URL from Compose-injected PostgreSQL settings; the Rust binary does not consume it. RabbitMQ/Redis URLs, worker concurrency, retry and batch settings remain planned.
+The first three are application settings. The remaining settings belong to development tooling. There are no mandatory connection strings. The SQLx wrapper constructs DATABASE_URL from Compose-injected PostgreSQL settings; the Rust binary does not consume it. RabbitMQ settings are documented in [Milestone 2.1](milestone-2-1.md); Redis, worker concurrency, retry and batch settings remain planned.
 
-The binary loads `.env` from its working directory or ancestors with dotenvy; already-set process variables win. Compose separately reads root `.env` for interpolation (ports/build IDs); it does not inject all values into the container. The source mount exposes `.env` for the binary to load at runtime. To override explicitly: `docker compose exec -e RUST_LOG=debug app cargo run --locked`. An absent `.env` is valid; malformed `.env`, empty APP_ENV, invalid HTTP_ADDR or RUST_LOG, and occupied sockets cause failure.
+The binary loads `.env` from its working directory or ancestors with dotenvy; already-set process variables win. Compose separately reads root `.env` for interpolation (ports/build IDs); it does not inject all values into the container. The source mount exposes `.env` for the binary to load at runtime. An absent `.env` is valid; malformed `.env`, empty APP_ENV, invalid HTTP_ADDR or RUST_LOG, and occupied sockets cause failure.
 
 Keep `.env` and cache credentials out of Git and Docker build context. Do not place secrets in `.env.example`. The port is published on host loopback only; changing HTTP_ADDR to container loopback prevents host access. Keep port 8080 in the container or adjust the Compose container port as well. `/health` is liveness only, with no readiness dependency checks.
 
@@ -43,7 +46,10 @@ git clone https://github.com/juniocr26/rust-event-relay.git
 cd rust-event-relay
 cp .env.example .env
 # Linux: align LOCAL_UID and LOCAL_GID before building.
-docker compose up -d --build --wait --wait-timeout 120
+# Edit RabbitMQ credentials before initialization.
+docker compose build app
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 docker compose ps
 docker compose logs postgres
 docker compose exec postgres sh -c 'pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
@@ -51,10 +57,10 @@ docker compose exec postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h post
 docker compose exec app sqlx migrate run
 docker compose exec app cargo fetch --locked
 docker compose exec app cargo build --locked
-docker compose exec app cargo run --locked
+docker compose exec app supervisorctl status
 ```
 
-Compose creates a project network. `app` resolves `postgres` through Docker DNS. PostgreSQL listens internally on 5432; only the host mapping uses 5433 to avoid the other project's 5432. `app` waits for PostgreSQL's healthcheck without fixed sleeps. The workspace runs `sleep infinity` until you invoke Cargo; the application itself still needs no database connection. The startup dependency is not runtime application readiness.
+Compose creates a project network. `app` resolves `postgres` through Docker DNS. PostgreSQL listens internally on 5432; only the host mapping uses 5433 to avoid the other project's 5432. `app` waits for PostgreSQL and RabbitMQ healthchecks without fixed sleeps. Supervisor starts the compiled HTTP binary; the application itself still needs no database connection. The startup dependency is not runtime application readiness.
 
 ```mermaid
 flowchart LR
@@ -111,7 +117,10 @@ The first three are generated/local state; migrations are source code. PostgreSQ
 ```bash
 docker compose down
 rm -rf .dockerized-postgres/
-docker compose up -d --build --wait --wait-timeout 120
+# Edit RabbitMQ credentials before initialization.
+docker compose build app
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 docker compose exec app sqlx migrate run
 ```
 
@@ -146,3 +155,7 @@ Raw Compose config, environment dumps and SQLx help can reveal secrets; inspect 
 ## Persistence abstraction configuration — Milestone 1.5
 
 No new environment variables, pools or persistence tuning are introduced. The new Rust contract/model tests do not load .env or connect to PostgreSQL. SQLx CLI remains schema tooling; Milestone 1.6 adds a SQLx read adapter with an injected pool while HTTP startup stays independent of the database. Batch-size operational caps, poll interval, retry delays and maximum attempts belong to later caller/worker configuration. See [persistence decisions](persistence-abstraction.md).
+
+## RabbitMQ and program management — Milestone 2.1
+
+Open **http://localhost:15672/** and enter the same `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` set in ignored `.env`. RabbitMQ initializes management access and scoped project-vhost permissions; initialization variables do not update an existing volume. Never reset broker data for credential changes. [Full setup, deadlines, topology, exact Supervisor commands and troubleshooting](milestone-2-1.md) describes host loopback management versus internal rabbitmq:5672, the persistent broker volume and physical Supervisor config. `all` controls only app programs, currently `http`; databases remain separate Compose services.

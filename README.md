@@ -8,13 +8,13 @@ This open-source engineering portfolio and study project investigates distribute
 
 ## Current status and scope
 
-**Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a read-only PostgreSQL repository (no application writes), isolated opt-in PostgreSQL repository integration tests, CI checks and bilingual documentation.
+**Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a read-only PostgreSQL repository (no application writes), isolated opt-in PostgreSQL repository integration tests, a confirmed RabbitMQ publisher adapter, local broker management and Supervisor process control, CI checks and bilingual documentation.
 
-**Planned / future exploration:** outbox writes and processing, RabbitMQ delivery, retries, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The Rust application does not persist or deliver events today. The provisional roadmap is in [architecture](docs/en/architecture.md).
+**Planned / future exploration:** outbox writes and processing, delivery-state updates, retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture.md).
 
 ## Architecture
 
-A thin `main.rs` loads configuration, configures tracing, binds a socket and runs the application. `application.rs` owns HTTP lifecycle; `config.rs` owns parsing; `telemetry.rs` owns logging. `domain/event.rs` defines the canonical event envelope; delivery modules remain planned. SQLx 0.8.6 backs PostgreSQL reads; broker dependencies remain deferred. Compose provides local PostgreSQL; the binary does not connect to it. The persistence module exposes bounded pending snapshots and classified errors for future generic callers; `infrastructure/postgres` implements OutboxReader with an injected PgPool.
+A thin `main.rs` loads configuration, configures tracing, binds a socket and runs the application. `application.rs` owns HTTP lifecycle; `config.rs` owns parsing; `telemetry.rs` owns logging. `domain/event.rs` defines the canonical event envelope; the application publisher contract is implemented by the Lapin 4.12.0 RabbitMQ infrastructure adapter. SQLx 0.8.6 backs PostgreSQL reads. Compose provides PostgreSQL and RabbitMQ separately; the HTTP binary connects to neither service. The persistence module exposes bounded pending snapshots and classified errors for future generic callers; `infrastructure/postgres` implements OutboxReader with an injected PgPool.
 
 ## Development
 
@@ -23,13 +23,13 @@ Prerequisites: Docker Engine/Desktop with Compose v2. Native development also ne
 ```bash
 cp .env.example .env
 # Linux: edit LOCAL_UID and LOCAL_GID in .env to match id -u and id -g.
-docker compose up -d --build
-docker compose exec app cargo fetch --locked
-docker compose exec app cargo build --locked
-docker compose exec app cargo run --locked
+# Set RabbitMQ credentials in .env before startup.
+docker compose build app
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 ```
 
-In another terminal: `curl --fail http://localhost:8080/health`. Stop the foreground service with Ctrl-C. The development container itself remains available until `docker compose down`. Source code is bind-mounted; changes require restarting `cargo run` (no automatic reload).
+In another terminal: `curl --fail http://localhost:8080/health`. Supervisor manages the `http` binary. Open **http://localhost:15672/** and log in with `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` from ignored `.env`. See [Milestone 2.1](docs/en/milestone-2-1.md) for exact collective/named/interactive commands, build/start workflow and existing-volume credential handling. Source changes require stop, build and start; there is no automatic reload.
 
 ```bash
 docker compose exec app bash
@@ -42,22 +42,35 @@ Native equivalents: `cargo run --locked`, `cargo test --locked`, `cargo fmt --ch
 
 ## Configuration and recovery
 
-`.env` is ignored. Existing process variables override `.env`; absence of `.env` is supported, malformed files fail startup. Defaults: `APP_ENV=development`, `RUST_LOG=info`, `HTTP_ADDR=0.0.0.0:8080`. Compose publishes only on host loopback; `HOST_HTTP_PORT` changes the host port. Keep container port 8080 in `HTTP_ADDR` unless you also change Compose mapping.
+`.env` is ignored. Existing process variables override `.env`; the HTTP binary supports absence of `.env`, while Compose requires broker credentials; malformed files fail binary startup. Defaults: `APP_ENV=development`, `RUST_LOG=info`, `HTTP_ADDR=0.0.0.0:8080`. Compose publishes only on host loopback; `HOST_HTTP_PORT` changes the host port. Keep container port 8080 in `HTTP_ADDR` unless you also change Compose mapping.
 
-`CARGO_HOME=/app/.cargo-cache` stores registry/git dependencies; `CARGO_TARGET_DIR=/app/target` stores compiled artifacts. Both are physical host directories under the source bind mount, ignored by Git. They are created by the entrypoint, with no named volumes. Restore downloads with `cargo fetch --locked` and artifacts with `cargo build --locked` inside the container. Full recovery:
+`CARGO_HOME=/app/.cargo-cache` stores registry/git dependencies; `CARGO_TARGET_DIR=/app/target` stores compiled artifacts. Both are physical host directories under the source bind mount, ignored by Git. They are created by the entrypoint, without named Cargo volumes; RabbitMQ uses a separate persistent named volume. Restore downloads with `cargo fetch --locked` and artifacts with `cargo build --locked` inside the container. Full recovery:
 
 ```bash
 docker compose down
 rm -rf .cargo-cache target
-docker compose up -d
-docker compose exec app cargo fetch --locked
-docker compose exec app cargo build --locked
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 docker compose exec app cargo test --locked
 ```
 
 ## Local PostgreSQL
 
-Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses POSTGRES_DB/USER/PASSWORD from your local configuration, matching persisted cluster credentials. Changing initialization variables does not update an existing cluster. `.dockerized-postgres/` persists through Compose down. SQLx CLI 0.8.6 provides explicit migrations creating the relay namespace and relay.outbox_events; application writes and delivery remain future work. See [PostgreSQL and destructive reset](docs/en/postgresql.md) and [migration commands](docs/en/database-migrations.md).
+Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses POSTGRES_DB/USER/PASSWORD from your local configuration, matching persisted cluster credentials. Changing initialization variables does not update an existing cluster. `.dockerized-postgres/` persists through Compose down. SQLx CLI 0.8.6 provides explicit migrations creating the relay namespace and relay.outbox_events; application writes and outbox worker delivery remain future work. See [PostgreSQL and destructive reset](docs/en/postgresql.md) and [migration commands](docs/en/database-migrations.md).
+
+## RabbitMQ and Supervisor
+
+```bash
+docker compose exec app bash
+supervisorctl status
+supervisorctl stop all
+supervisorctl start all
+supervisorctl stop http
+supervisorctl start http
+supervisorctl restart http
+```
+
+The same arguments work with `supervisor`; run either command without arguments for its interactive console. `all` controls app programs only, currently `http`. Browser login and initialization behavior are documented in [Milestone 2.1](docs/en/milestone-2-1.md).
 
 ## Documentation
 
@@ -79,8 +92,8 @@ Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses 
 
 ## Limits and philosophy
 
-`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. Graceful HTTP shutdown has no forced timeout yet; long-lived requests could delay termination. There is no authentication, producer writes, relay processing, performance measurement or production deployment image. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
+`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. The binary has graceful HTTP shutdown; Supervisor bounds child shutdown to 30 seconds. There is no HTTP application authentication, producer writes, relay processing, performance measurement or production deployment image. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
 
 MIT licensed; see [LICENSE](LICENSE).
 
-[Milestone 1 is closed](docs/en/milestone-1-review.md): envelope, PostgreSQL, migrations, schema, contracts, repository, integration and [failure/transaction semantics](docs/en/failure-and-transaction-semantics.md). Milestone 2 has not begun. [Portuguese handoff PDF](HANDOFF_MARCO_1.pdf) | [Markdown source](docs/pt-BR/handoff-marco-1.md).
+[Milestone 1 is closed](docs/en/milestone-1-review.md): envelope, PostgreSQL, migrations, schema, contracts, repository, integration and [failure/transaction semantics](docs/en/failure-and-transaction-semantics.md). [Milestone 2.1](docs/en/milestone-2-1.md) implements the publisher; delivery state and at-least-once orchestration remain deferred. [Portuguese handoff PDF](HANDOFF_MARCO_1.pdf) | [Markdown source](docs/pt-BR/handoff-marco-1.md).

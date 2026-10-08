@@ -40,3 +40,32 @@ jobs:
           rustup toolchain install 1.95.0 --profile minimal
           rustup default 1.95.0
       - run: cargo test --locked --test postgres_repository -- --ignored --test-threads=4
+  rabbitmq-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      rabbitmq:
+        image: rabbitmq:4.3.6-management
+        env:
+          RABBITMQ_DEFAULT_USER: relay_test
+          RABBITMQ_DEFAULT_PASS: disposable_test_password
+          RABBITMQ_DEFAULT_VHOST: relay
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_running"
+          --health-interval 5s --health-timeout 5s --health-retries 24
+    env:
+      RABBITMQ_HOST: 127.0.0.1
+      RABBITMQ_PORT: 5672
+      RABBITMQ_DEFAULT_USER: relay_test
+      RABBITMQ_DEFAULT_PASS: disposable_test_password
+      RABBITMQ_DEFAULT_VHOST: relay
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup default 1.95.0
+      - run: cargo test --locked --test rabbitmq_publisher -- --ignored
+      - run: cargo test --locked --lib infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable -- --ignored

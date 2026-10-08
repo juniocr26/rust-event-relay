@@ -2,10 +2,14 @@
 
 # Architecture
 
+## Milestone 2.1 — Publisher and local process control
+
+The application now exposes `EventPublisher`; `infrastructure/rabbitmq.rs` implements it with Lapin and owns AMQP connection, topology, mandatory routing and confirmation. The HTTP runtime remains independent of adapter calls. Supervisor manages the compiled HTTP program; RabbitMQ and PostgreSQL remain separate Compose services. No use case connects snapshots to publication yet. See [scope and semantics](milestone-2-1.md) and [ADR 006](adr/006-rabbitmq-publisher-and-supervisor.md). Milestone 2 delivery state/ownership/retries remain deferred; at-least-once delivery is not complete.
+
 ## Implemented foundation
 
 `main` → configuration and telemetry → TCP listener → application HTTP lifecycle.
-The application accepts an injected shutdown future, so lifecycle tests use a real ephemeral socket without global signal state. It has no delivery or storage logic. The event domain lives in `src/domain/event.rs`; focused persistence interfaces now exist separately; no runtime adapter or broker abstraction is connected.
+The application accepts an injected shutdown future, so lifecycle tests use a real ephemeral socket without global signal state. It has no delivery or storage logic. The event domain lives in `src/domain/event.rs`; focused persistence interfaces now exist separately; the publisher adapter exists but is not wired to HTTP or an outbox worker.
 
 ## Canonical event envelope — Milestone 1.1 implemented
 
@@ -149,4 +153,4 @@ See [full contracts and open questions](persistence-abstraction.md), [ADR 005](a
 
 `src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
 
-See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](failure-and-transaction-semantics.md). Milestone 1 is closed; later delivery work has not begun.
+See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](failure-and-transaction-semantics.md). Milestone 1 is closed; [Milestone 2.1](milestone-2-1.md) adds the publisher while worker delivery remains deferred.

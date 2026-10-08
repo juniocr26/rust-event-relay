@@ -567,3 +567,28 @@ Consulta somente leitura com prazos observou PostgreSQL `18.6 (Debian 18.6-1.pgd
 ### Limites da evidência
 
 Job CI dedicado revisado frente ao comando testado e serviço PostgreSQL 18.6; nenhuma execução GitHub remota. Rust nativo no host, Windows, deploy produtivo, benchmark/desempenho, exercícios de backup/restore, limpeza/recuperação após término abrupto, injeção de falhas publisher/ack, prazo de cancelamento, pool esgotado na integração e toda sequência de escritas concorrentes não validados. Nenhum check de aceitação atual bloqueado ou pulado. Limitações futuras não transformam persistência/observação em garantia de entrega funcional; veja matriz de falhas e decisões abertas.
+
+## Marco 2.1 — 2026-10-08
+
+Executado no host Docker Desktop do usuário com Rust 1.95.0, Lapin 4.12.0, RabbitMQ 4.3.6 management e PostgreSQL 18.6 preservado. Implementação direta sem commit/push. Handoff do Marco 1 não foi editado. [Escopo e comandos do Marco 2.1](milestone-2-1.md) substituem descrições anteriores de setup/runtime.
+
+| Verificação | Resultado real |
+| --- | --- |
+| Rebuild da imagem app e build do binário real | Passaram; usuário developer e montagens Cargo graváveis mantidos |
+| Formatação / Clippy estrito / rustdoc estrito / whitespace do diff | Passaram |
+| Suíte Rust padrão | 27 passaram, 18 casos opt-in ignorados; sem necessidade de PostgreSQL/RabbitMQ |
+| Integração PostgreSQL existente | 15 casos ignorados passaram com 4 threads |
+| Target integração RabbitMQ | 2 passaram: envelope/propriedades exatos, ack roteado, falha de ack com retorno, timeout de confirm e cancelamento pós-envio por proxy isolado, sem retry |
+| Conexão RabbitMQ própria fechada | 1 caso opt-in de biblioteca passou |
+| Handshake retido com prazo / transporte recusado / fontes tipadas sanitizadas | Passaram na suíte unitária padrão |
+| Endpoint management no host | HTTP 200 com página de login exatamente em http://localhost:15672/ |
+| Management autenticado | `/api/whoami` e vhost visível passaram com credenciais `.env` e tag management; configure/write/read escopados verificados via CLI do nó |
+| Detecção de conflito de porta | Porta temporária ocupada informada; nenhum serviço compartilhado ou porta padrão alterados |
+| Controle Supervisor | Status, stop/start coletivos e stop/start/restart por nome passaram com supervisorctl direto, alias executável supervisor e ambos consoles interativos |
+| Ciclo do filho | HTTP indisponível quando parado e saudável após start/restart; PID manager mantido; modos/propriedade developer do socket privado verificados |
+| Saída inesperada | SIGKILL somente no filho HTTP gerenciado; reinício automático e recuperação de health passaram |
+| Encerramento gracioso | Testes diretos SIGTERM/SIGINT passaram; stops gerenciados registraram shutdown requested/application stopped e saída esperada 0; recriação app preservou dados de broker/banco |
+
+Diagnóstico management inicial tentou listar permissões via API e recebeu 401, pois tag management não concede listagem administrativa. `/api/whoami` autenticou corretamente; diagnóstico foi corrigido para validar vhosts visíveis via API e regex efetivas pelo CLI do nó. Nenhuma senha, tag ou dado do broker foi resetado para resolver esse erro de diagnóstico.
+
+**Não testados diretamente:** login pelo formulário do navegador (sem ferramenta de controle do navegador do host), CI remoto GitHub, TLS/HA produtivos, power loss do broker, injeção real de nack, drenagem HTTP além do orçamento Supervisor, carga esgotando admissão de publicação ou morte abrupta do harness. Falha de serialização é categoria defensiva, sem injeção deliberada no envelope validado atual. Verificação HTTP/API não é relatada como login de navegador. Entrega pelo menos uma vez por worker continua incompleta.

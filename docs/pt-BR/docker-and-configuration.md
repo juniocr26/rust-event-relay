@@ -2,12 +2,15 @@
 
 # Docker e configuração
 
-O Dockerfile é uma imagem de ferramentas de desenvolvimento, não de implantação em produção. Fixa Rust estável 1.95.0 sobre Debian Bookworm, inclui Bash, rustfmt, Clippy, Python 3 e SQLx CLI 0.8.6 e executa como `developer`. A tag de versão é fixa; o digest da imagem base não é, portanto revisões upstream ainda podem mudar pacotes de sistema. Compose usa um processo init e montagem do código do host. `sleep infinity` mantém o workspace utilizável antes do download das dependências.
+O Dockerfile é uma imagem de ferramentas de desenvolvimento, não de implantação em produção. Fixa Rust estável 1.95.0 sobre Debian Bookworm, inclui Bash, rustfmt, Clippy, Python 3, Supervisor e SQLx CLI 0.8.6 e executa como `developer`. A tag de versão é fixa; o digest da imagem base não é, portanto revisões upstream ainda podem mudar pacotes de sistema. Compose usa um processo init e montagem do código do host. Supervisor em primeiro plano gerencia o filho compilado `http` e mantém workspace disponível enquanto ele está parado. Veja [RabbitMQ management e Supervisor](milestone-2-1.md).
 
 ```bash
 cp .env.example .env
 # No Linux: ajuste no .env os valores LOCAL_UID=$(id -u) e LOCAL_GID=$(id -g).
-docker compose up -d --build
+# Edit RABBITMQ_DEFAULT_USER / RABBITMQ_DEFAULT_PASS in .env.
+docker compose build app
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 docker compose exec app bash
 # Dentro do shell:
 cargo fetch --locked
@@ -15,10 +18,10 @@ cargo build --locked
 cargo test --locked
 cargo fmt
 cargo clippy --locked --all-targets --all-features -- -D warnings
-cargo run --locked
+supervisorctl status
 ```
 
-Use Ctrl-C para parar a aplicação em primeiro plano e `docker compose down` para parar o ambiente. Mudanças no código exigem nova execução; mudanças de UID/GID ou Dockerfile exigem reconstrução da imagem. No Linux, a raiz montada precisa permitir escrita pelo UID/GID configurado. Não execute os primeiros comandos Cargo como root. IDs numéricos padrão são 1000; escolha ID sem privilégios. IDs existentes na imagem base podem impedir a criação de usuário/grupo: escolha IDs compatíveis ou adapte a criação para seu ambiente. Docker Desktop traduz montagens macOS/Windows de maneira diferente; o comportamento de propriedade Linux não foi testado nesses sistemas. No Windows, use um shell compatível com os comandos (por exemplo WSL). Bash está disponível via `docker compose exec app bash`.
+Use `supervisorctl stop http` dentro do app para parar o filho gerenciado e `docker compose down` para parar o ambiente. Mudanças no código exigem stop/build/start; mudanças de UID/GID ou Dockerfile exigem reconstrução da imagem. No Linux, a raiz montada precisa permitir escrita pelo UID/GID configurado. Não execute os primeiros comandos Cargo como root. IDs numéricos padrão são 1000; escolha ID sem privilégios. IDs existentes na imagem base podem impedir a criação de usuário/grupo: escolha IDs compatíveis ou adapte a criação para seu ambiente. Docker Desktop traduz montagens macOS/Windows de maneira diferente; o comportamento de propriedade Linux não foi testado nesses sistemas. No Windows, use um shell compatível com os comandos (por exemplo WSL). Bash está disponível via `docker compose exec app bash`.
 
 | Variável | Padrão | Uso |
 | --- | --- | --- |
@@ -30,9 +33,9 @@ Use Ctrl-C para parar a aplicação em primeiro plano e `docker compose down` pa
 | CARGO_HOME | /app/.cargo-cache | Cache de fontes/downloads Cargo no container |
 | CARGO_TARGET_DIR | /app/target | Artefatos compilados no container |
 
-As três primeiras são configurações da aplicação. As demais pertencem às ferramentas de desenvolvimento. Não há strings de conexão obrigatórias. O wrapper SQLx constrói DATABASE_URL com configurações PostgreSQL injetadas pelo Compose; o binário Rust não a consome. URLs de RabbitMQ/Redis, concorrência de workers, tentativas e batches continuam planejados.
+As três primeiras são configurações da aplicação. As demais pertencem às ferramentas de desenvolvimento. Não há strings de conexão obrigatórias. O wrapper SQLx constrói DATABASE_URL com configurações PostgreSQL injetadas pelo Compose; o binário Rust não a consome. Configuração RabbitMQ está no [Marco 2.1](milestone-2-1.md); Redis, concorrência de workers, tentativas e batches continuam planejados.
 
-O binário carrega `.env` do diretório de trabalho ou ancestrais com dotenvy; variáveis já existentes no processo têm precedência. Compose lê separadamente o `.env` da raiz para interpolação (portas/IDs); não injeta todos os valores no container. A montagem do código expõe `.env` para leitura pelo binário em execução. Para sobrescrever explicitamente: `docker compose exec -e RUST_LOG=debug app cargo run --locked`. A ausência de `.env` é válida; `.env` malformado, APP_ENV vazio, HTTP_ADDR ou RUST_LOG inválidos e sockets ocupados causam falha.
+O binário carrega `.env` do diretório de trabalho ou ancestrais com dotenvy; variáveis já existentes no processo têm precedência. Compose lê separadamente o `.env` da raiz para interpolação (portas/IDs); não injeta todos os valores no container. A montagem do código expõe `.env` para leitura pelo binário em execução. A ausência de `.env` é válida; `.env` malformado, APP_ENV vazio, HTTP_ADDR ou RUST_LOG inválidos e sockets ocupados causam falha.
 
 Mantenha `.env` e credenciais de cache fora do Git e do contexto de build Docker. Não coloque segredos em `.env.example`. A porta é publicada apenas no loopback do host; mudar HTTP_ADDR para loopback do container impede acesso pelo host. Mantenha 8080 no container ou ajuste também a porta interna no Compose. `/health` indica apenas liveness, sem verificações de readiness das dependências.
 
@@ -43,7 +46,10 @@ git clone https://github.com/juniocr26/rust-event-relay.git
 cd rust-event-relay
 cp .env.example .env
 # Linux: alinhe LOCAL_UID e LOCAL_GID antes do build.
-docker compose up -d --build --wait --wait-timeout 120
+# Edit RabbitMQ credentials before initialization.
+docker compose build app
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 docker compose ps
 docker compose logs postgres
 docker compose exec postgres sh -c 'pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
@@ -51,10 +57,10 @@ docker compose exec postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" psql -h post
 docker compose exec app sqlx migrate run
 docker compose exec app cargo fetch --locked
 docker compose exec app cargo build --locked
-docker compose exec app cargo run --locked
+docker compose exec app supervisorctl status
 ```
 
-Compose cria uma rede do projeto. `app` resolve `postgres` pelo DNS do Docker. PostgreSQL escuta internamente em 5432; apenas o mapeamento no host usa 5433, evitando a porta 5432 do outro projeto. `app` aguarda o healthcheck sem sleeps fixos. O workspace executa `sleep infinity` até você chamar Cargo; a aplicação ainda não exige conexão ao banco. A dependência de partida não é readiness da aplicação em execução.
+Compose cria uma rede do projeto. `app` resolve `postgres` pelo DNS do Docker. PostgreSQL escuta internamente em 5432; apenas o mapeamento no host usa 5433, evitando a porta 5432 do outro projeto. `app` aguarda healthchecks PostgreSQL e RabbitMQ sem sleeps fixos. Supervisor inicia HTTP compilado; a aplicação ainda não exige conexão ao banco. A dependência de partida não é readiness da aplicação em execução.
 
 ```mermaid
 flowchart LR
@@ -111,7 +117,10 @@ Os três primeiros são estado gerado/local; migrações são código-fonte. Dad
 ```bash
 docker compose down
 rm -rf .dockerized-postgres/
-docker compose up -d --build --wait --wait-timeout 120
+# Edit RabbitMQ credentials before initialization.
+docker compose build app
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 docker compose exec app sqlx migrate run
 ```
 
@@ -146,3 +155,7 @@ Configuração Compose bruta, dumps de ambiente e ajuda SQLx podem revelar segre
 ## Configuração da abstração — Marco 1.5
 
 Sem novas variáveis, pools ou tuning de persistência. Novos testes Rust não carregam .env nem conectam PostgreSQL. SQLx CLI continua ferramenta de schema; Marco 1.6 adiciona adapter SQLx de leitura com pool injetado, mantendo bootstrap HTTP independente do banco. Limites operacionais de lote, intervalo de polling, delays e máximo de tentativas pertencem à configuração futura do chamador/worker. Veja [decisões de persistência](persistence-abstraction.md).
+
+## RabbitMQ e gestão de programas — Marco 2.1
+
+Abra **http://localhost:15672/** e digite os mesmos `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` do `.env` ignorado. RabbitMQ inicializa acesso management e permissões do vhost do projeto; variáveis iniciais não atualizam volume existente. Nunca resete broker para alterar credenciais. [Setup completo, prazos, topologia, comandos Supervisor e diagnóstico](milestone-2-1.md) explica management loopback no host versus rabbitmq:5672 interno, volume persistente do broker e config física Supervisor. `all` controla só programas do app, hoje `http`; bancos ficam em serviços Compose separados.

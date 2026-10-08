@@ -2,10 +2,14 @@
 
 # Arquitetura
 
+## Marco 2.1 — Publisher e gestão local de processos
+
+A aplicação agora expõe `EventPublisher`; `infrastructure/rabbitmq.rs` implementa com Lapin e controla conexão AMQP, topologia, mandatory e confirms. Runtime HTTP continua independente das chamadas ao adapter. Supervisor gerencia HTTP compilado; RabbitMQ e PostgreSQL permanecem serviços Compose separados. Nenhum use case conecta snapshots à publicação. Veja [escopo/semântica](milestone-2-1.md) e [ADR 006](adr/006-rabbitmq-publisher-and-supervisor.md). Estado/propriedade/retries do Marco 2 ficam adiados; entrega pelo menos uma vez não está completa.
+
 ## Base implementada
 
 `main` → configuração e telemetria → listener TCP → ciclo de vida HTTP da aplicação.
-A aplicação aceita uma future de encerramento injetada; os testes usam um socket real com porta efêmera, sem estado global de sinais. Não há lógica de entrega ou armazenamento. O domínio de eventos está em `src/domain/event.rs`; interfaces focadas de persistência agora existem separadamente; sem adapter em runtime ou abstração de broker conectados.
+A aplicação aceita uma future de encerramento injetada; os testes usam um socket real com porta efêmera, sem estado global de sinais. Não há lógica de entrega ou armazenamento. O domínio de eventos está em `src/domain/event.rs`; interfaces focadas de persistência agora existem separadamente; publisher existe, mas não está conectado ao HTTP nem a worker outbox.
 
 ## Envelope canônico de eventos — Marco 1.1 implementado
 

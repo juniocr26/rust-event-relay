@@ -214,3 +214,7 @@ Não comprova entrega concorrente segura, ordem de negócio nem snapshots sob to
 Caso ignorado `committed_schema_fixture_validates_constraints_and_rolls_back` executa fixture SQL existente de 25 casos somente no banco isolado e verifica zero linhas após rollback. Não adiciona escrita produtiva nem altera dados compartilhados. Fixture JSON aninhada é comparada ao conteúdo esperado explícito, normalizando somente grafia do expoente grande. Suíte tem 15 casos opt-in e um sem banco.
 
 Execute `./scripts/check-postgres.sh` e `docker compose exec -T app sqlx migrate info` antes das verificações Cargo acima. Script `tests/sql/inspect_outbox_schema.sql` é somente leitura; gravações fixture pertencem ao caso Rust isolado. Veja [revisão](milestone-1-review.md), [semântica](failure-and-transaction-semantics.md) e [resultados reais](validation-results.md).
+
+## Testes do Marco 2.1
+
+[Comandos de integração RabbitMQ, ciclo Supervisor e validação management](milestone-2-1.md#comandos-de-teste-e-evidências) são opt-in. Suíte padrão continua independente de banco/broker. Proxy com broker real verifica aceitação incerta após timeout/cancelamento sem reiniciar broker.

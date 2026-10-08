@@ -15,9 +15,8 @@ Se apenas `.cargo-cache/` for removido, execute `docker compose exec app cargo f
 ```bash
 docker compose down
 rm -rf .cargo-cache target
-docker compose up -d
-docker compose exec app cargo fetch --locked
-docker compose exec app cargo build --locked
+docker compose run --rm --no-deps app cargo build --locked
+python3 scripts/start-local.py
 docker compose exec app cargo test --locked
 ```
 
@@ -32,3 +31,5 @@ PostgreSQL segue a mesma filosofia de estado visível com `.dockerized-postgres/
 `src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
 
 Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marcos 1.7 e 1.8 concluídos: integração e [semântica de falhas/transações](failure-and-transaction-semantics.md). Marco 1 fechado; entrega futura não iniciada.
+
+[Marco 2.1](milestone-2-1.md) adiciona Lapin 4.12.0 (Tokio, AMQP local plaintext) e encoding de URL. Após reconstruir artefatos, inicie filho `http` com `supervisorctl start http`.
