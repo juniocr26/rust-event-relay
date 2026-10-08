@@ -173,7 +173,7 @@ docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES
 - Chamador OutboxReader genérico com fake de uma resposta, captura da requisição e future Send em Tokio spawn.
 - Snapshot vazio bem-sucedido e propagação de erro Unavailable pelo chamador genérico.
 
-Fake mantém um resultado preparado; não é engine em memória nem simula filtros, locks, durabilidade ou claims. Testes não consultam PostgreSQL, instanciam pools, leem .env ou executam SQL. Conformidade de adapter/integração segue sem teste até 1.6/1.7. Metadados usam u32 unsigned; conversão de largura assinada é responsabilidade futura do adapter.
+Fake mantém um resultado preparado; não é engine em memória nem simula filtros, locks, durabilidade ou claims. Testes não consultam PostgreSQL, instanciam pools, leem .env ou executam SQL. Marco 1.6 adiciona testes do adapter e smoke focado; suíte completa fica para 1.7. Metadados usam u32 unsigned; conversão de largura assinada é implementada pelo adapter.
 
 ```bash
 docker compose exec -T app cargo test --locked --test persistence_contract
@@ -185,3 +185,21 @@ docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no
 ```
 
 Distinga fixtures SQL do Marco 1.4 acima, testes Rust de contrato/modelo do 1.5 e integração PostgreSQL futura do 1.7. Fixtures de schema permanecem inalterados e não foram reexecutados neste marco Rust. Veja [requisitos do contrato](persistence-abstraction.md) e [validação real](validation-results.md).
+
+## Repositório de leitura PostgreSQL — Marco 1.6
+
+Testes unitários sem banco cobrem restauração fiel, JSON null, espaços/IDs/tempo/UUIDs preservados, intervalos de versão/tentativas, infinity/overflow temporal, JSON numérico exato e versões/conteúdo JSONB inválidos, falha integral do lote, LIMIT verificado, SQLSTATE conservador e fontes tipadas sanitizadas. Suíte padrão ignora smoke e dispensa PostgreSQL/ambiente.
+
+Smoke opt-in cria banco com nome único usando variáveis POSTGRES do container e privilégio CREATE DATABASE. DDL fixture usa migrações inalteradas; gravações ficam fora da API produtiva. Fecha pool e remove somente esse banco, inclusive se a verificação em task entrar em panic. Interrupção abrupta pode exigir limpeza manual desse banco fixture identificado. Linhas existentes não são alteradas. Matriz completa de integração fica para 1.7; concorrência/recuperação/transações para 1.8.
+
+```bash
+docker compose exec -T app sqlx migrate info
+# Apply only if pending; never reset or rewrite migration history:
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app cargo test --locked --test postgres_read_smoke -- --ignored
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
+```

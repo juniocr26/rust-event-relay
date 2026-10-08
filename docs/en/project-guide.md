@@ -12,8 +12,9 @@
 │   ├── application.rs
 │   ├── telemetry.rs
 │   ├── domain/event.rs
+│   ├── infrastructure/postgres/mod.rs
 │   └── persistence/ (mod.rs, model.rs, error.rs)
-├── tests/ (lifecycle.rs, event_envelope.rs, persistence_contract.rs, sql/)
+├── tests/ (lifecycle.rs, event_envelope.rs, persistence_contract.rs, postgres_read_smoke.rs, sql/)
 ├── docs/
 │   ├── en/ (architecture, dependencies, Docker, guide, testing, validation, adr/)
 │   └── pt-BR/ (equivalent documents)
@@ -54,7 +55,7 @@
 | tracing | Structured lifecycle events |
 | tracing-subscriber | JSON formatting and environment filter parsing |
 
-Serde and serde_json provide envelope JSON serialization; UUID generates v7 event IDs; Chrono supplies UTC timestamps. Errors use the standard library; no thiserror, Rust database driver or broker dependencies are present. `domain/event.rs` contains real envelope behavior, not an empty architecture layer. Compose supplies local PostgreSQL with physical data storage; SQLx migrations define the relay namespace and outbox table; Rust persistence contracts now exist separately; no PostgreSQL adapter or application writes exist. See [PostgreSQL](postgresql.md) and [ADR 002](adr/002-use-postgresql-for-durable-event-storage.md). No Makefile or separate development Compose override is necessary for the current commands.
+Serde and serde_json provide envelope JSON serialization; UUID generates v7 event IDs; Chrono supplies UTC timestamps. Errors use the standard library; no direct thiserror or broker dependency is present; SQLx supplies the PostgreSQL driver. `domain/event.rs` contains real envelope behavior, not an empty architecture layer. Compose supplies local PostgreSQL with physical data storage; SQLx migrations define the relay namespace and outbox table; Rust persistence contracts now exist separately; a read-only PostgreSQL adapter exists; application writes remain deferred. See [PostgreSQL](postgresql.md) and [ADR 002](adr/002-use-postgresql-for-durable-event-storage.md). No Makefile or separate development Compose override is necessary for the current commands.
 
 The intended public repository name is `reliable-event-relay`; the existing local checkout folder can keep its current name. The Cargo package and project title use the intended name. The GitHub description is the first README sentence and Cargo description; no remote repository settings are changed by this scaffold.
 
@@ -66,3 +67,9 @@ The intended public repository name is `reliable-event-relay`; the existing loca
 - `tests/persistence_contract.rs`: five Rust-level tests and a scripted single-response fake; no database, environment reads or alternate production repository.
 
 EventEnvelope describes the canonical event; the outbox migration defines durable SQL representation; these persistence contracts define what future application callers expect; the PostgreSQL adapter and signed-width/row/error mappings belong to Milestone 1.6. No empty adapter placeholder is added. Runtime configuration/HTTP lifecycle remain independent. See [design details](persistence-abstraction.md) and [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md).
+
+## PostgreSQL repository — Milestone 1.6 implemented
+
+`src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
+
+See [query, restoration, bounds and errors](postgres-repository.md), [checks and smoke guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.

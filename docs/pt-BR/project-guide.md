@@ -12,8 +12,9 @@
 │   ├── application.rs
 │   ├── telemetry.rs
 │   ├── domain/event.rs
+│   ├── infrastructure/postgres/mod.rs
 │   └── persistence/ (mod.rs, model.rs, error.rs)
-├── tests/ (lifecycle.rs, event_envelope.rs, persistence_contract.rs, sql/)
+├── tests/ (lifecycle.rs, event_envelope.rs, persistence_contract.rs, postgres_read_smoke.rs, sql/)
 ├── docs/
 │   ├── en/ (architecture, dependencies, Docker, guide, testing, validation, adr/)
 │   └── pt-BR/ (documentos equivalentes)
@@ -53,7 +54,7 @@
 | tracing | Eventos estruturados do ciclo de vida |
 | tracing-subscriber | Formatação JSON e interpretação de filtros |
 
-Serde e serde_json fornecem serialização JSON do envelope; UUID gera IDs v7; Chrono fornece timestamps UTC. Erros usam a biblioteca padrão; não há thiserror, driver Rust de banco ou dependências de broker. `domain/event.rs` contém comportamento real do envelope, não uma camada vazia. Compose fornece PostgreSQL local com armazenamento físico; migrações SQLx definem namespace relay e tabela outbox; contratos Rust de persistência existem separadamente; sem adapter PostgreSQL ou gravações pela aplicação. Consulte [PostgreSQL](postgresql.md) e [ADR 002](adr/002-use-postgresql-for-durable-event-storage.md). Não são necessários Makefile nem override Compose separado para os comandos atuais.
+Serde e serde_json fornecem serialização JSON do envelope; UUID gera IDs v7; Chrono fornece timestamps UTC. Erros usam a biblioteca padrão; não há dependência direta de thiserror ou broker; SQLx fornece driver PostgreSQL. `domain/event.rs` contém comportamento real do envelope, não uma camada vazia. Compose fornece PostgreSQL local com armazenamento físico; migrações SQLx definem namespace relay e tabela outbox; contratos Rust de persistência existem separadamente; adapter PostgreSQL somente leitura implementado; gravações pela aplicação ficam adiadas. Consulte [PostgreSQL](postgresql.md) e [ADR 002](adr/002-use-postgresql-for-durable-event-storage.md). Não são necessários Makefile nem override Compose separado para os comandos atuais.
 
 O nome pretendido do repositório público é `reliable-event-relay`; a pasta local existente pode manter seu nome atual. O pacote Cargo e o título usam o nome pretendido. A descrição GitHub é a primeira frase do README inglês e a descrição Cargo; este scaffold não altera configurações de repositórios remotos.
 
@@ -65,3 +66,9 @@ O nome pretendido do repositório público é `reliable-event-relay`; a pasta lo
 - `tests/persistence_contract.rs`: cinco testes Rust e fake de uma resposta; sem banco, leitura de ambiente ou repositório alternativo de produção.
 
 EventEnvelope é evento canônico; migração outbox é representação SQL durável; contratos definem expectativa de futuros chamadores; adapter PostgreSQL e mapeamentos de largura assinada/linhas/erros pertencem ao Marco 1.6. Sem placeholder vazio de adapter. Configuração/runtime HTTP permanecem independentes. Veja [detalhes](persistence-abstraction.md) e [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md).
+
+## Repositório PostgreSQL — Marco 1.6 implementado
+
+`src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
+
+Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes e smoke](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marco 1.7 cobre suíte completa de integração e 1.8 análise mais ampla de falhas/transações.

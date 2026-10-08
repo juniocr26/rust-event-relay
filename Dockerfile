@@ -1,5 +1,5 @@
 FROM rust:1.95.0-bookworm
-# Database migrations are development tooling, not application dependencies.
+# SQLx CLI provides development migrations; the application uses SQLx separately.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 \
     && rm -rf /var/lib/apt/lists/*

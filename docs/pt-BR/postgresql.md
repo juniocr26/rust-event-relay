@@ -8,7 +8,7 @@ O Marco 1.2 adiciona apenas um serviço PostgreSQL local, configuração, health
 
 A [imagem oficial](https://hub.docker.com/_/postgres) usa `/var/lib/postgresql/18/docker` no PostgreSQL 18. Compose monta `.dockerized-postgres/` em `/var/lib/postgresql`, deixando os arquivos em `.dockerized-postgres/18/docker/`, sem volumes de dados nomeados ou anônimos. Recriar containers e executar `docker compose down` preserva esses arquivos. Esse diretório local não é uma estratégia de backup de produção.
 
-O binário Rust ainda não lê configurações de banco nem estabelece conexões. O wrapper SQLx constrói `DATABASE_URL` com configurações Compose para comandos de migração; nenhuma dependência Rust de banco ou tipo de configuração sem uso foi adicionado. `/health` continua indicando liveness HTTP. `depends_on: service_healthy` condiciona a partida do container de desenvolvimento, e o healthcheck executa `SELECT 1` via TCP com as credenciais configuradas. Usa o endereço de rede `POSTGRES_HOST`, evitando o loopback com regra `trust`, e suprime a saída. Valida autenticação e acesso ao banco, sem verificar disponibilidade do schema ou readiness contínua após a partida.
+O binário Rust ainda não lê configurações de banco nem estabelece conexões. O wrapper SQLx constrói `DATABASE_URL` com configurações Compose para comandos de migração; SQLx agora é dependência do adapter de leitura; não há configuração de banco no bootstrap HTTP. `/health` continua indicando liveness HTTP. `depends_on: service_healthy` condiciona a partida do container de desenvolvimento, e o healthcheck executa `SELECT 1` via TCP com as credenciais configuradas. Usa o endereço de rede `POSTGRES_HOST`, evitando o loopback com regra `trust`, e suprime a saída. Valida autenticação e acesso ao banco, sem verificar disponibilidade do schema ou readiness contínua após a partida.
 
 ## Útil para a arquitetura pretendida
 
@@ -86,7 +86,7 @@ Use 127.0.0.1 para corresponder à publicação IPv4 deliberada e evitar ambigui
 
 ## Responsabilidade pelo schema
 
-[migrations/](../../migrations/) contém o histórico SQL canônico versionado, gerenciado pelo SQLx CLI 0.8.6 no Docker. DBeaver serve para inspeção, consultas e depuração; mudanças pretendidas pertencem a migrações. Dados físicos `.dockerized-postgres/18/docker/` são estado local ignorado e sobrevivem a up, down, build e recriação. Rollback não exclui esse diretório. Marco 1.3 cria apenas namespace relay vazio; Marco 1.4 adiciona schema outbox; persistência pela aplicação permanece futura.
+[migrations/](../../migrations/) contém o histórico SQL canônico versionado, gerenciado pelo SQLx CLI 0.8.6 no Docker. DBeaver serve para inspeção, consultas e depuração; mudanças pretendidas pertencem a migrações. Dados físicos `.dockerized-postgres/18/docker/` são estado local ignorado e sobrevivem a up, down, build e recriação. Rollback não exclui esse diretório. Marco 1.3 cria apenas namespace relay vazio; Marco 1.4 adiciona schema outbox; Marco 1.6 adiciona leitura pela aplicação; gravações permanecem futuras.
 
 ## Correção de autenticação no cluster local real
 
@@ -98,3 +98,9 @@ Os dois bancos não-template tinham apenas public, sem relações/rotinas de usu
 ### Revalidação focada da autenticação
 
 Na revalidação de 2026-10-07, o contêiner estava parado. Após `docker compose start postgres`, o cluster existente aceitou exatamente as credenciais atuais do `.env` pela rede Docker e pela porta publicada no host. Uma senha incorreta foi rejeitada nas duas rotas, confirmando autenticação real, não uma regra `trust`. A falha histórica não foi reproduzida; não houve alteração de senha, criação de usuário, reset ou execução de migrações nesta revalidação. O healthcheck foi corrigido para testar SQL autenticado; `pg_isready` no loopback não comprovava a senha.
+
+## Repositório PostgreSQL — Marco 1.6 implementado
+
+`src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
+
+Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes e smoke](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marco 1.7 cobre suíte completa de integração e 1.8 análise mais ampla de falhas/transações.

@@ -61,7 +61,7 @@ impl From<EventType> for String {
 /// Stable event identity and metadata, independent of persistence or delivery.
 /// Private fields preserve validation; deserialization restores the original ID/time.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(try_from = "EventEnvelopeJson")]
+#[serde(try_from = "EventEnvelopeParts")]
 pub struct EventEnvelope {
     id: Uuid,
     event_type: EventType,
@@ -99,6 +99,11 @@ impl EventEnvelope {
             causation_id: None,
             payload,
         })
+    }
+
+    /// Restores existing values using the same validation as deserialization.
+    pub fn restore(parts: EventEnvelopeParts) -> Result<Self, EventError> {
+        parts.try_into()
     }
 
     pub fn with_correlation_id(mut self, id: Uuid) -> Self {
@@ -154,23 +159,24 @@ fn validate(
     NonZeroU32::new(version).ok_or(EventError::ZeroSchemaVersion)
 }
 
-// Wire representation validates restored data without generating new identity/time.
+/// Restoration input, validated when converted into an envelope.
+/// Identity and timestamps are supplied by the caller and never regenerated.
 #[derive(Deserialize)]
-struct EventEnvelopeJson {
-    id: Uuid,
-    event_type: EventType,
-    aggregate_type: String,
-    aggregate_id: String,
-    schema_version: u32,
-    occurred_at: DateTime<Utc>,
-    correlation_id: Option<Uuid>,
-    causation_id: Option<Uuid>,
-    payload: Value,
+pub struct EventEnvelopeParts {
+    pub id: Uuid,
+    pub event_type: EventType,
+    pub aggregate_type: String,
+    pub aggregate_id: String,
+    pub schema_version: u32,
+    pub occurred_at: DateTime<Utc>,
+    pub correlation_id: Option<Uuid>,
+    pub causation_id: Option<Uuid>,
+    pub payload: Value,
 }
 
-impl TryFrom<EventEnvelopeJson> for EventEnvelope {
+impl TryFrom<EventEnvelopeParts> for EventEnvelope {
     type Error = EventError;
-    fn try_from(value: EventEnvelopeJson) -> Result<Self, Self::Error> {
+    fn try_from(value: EventEnvelopeParts) -> Result<Self, Self::Error> {
         let schema_version = validate(
             &value.aggregate_type,
             &value.aggregate_id,

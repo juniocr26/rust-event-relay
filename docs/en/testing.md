@@ -173,7 +173,7 @@ docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES
 - Generic OutboxReader usage with a one-response scripted fake, captured request and Tokio-spawned Send future.
 - Successful empty snapshots and typed unavailable failure propagation through a generic caller.
 
-The fake holds only one prepared result; it is not an in-memory engine and does not simulate eligibility filtering, locks, durability or claims. The tests do not query PostgreSQL, instantiate pools, read .env or execute SQL. Adapter conformance and repository integration remain untested until Milestones 1.6/1.7. Pending metadata uses unsigned u32; checked signed-width decoding is future adapter responsibility.
+The fake holds only one prepared result; it is not an in-memory engine and does not simulate eligibility filtering, locks, durability or claims. The tests do not query PostgreSQL, instantiate pools, read .env or execute SQL. Milestone 1.6 adds adapter tests and a focused smoke check; the full integration suite remains deferred to 1.7. Pending metadata uses unsigned u32; checked signed-width decoding is implemented in the adapter.
 
 ```bash
 docker compose exec -T app cargo test --locked --test persistence_contract
@@ -185,3 +185,21 @@ docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no
 ```
 
 Distinguish Milestone 1.4 SQL schema fixtures above, these Milestone 1.5 contract/model tests, and future Milestone 1.7 PostgreSQL repository integration tests. The existing schema fixtures are unchanged and were not rerun for this Rust-only milestone. See [contract requirements](persistence-abstraction.md) and [actual validation](validation-results.md).
+
+## PostgreSQL read repository — Milestone 1.6
+
+Database-independent unit tests cover faithful restoration including null JSON, preserved whitespace/IDs/time/UUIDs, version/counter ranges, timestamp infinity/overflow, exact numeric JSON and invalid JSONB versions/contents, atomic batch failure, checked LIMIT, conservative SQLSTATE classification and typed sanitized sources. The default suite skips the database smoke and needs no PostgreSQL or environment variables.
+
+The opt-in smoke creates a uniquely named database using the running container's POSTGRES variables and CREATE DATABASE privilege. Fixture DDL uses the unchanged migrations; fixture writes are outside the production repository. It closes its pool and drops only that database, including when the spawned check panics. Abrupt process termination can still require manual removal of that uniquely named fixture database. No existing outbox rows are modified. The full integration matrix is deferred to 1.7; concurrency/recovery/transaction analysis to 1.8.
+
+```bash
+docker compose exec -T app sqlx migrate info
+# Apply only if pending; never reset or rewrite migration history:
+docker compose exec -T app sqlx migrate run
+docker compose exec -T app cargo test --locked --test postgres_read_smoke -- --ignored
+docker compose exec -T app cargo fmt --check
+docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo build --locked
+docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps
+```

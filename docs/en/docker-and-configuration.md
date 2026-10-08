@@ -145,4 +145,4 @@ Raw Compose config, environment dumps and SQLx help can reveal secrets; inspect 
 
 ## Persistence abstraction configuration — Milestone 1.5
 
-No new environment variables, pools or persistence tuning are introduced. The new Rust contract/model tests do not load .env or connect to PostgreSQL. Existing Docker PostgreSQL/SQLx setup remains schema tooling; the Rust binary still has no database adapter. Batch-size operational caps, poll interval, retry delays and maximum attempts belong to later caller/worker configuration. See [persistence decisions](persistence-abstraction.md).
+No new environment variables, pools or persistence tuning are introduced. The new Rust contract/model tests do not load .env or connect to PostgreSQL. SQLx CLI remains schema tooling; Milestone 1.6 adds a SQLx read adapter with an injected pool while HTTP startup stays independent of the database. Batch-size operational caps, poll interval, retry delays and maximum attempts belong to later caller/worker configuration. See [persistence decisions](persistence-abstraction.md).

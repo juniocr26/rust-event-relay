@@ -4,7 +4,7 @@
 
 ## Purpose and implemented boundary
 
-`src/persistence/` defines application-facing outbox types, classified errors and **one read-only contract**, `OutboxReader`. Future relay logic can depend on these Rust semantics instead of SQL, driver types or a database row. This is deliberately a first boundary, not a complete processing engine: there is no concrete adapter, runtime database connection, insert, claim, transition or delivery behavior. SQLx remains Docker migration tooling only.
+`src/persistence/` defines application-facing outbox types, classified errors and **one read-only contract**, `OutboxReader`. Future relay logic can depend on these Rust semantics instead of SQL, driver types or a database row. This is deliberately a first boundary, not a complete processing engine: Milestone 1.6 adds a concrete read adapter; the HTTP bootstrap has no database connection, insert, claim, transition or delivery behavior. SQLx 0.8.6 now also backs the read-only PostgreSQL adapter.
 
 The scope is proportional to the unresolved ownership problem. A bounded read is useful and has precise semantics today. Producer append and ID-only lifecycle updates would communicate transactional/concurrency guarantees that the current schema and service cannot yet provide; they are intentionally absent. No generic Repository<T>, giant CRUD interface or empty infrastructure modules are introduced.
 
@@ -12,7 +12,7 @@ The scope is proportional to the unresolved ownership problem. A bounded read is
 flowchart LR
     APP[Future relay application logic]
     PORT[OutboxReader and application models]
-    ADAPTER[Future PostgreSQL adapter - Milestone 1.6]
+    ADAPTER[PostgreSQL adapter - Milestone 1.6]
     DB[(relay.outbox_events)]
     APP -->|compile-time dependency| PORT
     ADAPTER -->|implements and depends inward| PORT
@@ -105,6 +105,12 @@ Future flow is durable backlog → bounded retrieval → bounded in-memory work 
 
 The current schema index can support deterministic availability/creation/ID selection, but this first contract promises no specific order. Concurrent completion and rescheduling may reorder delivery. UUID v7 is not business ordering; aggregate ordering would need explicit capability and trade-offs later.
 
-The abstraction adds types/interface cost that a tiny CRUD service might not need. It hides driver details but risks hiding essential transaction semantics, which is why the read/no-claim guarantee is explicit. Fakes help test generic usage but do not simulate database locking, durability or recovery. Other adapters are possible; database portability is not the goal. Open questions are ownership/recovery boundaries, mutation conflict/idempotency rules, attempt-count update timing, producer duplicate policy, operational bounds and aggregate ordering. Milestone 1.6 owns the PostgreSQL adapter and driver dependency; 1.7 owns repository integration tests. Neither is implemented or validated here.
+The abstraction adds types/interface cost that a tiny CRUD service might not need. It hides driver details but risks hiding essential transaction semantics, which is why the read/no-claim guarantee is explicit. Fakes help test generic usage but do not simulate database locking, durability or recovery. Other adapters are possible; database portability is not the goal. Open questions are ownership/recovery boundaries, mutation conflict/idempotency rules, attempt-count update timing, producer duplicate policy, operational bounds and aggregate ordering. Milestone 1.6 owns the PostgreSQL adapter and driver dependency; 1.7 owns repository integration tests. The adapter is implemented with a focused smoke check; the full integration suite remains deferred.
 
 See [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md), [test coverage](testing.md), [actual validation](validation-results.md) and [outbox schema](outbox-schema.md).
+
+## PostgreSQL repository — Milestone 1.6 implemented
+
+`src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
+
+See [query, restoration, bounds and errors](postgres-repository.md), [checks and smoke guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.

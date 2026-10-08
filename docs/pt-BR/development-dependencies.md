@@ -26,3 +26,9 @@ A remoção descarta apenas downloads/artefatos ignorados, não fontes ou `Cargo
 Cargo nativo normalmente usa `~/.cargo` para dependências e `target/` do repositório para builds. Para usar os mesmos caminhos explícitos nativamente: `CARGO_HOME="$PWD/.cargo-cache" CARGO_TARGET_DIR="$PWD/target" cargo fetch --locked`. Artefatos nativos e do container dependem da plataforma; use `cargo clean` ao alternar targets/toolchains incompatíveis. Um lockfile válido sozinho não permite recuperação offline após apagar todos os caches de fontes.
 
 PostgreSQL segue a mesma filosofia de estado visível com `.dockerized-postgres/`, mas contém dados de banco em vez de artefatos Cargo regeneráveis. A recuperação acima preserva o banco. `docker compose down` preserva os três diretórios. Consulte [armazenamento do banco e reset deliberado](docker-and-configuration.md).
+
+## Repositório PostgreSQL — Marco 1.6 implementado
+
+`src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
+
+Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes e smoke](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marco 1.7 cobre suíte completa de integração e 1.8 análise mais ampla de falhas/transações.

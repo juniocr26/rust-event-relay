@@ -484,3 +484,25 @@ The unit tests cover default configuration and rejection cases. The HTTP test us
 ## Foundation limitations (previous validation)
 
 Native host Rust, Windows signal behavior, Linux host UID/GID portability, GitHub-hosted CI execution and production deployment were not validated. No PostgreSQL, RabbitMQ, Redis, webhook delivery, retries, idempotency, backpressure or crash recovery was implemented or tested. There are no benchmarks or throughput/latency claims. Health indicates only HTTP liveness. The development workspace container remains running after validation; the temporary live HTTP process ended when Compose was stopped for recovery. Start the service with `docker compose exec app cargo run --locked`.
+
+## Milestone 1.6 — PostgreSQL repository (2026-10-08)
+
+Checkout started clean at `223953f` after `39eca7a`. No applicable AGENTS.md was found. Docker Desktop app and healthy PostgreSQL were accessible after sandbox-approved Docker socket access; app reports Rust 1.95.0. SQLx application dependency 0.8.6 matches the installed CLI, defaults disabled with postgres/runtime-tokio/uuid/chrono/json. serde_json arbitrary_precision prevents numeric payload rounding. Cargo resolution retained every preexisting locked package version; new transitive packages were added.
+
+Both existing migrations were initially pending. The existing `docker compose exec -T app sqlx migrate run` wrapper explicitly applied them; final info reports both installed. No migration was rewritten, no credentials changed and no developer database reset occurred.
+
+| Final executed check | Result |
+| --- | --- |
+| cargo fmt --check | Passed |
+| cargo clippy --locked --all-targets --all-features -- -D warnings | Passed |
+| cargo test --locked | Passed: 22 tests; one opt-in smoke ignored |
+| cargo build --locked | Passed |
+| RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps | Passed |
+| cargo test --locked --test postgres_read_smoke -- --ignored | Passed: one isolated PostgreSQL smoke |
+| git diff --check | Passed |
+
+All Cargo commands ran via `docker compose exec -T app` (rustdoc flags injected with `-e`). No compile-time SQL macros or database-dependent build metadata are needed. Smoke uses a uniquely named temporary database and unchanged migration DDL, checking empty reads, cutoff/pending filtering, deterministic bounded selection, full version range, preserved strings/IDs/timestamps/optional UUIDs/precise JSON numbers, repeated snapshots, and all-column before/after equality. Selected infinity/out-of-Chrono-range finite timestamps and whitespace-invalid fields fail the whole read as InvalidStoredData.
+
+Initial smoke exposed a panic in SQLx 0.8.6 Chrono decoding of infinity. Checked private timestamp decoding fixed it. The first panic left a fixture database, which was explicitly removed by its exact generated name. The test now runs the check in a spawned task and performs database cleanup even after a panic. A later numeric fixture comparison exposed PostgreSQL's normalization of exponent spelling; final fixture uses exact stored numeric spelling while unit tests cover large exponents. A temporary boxed-source test compile error was also corrected before final checks. Public fixture failure output is static; no raw sources or credentials are printed.
+
+Final catalog inspection found zero remaining relay_smoke_* databases and zero rows in the developer outbox. No fixture writes touched that outbox. No validation remains blocked. This smoke does not complete 1.7's full integration/concurrency matrix or 1.8's broader failure/transaction/recovery analysis; no processing or delivery is implemented. Existing historical validation sections below/above describe their original milestones, not current dependency scope.

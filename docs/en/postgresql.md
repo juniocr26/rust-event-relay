@@ -8,7 +8,7 @@ Milestone 1.2 adds only a local PostgreSQL service, configuration, healthcheck, 
 
 The [official image](https://hub.docker.com/_/postgres) uses `/var/lib/postgresql/18/docker` for PostgreSQL 18. Compose binds `.dockerized-postgres/` to `/var/lib/postgresql`, so files appear under `.dockerized-postgres/18/docker/` without named or anonymous data volumes. Container recreation and `docker compose down` preserve those files. This local directory is not a production backup strategy.
 
-The Rust binary does not read database settings or establish connections yet. The SQLx wrapper builds `DATABASE_URL` from Compose settings for migration commands; no Rust database dependency or unused configuration type was added. `/health` remains HTTP liveness. `depends_on: service_healthy` gates development container startup, and the healthcheck executes `SELECT 1` over TCP with the configured credentials. It uses the network address `POSTGRES_HOST`, avoiding loopback with its `trust` rule, and suppresses output. This validates authentication and database access, without checking schema availability or continued readiness after startup.
+The Rust binary does not read database settings or establish connections yet. The SQLx wrapper builds `DATABASE_URL` from Compose settings for migration commands; SQLx now backs the read adapter; no unused database configuration was added to the HTTP bootstrap. `/health` remains HTTP liveness. `depends_on: service_healthy` gates development container startup, and the healthcheck executes `SELECT 1` over TCP with the configured credentials. It uses the network address `POSTGRES_HOST`, avoiding loopback with its `trust` rule, and suppresses output. This validates authentication and database access, without checking schema availability or continued readiness after startup.
 
 ## Useful for the intended architecture
 
@@ -86,7 +86,7 @@ Use 127.0.0.1 to match intentional IPv4 loopback publication and avoid localhost
 
 ## Schema ownership
 
-[migrations/](../../migrations/) contains canonical source-controlled SQL history, managed by SQLx CLI 0.8.6 inside Docker. DBeaver is for inspection, querying and debugging; intended schema changes belong in migrations. Physical `.dockerized-postgres/18/docker/` data is ignored local state and survives up, down, build and container recreation. Migration rollback does not delete that directory. Milestone 1.3 creates only an empty relay namespace; Milestone 1.4 adds the outbox schema; application persistence remains future work.
+[migrations/](../../migrations/) contains canonical source-controlled SQL history, managed by SQLx CLI 0.8.6 inside Docker. DBeaver is for inspection, querying and debugging; intended schema changes belong in migrations. Physical `.dockerized-postgres/18/docker/` data is ignored local state and survives up, down, build and container recreation. Migration rollback does not delete that directory. Milestone 1.3 creates only an empty relay namespace; Milestone 1.4 adds the outbox schema; Milestone 1.6 adds application reads; writes remain future work.
 
 ## Authentication remediation on the real local cluster
 
@@ -98,3 +98,9 @@ Both non-template databases had only public, no user relations/routines and no S
 ### Focused authentication revalidation
 
 During revalidation on 2026-10-07, the container was stopped. After `docker compose start postgres`, the existing cluster accepted the exact current `.env` credentials through the Docker network and published host port. An incorrect password was rejected on both routes, confirming actual authentication rather than a `trust` rule. The historical failure was not reproduced; this revalidation did not change passwords, create roles, reset the cluster or run migrations. The healthcheck now tests authenticated SQL; loopback `pg_isready` did not prove password validity.
+
+## PostgreSQL repository — Milestone 1.6 implemented
+
+`src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
+
+See [query, restoration, bounds and errors](postgres-repository.md), [checks and smoke guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.

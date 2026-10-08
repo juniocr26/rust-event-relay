@@ -145,4 +145,4 @@ Configuração Compose bruta, dumps de ambiente e ajuda SQLx podem revelar segre
 
 ## Configuração da abstração — Marco 1.5
 
-Sem novas variáveis, pools ou tuning de persistência. Novos testes Rust não carregam .env nem conectam PostgreSQL. Setup Docker PostgreSQL/SQLx continua como ferramenta de schema; binário segue sem adapter de banco. Limites operacionais de lote, intervalo de polling, delays e máximo de tentativas pertencem à configuração futura do chamador/worker. Veja [decisões de persistência](persistence-abstraction.md).
+Sem novas variáveis, pools ou tuning de persistência. Novos testes Rust não carregam .env nem conectam PostgreSQL. SQLx CLI continua ferramenta de schema; Marco 1.6 adiciona adapter SQLx de leitura com pool injetado, mantendo bootstrap HTTP independente do banco. Limites operacionais de lote, intervalo de polling, delays e máximo de tentativas pertencem à configuração futura do chamador/worker. Veja [decisões de persistência](persistence-abstraction.md).

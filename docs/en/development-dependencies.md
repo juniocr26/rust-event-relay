@@ -26,3 +26,9 @@ The deletion discards only ignored downloads/build artifacts, not source or `Car
 Native Cargo normally uses `~/.cargo` for dependencies and repository `target/` for builds. To use the same explicit paths natively: `CARGO_HOME="$PWD/.cargo-cache" CARGO_TARGET_DIR="$PWD/target" cargo fetch --locked`. Native and container artifacts are platform-specific; run `cargo clean` when switching incompatible targets/toolchains. A valid lockfile alone is insufficient for offline recovery after all source caches are deleted.
 
 PostgreSQL follows the same visible-state philosophy through `.dockerized-postgres/`, but it holds database contents rather than regenerable Cargo artifacts. The recovery above leaves database contents intact. `docker compose down` preserves all three directories. See [database storage and deliberate reset](docker-and-configuration.md).
+
+## PostgreSQL repository — Milestone 1.6 implemented
+
+`src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
+
+See [query, restoration, bounds and errors](postgres-repository.md), [checks and smoke guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.

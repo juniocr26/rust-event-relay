@@ -8,13 +8,13 @@ This open-source engineering portfolio and study project investigates distribute
 
 ## Current status and scope
 
-**Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts (no PostgreSQL adapter or application writes), CI checks and bilingual documentation.
+**Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a read-only PostgreSQL repository (no application writes), CI checks and bilingual documentation.
 
-**Planned / future exploration:** outbox persistence and processing, PostgreSQL application persistence, RabbitMQ delivery, retries, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The Rust application does not persist or deliver events today. The provisional roadmap is in [architecture](docs/en/architecture.md).
+**Planned / future exploration:** outbox writes and processing, RabbitMQ delivery, retries, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The Rust application does not persist or deliver events today. The provisional roadmap is in [architecture](docs/en/architecture.md).
 
 ## Architecture
 
-A thin `main.rs` loads configuration, configures tracing, binds a socket and runs the application. `application.rs` owns HTTP lifecycle; `config.rs` owns parsing; `telemetry.rs` owns logging. `domain/event.rs` defines the canonical event envelope; delivery modules remain planned. There are no Rust database or broker dependencies yet. Compose provides local PostgreSQL; the binary does not connect to it. The persistence module exposes bounded pending snapshots and classified errors for future generic callers; no runtime adapter exists.
+A thin `main.rs` loads configuration, configures tracing, binds a socket and runs the application. `application.rs` owns HTTP lifecycle; `config.rs` owns parsing; `telemetry.rs` owns logging. `domain/event.rs` defines the canonical event envelope; delivery modules remain planned. SQLx 0.8.6 backs PostgreSQL reads; broker dependencies remain deferred. Compose provides local PostgreSQL; the binary does not connect to it. The persistence module exposes bounded pending snapshots and classified errors for future generic callers; `infrastructure/postgres` implements OutboxReader with an injected PgPool.
 
 ## Development
 
@@ -79,6 +79,8 @@ Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses 
 
 ## Limits and philosophy
 
-`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. Graceful HTTP shutdown has no forced timeout yet; long-lived requests could delay termination. There is no authentication, application persistence implementation, relay, performance measurement or production deployment image. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
+`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. Graceful HTTP shutdown has no forced timeout yet; long-lived requests could delay termination. There is no authentication, producer writes, relay processing, performance measurement or production deployment image. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
 
 MIT licensed; see [LICENSE](LICENSE).
+
+[PostgreSQL repository — Milestone 1.6](docs/en/postgres-repository.md). Full integration tests (1.7) and broader failure/transaction analysis (1.8) remain deferred.

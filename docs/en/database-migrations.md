@@ -4,7 +4,7 @@
 
 ## Purpose and tooling
 
-Source-controlled SQL migrations own PostgreSQL schema evolution. SQLx CLI **0.8.6** is installed in the development Docker image with `cargo install sqlx-cli --version 0.8.6 --locked --no-default-features --features rustls,postgres --root /opt/sqlx`. No host Cargo or new Rust application dependency is required. The CLI version and its packaged dependency lockfile are pinned; base-image tags and Debian package revisions are not immutable digests. Rebuild with `docker compose up -d --build --wait --wait-timeout 120`.
+Source-controlled SQL migrations own PostgreSQL schema evolution. SQLx CLI **0.8.6** is installed in the development Docker image with `cargo install sqlx-cli --version 0.8.6 --locked --no-default-features --features rustls,postgres --root /opt/sqlx`. The migration CLI is separate from the SQLx application dependency introduced for reads in Milestone 1.6. The CLI version and its packaged dependency lockfile are pinned; base-image tags and Debian package revisions are not immutable digests. Rebuild with `docker compose up -d --build --wait --wait-timeout 120`.
 
 `docker/sqlx.py`, installed as `sqlx`, constructs DATABASE_URL for each invocation from Compose-injected POSTGRES_USER/PASSWORD/DB/HOST/PORT. It percent-encodes user, password and database components and passes the URL only in the child environment. It enforces the project's internal `postgres:5432` topology. A DATABASE_URL in the host `.env` is not used by this wrapper. The Rust application still does not connect to PostgreSQL. Do not print connection strings or use real credentials in examples. SQLx subcommand help can display DATABASE_URL as an environment default; redact that output before sharing.
 
@@ -20,7 +20,7 @@ migrations/
   20261007175358_create_outbox_events.down.sql
 ```
 
-Option B: create an empty `relay` namespace reserved for future relay database objects. This establishes an architectural schema boundary and demonstrates a reversible migration without business tables. Future migrations should explicitly qualify objects with `relay.`; the default search_path is unchanged. The up migration fails if an unmanaged namespace already exists. The down migration uses RESTRICT, refusing to destroy dependent objects. SQLx maintains its own `_sqlx_migrations` bookkeeping table in the default public schema; it is tooling metadata, not application storage. Milestone 1.4 adds relay.outbox_events through a separate migration; no Rust repository, inserts or workers exist.
+Option B: create an empty `relay` namespace reserved for future relay database objects. This establishes an architectural schema boundary and demonstrates a reversible migration without business tables. Future migrations should explicitly qualify objects with `relay.`; the default search_path is unchanged. The up migration fails if an unmanaged namespace already exists. The down migration uses RESTRICT, refusing to destroy dependent objects. SQLx maintains its own `_sqlx_migrations` bookkeeping table in the default public schema; it is tooling metadata, not application storage. Milestone 1.4 adds relay.outbox_events through a separate migration; Milestone 1.6 provides a Rust read repository; inserts and workers remain deferred.
 
 Migration files are source code and must be committed with the relevant code. `.dockerized-postgres/` is ignored local cluster data, never migration history. Rebuilding a container preserves data; a fresh cluster needs `sqlx migrate run` explicitly. Neither entrypoint nor application startup runs migrations or resets the database automatically.
 
@@ -88,3 +88,9 @@ Changing `.env` does not update an initialized cluster. A missing role can produ
 Raw Compose config, environment dumps and SQLx help can reveal secrets; inspect through a parser reporting only non-sensitive fields/equality checks and redact identifying credentials before sharing logs. See [PostgreSQL repair](postgresql.md#authentication-remediation-on-the-real-local-cluster) and [actual remediation results](validation-results.md#local-postgresql-authentication-remediation).
 
 The current last migration is create_outbox_events. Revert drops only that table (and its own indexes/constraints), preserving relay; inspect for data first. Re-apply with migrate run. [Outbox schema](outbox-schema.md) documents the full mapping and destructive rollback limitations.
+
+## PostgreSQL repository — Milestone 1.6 implemented
+
+`src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
+
+See [query, restoration, bounds and errors](postgres-repository.md), [checks and smoke guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestone 1.7 covers the full database integration suite and 1.8 broader failures/transactions.

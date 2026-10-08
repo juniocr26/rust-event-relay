@@ -8,13 +8,13 @@ Este projeto de código aberto, estudo e portfólio investiga entrega distribuí
 
 ## Estado atual e escopo
 
-**Implementado hoje:** configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial e contratos de persistência da aplicação (sem adapter PostgreSQL ou gravações pela aplicação), verificações de CI e documentação bilíngue.
+**Implementado hoje:** configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial e contratos de persistência da aplicação e repositório PostgreSQL somente leitura (sem gravações pela aplicação), verificações de CI e documentação bilíngue.
 
-**Planejado / exploração futura:** persistência e processamento outbox, persistência da aplicação em PostgreSQL, entrega RabbitMQ, tentativas, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. A aplicação Rust não persiste nem entrega eventos hoje. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture.md).
+**Planejado / exploração futura:** gravação e processamento outbox, entrega RabbitMQ, tentativas, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. A aplicação Rust não persiste nem entrega eventos hoje. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture.md).
 
 ## Arquitetura
 
-Um `main.rs` pequeno carrega configuração, configura tracing, abre um socket e executa a aplicação. `application.rs` controla o ciclo de vida HTTP; `config.rs` interpreta configuração; `telemetry.rs` configura logs. `domain/event.rs` define o envelope canônico de eventos; módulos de entrega continuam planejados. Ainda não há dependências Rust de banco ou broker. Compose fornece PostgreSQL local; o binário não se conecta a ele. O módulo persistence expõe snapshots pending limitados e erros classificados para futuros chamadores genéricos; sem adapter em runtime.
+Um `main.rs` pequeno carrega configuração, configura tracing, abre um socket e executa a aplicação. `application.rs` controla o ciclo de vida HTTP; `config.rs` interpreta configuração; `telemetry.rs` configura logs. `domain/event.rs` define o envelope canônico de eventos; módulos de entrega continuam planejados. SQLx 0.8.6 executa leituras PostgreSQL; dependências de broker ficam adiadas. Compose fornece PostgreSQL local; o binário não se conecta a ele. O módulo persistence expõe snapshots pending limitados e erros classificados para futuros chamadores genéricos; `infrastructure/postgres` implementa OutboxReader com PgPool injetado.
 
 ## Desenvolvimento
 
@@ -79,6 +79,8 @@ Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver
 
 ## Limites e filosofia
 
-`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O encerramento HTTP ainda não tem timeout forçado; requisições prolongadas podem atrasá-lo. Não há autenticação, implementação de persistência da aplicação, relay, medição de desempenho ou imagem de produção. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
+`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O encerramento HTTP ainda não tem timeout forçado; requisições prolongadas podem atrasá-lo. Não há autenticação, gravações do produtor, processamento relay, medição de desempenho ou imagem de produção. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
 
 Licença MIT; consulte [LICENSE](LICENSE).
+
+[Repositório PostgreSQL — Marco 1.6](docs/pt-BR/postgres-repository.md). Suíte completa de integração (1.7) e análise ampla de falhas/transações (1.8) permanecem adiadas.
