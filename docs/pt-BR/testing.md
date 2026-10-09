@@ -1,10 +1,12 @@
 [English](../en/testing.md) | [README](../../README.pt-BR.md)
 
 
+# Testes
+
 ## Extensão atual — Marco 2.2
 
 [Estado de entrega e posse](milestone-2-2.md) e [ADR 007](adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.
-# Testes
+
 
 ```bash
 cargo test --locked
@@ -22,7 +24,7 @@ docker compose exec app cargo clippy --locked --all-targets --all-features -- -D
 
 Os testes unitários atuais verificam padrões e rejeição de endereços inválidos/ambiente vazio sem mudar o ambiente do processo. Testes de integração abrem um listener real em porta efêmera, verificam HTTP 200 e corpo, solicitam encerramento gracioso e confirmam o fechamento do listener. Um teste de subprocesso Unix carrega `.env` isolado, confere o ambiente no log de partida e envia separadamente SIGTERM/SIGINT, esperando saída bem-sucedida e log final. Ele exige o comando de sistema `kill` (incluído na imagem Docker). Arquivos temporários ficam fora das fontes. Windows ignora apenas esse teste Unix. Esperas por servidor/processo têm prazos; não há serviços externos nem portas fixas nos testes.
 
-Esses testes comprovam bootstrap, não confiabilidade de eventos. A integração do repositório está implementada no Marco 1.7. Os próximos marcos adicionarão integração com broker, janelas de crash entre publicação/confirmação, tentativas, idempotência, mensagens problemáticas, limites de concorrência e contrapressão. Testes de infraestrutura devem isolar estado e injetar falhas; benchmarks precisam publicar carga, hardware, metodologia e limitações medidas. Consulte [resultados de validação](validation-results.md) para comandos executados; configurar CI não comprova uma execução concluída no GitHub.
+Esses testes comprovam bootstrap, não confiabilidade de eventos. A integração do repositório está implementada no Marco 1.7. Integração com broker existe em 2.1; próximos marcos adicionarão janelas de crash ponta a ponta entre publicação/conclusão, tentativas, idempotência, mensagens problemáticas, limites de concorrência e contrapressão. Testes de infraestrutura devem isolar estado e injetar falhas; benchmarks precisam publicar carga, hardware, metodologia e limitações medidas. Consulte [resultados de validação](validation-results.md) para comandos executados; configurar CI não comprova uma execução concluída no GitHub.
 
 ## Testes do envelope canônico
 

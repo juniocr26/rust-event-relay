@@ -1,14 +1,16 @@
 [Português brasileiro](../pt-BR/persistence-abstraction.md) | [README](../../README.md)
 
 
+# Persistence abstraction — Milestone 1.5
+
 ## Current extension — Milestone 2.2
 
 [Delivery state and ownership](milestone-2-2.md) and [ADR 007](adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
-# Persistence abstraction — Milestone 1.5
+
 
 ## Purpose and implemented boundary
 
-`src/persistence/` defines application-facing outbox types, classified errors and **one read-only contract**, `OutboxReader`. Future relay logic can depend on these Rust semantics instead of SQL, driver types or a database row. This is deliberately a first boundary, not a complete processing engine: Milestone 1.6 adds a concrete read adapter; the HTTP bootstrap has no database connection, insert, claim, transition or delivery behavior. SQLx 0.8.6 now also backs the read-only PostgreSQL adapter.
+`src/persistence/` defines application-facing outbox types, classified errors, the read-only `OutboxReader` and separate acquisition/completion/release contracts added in 2.2. Future relay logic can depend on these Rust semantics instead of SQL, driver types or a database row. This is deliberately a first boundary, not a complete processing engine: Milestone 1.6 adds a concrete read adapter; the HTTP bootstrap has no database connection, insert, claim, transition or delivery behavior. SQLx 0.8.6 now also backs the read-only PostgreSQL adapter.
 
 The scope is proportional to the unresolved ownership problem. A bounded read is useful and has precise semantics today. Producer append and ID-only lifecycle updates would communicate transactional/concurrency guarantees that the current schema and service cannot yet provide; they are intentionally absent. No generic Repository<T>, giant CRUD interface or empty infrastructure modules are introduced.
 
@@ -81,7 +83,7 @@ The public constructor wraps an already validated envelope; the adapter must ver
 
 ## Errors and diagnostics
 
-PersistenceErrorKind contains only Unavailable (storage access unavailable), InvalidStoredData (selected data violates/restores incorrectly), and OperationFailed (other failures). Categories express caller-facing meaning, not SQLSTATE, driver strings or a guaranteed retry policy. The future adapter owns detailed classification; callers own response/retry policy. Unknown adapter errors must not be presented as safe to retry merely by matching a category.
+The reader uses Unavailable (storage access unavailable), InvalidStoredData (selected data violates/restores incorrectly), and OperationFailed (other failures). Categories express caller-facing meaning, not SQLSTATE, driver strings or a guaranteed retry policy. The future adapter owns detailed classification; callers own response/retry policy. Unknown adapter errors must not be presented as safe to retry merely by matching a category.
 
 PersistenceError preserves an optional `Box<dyn Error + Send + Sync>` through Error::source. This boxes a diagnostic source, not a persistence adapter. Display and Debug show only static classification and whether a source exists; they omit underlying text, credentials and payloads. Source inspection may still reveal sensitive driver details, so logging complete source chains requires redaction. No thiserror dependency, user-supplied public message or string-only loss of diagnostic type is introduced.
 
@@ -117,6 +119,8 @@ See [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md), [test 
 
 `src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
 
-See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](failure-and-transaction-semantics.md). Milestone 1 is closed; later delivery work has not begun.
+See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](testing.md) and [executed validation](validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](failure-and-transaction-semantics.md). Milestone 1 is closed; Milestones 2.1 and 2.2 add the publisher and ownership contracts/schema; production mutations and worker delivery remain deferred.
 
 Milestone 1 is closed. [Failure/transaction semantics](failure-and-transaction-semantics.md) records producer commit uncertainty, invalid-row blocking, cancellation limits and future publish/ack gaps without adding contracts.
+
+Milestone 2.2 additionally defines `CommitUncertain` for future mutation commit outcomes; the reader still maps only its original three categories. Ownership and attempt semantics are selected in ADR 007, while PostgreSQL mutation adapters and real owner concurrency remain deferred.

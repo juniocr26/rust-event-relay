@@ -1,14 +1,16 @@
 [English](../en/persistence-abstraction.md) | [README](../../README.pt-BR.md)
 
 
+# Abstração de persistência — Marco 1.5
+
 ## Extensão atual — Marco 2.2
 
 [Estado de entrega e posse](milestone-2-2.md) e [ADR 007](adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.
-# Abstração de persistência — Marco 1.5
+
 
 ## Objetivo e fronteira implementada
 
-`src/persistence/` define tipos voltados à aplicação, erros classificados e **um contrato somente leitura**, `OutboxReader`. Lógica relay futura pode depender dessas semânticas Rust em vez de SQL, driver ou linhas do banco. É uma primeira fronteira deliberada, não engine completa: Marco 1.6 adiciona adapter concreto somente leitura; bootstrap HTTP continua sem conexão com banco, inserção, claim, transição ou entrega. SQLx agora também é dependência da aplicação.
+`src/persistence/` define tipos voltados à aplicação, erros classificados, `OutboxReader` somente leitura e contratos separados de aquisição/conclusão/liberação adicionados em 2.2. Lógica relay futura pode depender dessas semânticas Rust em vez de SQL, driver ou linhas do banco. É uma primeira fronteira deliberada, não engine completa: Marco 1.6 adiciona adapter concreto somente leitura; bootstrap HTTP continua sem conexão com banco, inserção, claim, transição ou entrega. SQLx agora também é dependência da aplicação.
 
 O escopo é proporcional ao problema de propriedade ainda aberto. Leitura limitada é útil e tem semântica precisa hoje. Append do produtor e updates de ciclo apenas por ID comunicariam garantias transacionais/concorrentes que serviço/schema ainda não fornecem; ficam ausentes. Sem Repository<T> genérico, interface CRUD gigante ou módulos vazios.
 
@@ -81,7 +83,7 @@ Construtor público envolve envelope validado; adapter deve verificar pending/fo
 
 ## Erros e diagnóstico
 
-PersistenceErrorKind contém apenas Unavailable (acesso indisponível), InvalidStoredData (dados selecionados violam/não restauram modelo) e OperationFailed (outras falhas). Categorias expressam significado para chamador, não SQLSTATE, strings do driver ou política garantida de retry. Adapter classifica detalhes; chamador decide resposta/retry. Erros desconhecidos não viram seguros de repetir só pela categoria.
+O reader usa Unavailable (acesso indisponível), InvalidStoredData (dados selecionados violam/não restauram modelo) e OperationFailed (outras falhas). Categorias expressam significado para chamador, não SQLSTATE, strings do driver ou política garantida de retry. Adapter classifica detalhes; chamador decide resposta/retry. Erros desconhecidos não viram seguros de repetir só pela categoria.
 
 PersistenceError preserva fonte opcional `Box<dyn Error + Send + Sync>` em Error::source. Box é da fonte diagnóstica, não do adapter. Display/Debug mostram apenas classificação estática e presença de fonte; omitem texto original, credenciais e payload. Inspecionar fonte ainda pode revelar detalhes sensíveis; logging da cadeia exige remoção de segredos. Sem thiserror, mensagem pública livre ou perda de tipo ao converter tudo para string.
 
@@ -117,6 +119,8 @@ Veja [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md), [test
 
 `src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
 
-Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marcos 1.7 e 1.8 concluídos: integração e [semântica de falhas/transações](failure-and-transaction-semantics.md). Marco 1 fechado; entrega futura não iniciada.
+Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](testing.md) e [validação executada](validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marcos 1.7 e 1.8 concluídos: integração e [semântica de falhas/transações](failure-and-transaction-semantics.md). Marco 1 fechado; Marcos 2.1/2.2 adicionam publisher e contratos/schema de ownership; mutações produtivas e worker continuam adiados.
 
 Marco 1 fechado. [Semântica de falhas/transações](failure-and-transaction-semantics.md) registra COMMIT incerto do produtor, bloqueio por dados inválidos, limites de cancelamento e janelas futuras publicação/confirmação, sem novos contratos.
+
+Marco 2.2 também define `CommitUncertain` para commits futuros de mutação; reader mantém suas três categorias originais. ADR 007 seleciona ownership/tentativas; adapters PostgreSQL de mutação e concorrência real de donos continuam adiados.

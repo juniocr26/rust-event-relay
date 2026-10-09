@@ -91,6 +91,9 @@ Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem ar
 - [ADR 003: Migrações SQL versionadas](docs/pt-BR/adr/003-use-versioned-sql-migrations.md)
 - [ADR 004: Schema outbox transacional](docs/pt-BR/adr/004-use-postgresql-transactional-outbox-schema.md)
 - [ADR 005: Fronteira de persistência](docs/pt-BR/adr/005-separate-persistence-contracts-from-postgresql.md)
+- [ADR 006: Publisher RabbitMQ e Supervisor](docs/pt-BR/adr/006-rabbitmq-publisher-and-supervisor.md)
+- [ADR 007: Ownership durável](docs/pt-BR/adr/007-durable-delivery-ownership.md)
+- [Marco 2.2: Tipos, contratos e schema de ownership](docs/pt-BR/milestone-2-2.md)
 
 ## Limites e filosofia
 

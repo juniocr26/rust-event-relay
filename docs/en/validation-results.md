@@ -624,3 +624,9 @@ Five new pure/fake tests verify duration/token/timestamp validity, exact expiry,
 The Markdown check initially found four existing links to HANDOFF_MARCO_1.pdf, which is absent from this checkout and tracked files. Current navigation now links the existing historical Markdown source; historical PDF generation records remain unchanged.
 
 Final diagnostic coverage extension: `cargo test --locked --test persistence_contract` passed all 5 cases including CommitUncertain redaction/source retention; final formatting and strict Clippy passed again.
+
+## Static documentation audit — 2026-10-09
+
+Rechecked HTTP composition, read-only SQL, publisher confirmation/uncertainty, pure ownership models/ports, lease migration and CI definitions. Removed stale current claims about absent broker dependencies or unstarted Milestone 2, added ADR 006/007 navigation and aligned bilingual current scope. Ownership SQL mutations, orchestration and polling remain deferred; no end-to-end delivery guarantee is established. Default/opt-in tests, CI jobs, migrations, Cargo commands, broker and PostgreSQL were not executed. Historical milestone results remain unchanged.
+
+Static local-link/anchor, fence, language-pair and documentation-only SHA-256 checks are recorded in the shared [interview review](../../../tecnical-interview/docs/en/verification.md). Runtime environment files and secret-bearing backups were not read or modified.

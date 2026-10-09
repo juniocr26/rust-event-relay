@@ -1,10 +1,12 @@
 [Português brasileiro](../pt-BR/testing.md) | [README](../../README.md)
 
 
+# Testing
+
 ## Current extension — Milestone 2.2
 
 [Delivery state and ownership](milestone-2-2.md) and [ADR 007](adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
-# Testing
+
 
 ```bash
 cargo test --locked
@@ -22,7 +24,7 @@ docker compose exec app cargo clippy --locked --all-targets --all-features -- -D
 
 Current unit tests verify defaults and rejection of invalid addresses/empty environment without modifying process environment. Integration tests start a real listener on an ephemeral port, check HTTP 200 and body, request graceful shutdown and verify the listener closes. A Unix subprocess test loads an isolated `.env`, checks the startup environment log and separately sends SIGTERM/SIGINT, expecting successful exit and a final shutdown log. It requires the OS `kill` command (included in the Docker image). Its temporary files live outside the source tree. Windows skips only that Unix test. Server/process waits have deadlines; there are no external services or fixed test ports.
 
-These tests establish bootstrap correctness, not event reliability. Repository integration is implemented in Milestone 1.7. Future milestones will add broker integration, publication/acknowledgement crash windows, retries, idempotency, poison messages, concurrency bounds and backpressure. Infrastructure tests should isolate state and inject failures; benchmarks must publish workload, hardware, methodology and measured limitations. See [validation results](validation-results.md) for commands actually executed; CI configuration is not proof of a completed GitHub run.
+These tests establish bootstrap correctness, not event reliability. Repository integration is implemented in Milestone 1.7. Broker integration tests exist in Milestone 2.1; future milestones will add end-to-end publication/completion crash windows, retries, idempotency, poison messages, concurrency bounds and backpressure. Infrastructure tests should isolate state and inject failures; benchmarks must publish workload, hardware, methodology and measured limitations. See [validation results](validation-results.md) for commands actually executed; CI configuration is not proof of a completed GitHub run.
 
 ## Canonical envelope tests
 

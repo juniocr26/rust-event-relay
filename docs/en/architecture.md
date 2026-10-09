@@ -1,10 +1,12 @@
 [Português brasileiro](../pt-BR/architecture.md) | [README](../../README.md)
 
 
+# Architecture
+
 ## Current extension — Milestone 2.2
 
 [Delivery state and ownership](milestone-2-2.md) and [ADR 007](adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
-# Architecture
+
 
 ## Milestone 2.1 — Publisher and local process control
 
@@ -89,7 +91,7 @@ Future delivery initially targets at-least-once semantics, not exactly-once deli
 | --- | --- |
 | 0 — Foundation | Rust, Docker, configuration, tracing, shutdown, health, tests, bilingual docs (implemented) |
 | 1 — Durable event model | **Closed: 1.1-1.8 implemented and validated within their documented scope**; see [closure review](milestone-1-review.md) |
-| 2 — First delivery adapter | RabbitMQ publisher, delivery state, retries, at-least-once semantics |
+| 2 — First delivery adapter | 2.1 publisher and 2.2 ownership types/ports/schema implemented; 2.3–2.6 mutations, orchestration, worker and crash experiments deferred |
 | 3 — Reliability | Exponential backoff, DLQ, idempotency, crash recovery, poison messages |
 | 4 — Concurrency | Bounded channels, worker pools, concurrency limits, backpressure, graceful draining |
 | 5 — Multiple destinations | HTTP webhooks, Redis Streams, routing abstraction |
@@ -149,7 +151,7 @@ flowchart LR
     PG -->|storage access| DB
 ```
 
-Logic/adapter arrows to PORT mean compile-time dependency, not a runtime call sequence. Generic future callers invoke an implementation through that port; no PostgreSQL types flow inward. Producer writing remains with the producer's business transaction, not an independently committing relay append API. Snapshots are not claims: lifecycle mutation/ownership/recovery APIs are deferred, and no concurrent delivery safety or exactly-once behavior is asserted. The producer/relay handoff diagram above remains conceptual for writes and delivery.
+Logic/adapter arrows to PORT mean compile-time dependency, not a runtime call sequence. Generic future callers invoke an implementation through that port; no PostgreSQL types flow inward. Producer writing remains with the producer's business transaction, not an independently committing relay append API. Snapshots are not claims: 2.2 adds ownership contracts/models, while production mutation/recovery adapters are deferred, and no concurrent delivery safety or exactly-once behavior is asserted. The producer/relay handoff diagram above remains conceptual for writes and delivery.
 
 See [full contracts and open questions](persistence-abstraction.md), [ADR 005](adr/005-separate-persistence-contracts-from-postgresql.md) and [test coverage](testing.md). Milestone 1 is closed, including 1.8 [failure/transaction semantics](failure-and-transaction-semantics.md).
 

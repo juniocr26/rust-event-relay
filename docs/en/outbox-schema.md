@@ -1,10 +1,12 @@
 [Português brasileiro](../pt-BR/outbox-schema.md) | [README](../../README.md)
 
 
+# Outbox schema — Milestone 1.4
+
 ## Current extension — Milestone 2.2
 
 [Delivery state and ownership](milestone-2-2.md) and [ADR 007](adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
-# Outbox schema — Milestone 1.4
+
 
 ## Purpose and ownership
 
@@ -87,4 +89,4 @@ New immutable-history pair:
 
 Up creates the table, checks and one polling index in the existing relay namespace. Down drops only the table with RESTRICT; its own indexes/constraints disappear with it. It preserves relay and earlier SQLx history and refuses dependent external objects. SQLx runs PostgreSQL migrations transactionally by default. Rollback permanently loses stored events once data exists: inspect/back up first; forward correction may be safer. It is not a database reset.
 
-See [schema validation and commands](testing.md#outbox-schema-validation--milestone-14), [actual results](validation-results.md), [migration ownership](database-migrations.md) and [ADR 004](adr/004-use-postgresql-transactional-outbox-schema.md). No routing/destination columns, repository, publisher, retry execution, DLQ table or worker implementation exists.
+See [schema validation and commands](testing.md#outbox-schema-validation--milestone-14), [actual results](validation-results.md), [migration ownership](database-migrations.md) and [ADR 004](adr/004-use-postgresql-transactional-outbox-schema.md). Routing/destination columns, retry execution, DLQ table and worker remain absent. The read repository and RabbitMQ publisher now exist separately; ownership fields are added by the 2.2 migration.

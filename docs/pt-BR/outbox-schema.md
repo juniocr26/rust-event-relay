@@ -1,10 +1,12 @@
 [English](../en/outbox-schema.md) | [README](../../README.pt-BR.md)
 
 
+# Schema outbox — Marco 1.4
+
 ## Extensão atual — Marco 2.2
 
 [Estado de entrega e posse](milestone-2-2.md) e [ADR 007](adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.
-# Schema outbox — Marco 1.4
+
 
 ## Objetivo e responsabilidade
 
@@ -87,4 +89,4 @@ Novo par com histórico imutável:
 
 Up cria tabela, CHECKs e um índice de polling no namespace relay existente. Down exclui apenas tabela com RESTRICT; índices/constraints próprios são removidos junto. Preserva relay/histórico anterior e recusa dependências externas. SQLx executa migrações PostgreSQL transacionalmente por padrão. Após dados reais, rollback perde eventos permanentemente: inspecione/faça backup; correção para frente pode ser mais segura. Não é reset do banco.
 
-Veja [validação e comandos](testing.md#validação-do-schema-outbox--marco-14), [resultados reais](validation-results.md), [responsabilidade das migrações](database-migrations.md) e [ADR 004](adr/004-use-postgresql-transactional-outbox-schema.md). Sem colunas de destino/roteamento, repositório, publicador, retries executados, tabela DLQ ou workers.
+Veja [validação e comandos](testing.md#validação-do-schema-outbox--marco-14), [resultados reais](validation-results.md), [responsabilidade das migrações](database-migrations.md) e [ADR 004](adr/004-use-postgresql-transactional-outbox-schema.md). Colunas de destino/roteamento, execução de retries, tabela DLQ e worker continuam ausentes. O repositório de leitura e o publicador RabbitMQ já existem separadamente; a migração 2.2 acrescenta os campos de ownership.

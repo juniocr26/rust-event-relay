@@ -624,3 +624,9 @@ Cinco testes novos puros/fake verificam duração/token/timestamps, limite exato
 Check Markdown inicial encontrou quatro links antigos para HANDOFF_MARCO_1.pdf, ausente do checkout/arquivos rastreados. Navegação atual aponta à fonte Markdown histórica existente; registros históricos de geração do PDF preservados.
 
 Extensão final de cobertura diagnóstica: `cargo test --locked --test persistence_contract` passou os 5 casos, incluindo sanitização/fonte de CommitUncertain; formatação e Clippy estrito finais passaram novamente.
+
+## Auditoria documental estática — 2026-10-09
+
+Revisados composição HTTP, SQL de leitura, confirmações/incerteza do publisher, modelos/portas de ownership, migração lease e CI. Corrigidas afirmações atuais de dependência de broker ausente/Marco 2 não iniciado; navegação ADR 006/007 e escopo bilíngue alinhados. Mutações SQL, orquestração/polling adiados; sem garantia ponta a ponta. Não executados testes padrão/opt-in, CI, migrações, Cargo, broker ou PostgreSQL. Resultados históricos dos marcos preservados.
+
+Checagens estáticas de links/âncoras, fences, pares de idioma e SHA-256 para alterações somente documentais estão na [revisão de entrevista](../../../tecnical-interview/docs/pt-BR/verification.md). Arquivos reais de ambiente e backups sensíveis não foram lidos/alterados.
