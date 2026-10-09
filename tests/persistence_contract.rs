@@ -67,6 +67,7 @@ fn persistence_errors_keep_classification_and_sources_but_redact_formatting() {
         PersistenceErrorKind::Unavailable,
         PersistenceErrorKind::InvalidStoredData,
         PersistenceErrorKind::OperationFailed,
+        PersistenceErrorKind::CommitUncertain,
     ] {
         let without_source = PersistenceError::new(kind);
         assert_eq!(without_source.kind(), kind);

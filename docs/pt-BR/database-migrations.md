@@ -1,5 +1,9 @@
 [English](../en/database-migrations.md) | [README](../../README.pt-BR.md)
 
+
+## Extensão atual — Marco 2.2
+
+[Estado de entrega e posse](milestone-2-2.md) e [ADR 007](adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.
 # Migrações de banco — Marco 1.3
 
 ## Objetivo e ferramenta
@@ -87,7 +91,7 @@ Mudar `.env` não atualiza cluster inicializado. Usuário ausente pode gerar err
 
 Configuração Compose bruta, dumps de ambiente e ajuda SQLx podem revelar segredos; use parser que informe apenas campos não sensíveis/comparações e remova credenciais dos logs compartilhados. Veja [correção PostgreSQL](postgresql.md#correção-de-autenticação-no-cluster-local-real) e [resultados reais](validation-results.md#correção-de-autenticação-postgresql-local).
 
-A última migração atual é create_outbox_events. Revert exclui só essa tabela e seus índices/constraints, preservando relay; inspecione dados antes. Reaplique com migrate run. [Schema outbox](outbox-schema.md) documenta mapeamento e limites do rollback destrutivo.
+A migração mais recente nas fontes é add_delivery_ownership; seu down remove campos de posse e não deve executar com workers ativos. A descrição abaixo se aplica à migração anterior create_outbox_events. Revert exclui só essa tabela e seus índices/constraints, preservando relay; inspecione dados antes. Reaplique com migrate run. [Schema outbox](outbox-schema.md) documenta mapeamento e limites do rollback destrutivo.
 
 ## Repositório PostgreSQL — Marco 1.6 implementado
 

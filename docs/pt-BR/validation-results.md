@@ -592,3 +592,35 @@ Executado no host Docker Desktop do usuário com Rust 1.95.0, Lapin 4.12.0, Rabb
 Diagnóstico management inicial tentou listar permissões via API e recebeu 401, pois tag management não concede listagem administrativa. `/api/whoami` autenticou corretamente; diagnóstico foi corrigido para validar vhosts visíveis via API e regex efetivas pelo CLI do nó. Nenhuma senha, tag ou dado do broker foi resetado para resolver esse erro de diagnóstico.
 
 **Não testados diretamente:** login pelo formulário do navegador (sem ferramenta de controle do navegador do host), CI remoto GitHub, TLS/HA produtivos, power loss do broker, injeção real de nack, drenagem HTTP além do orçamento Supervisor, carga esgotando admissão de publicação ou morte abrupta do harness. Falha de serialização é categoria defensiva, sem injeção deliberada no envelope validado atual. Verificação HTTP/API não é relatada como login de navegador. Entrega pelo menos uma vez por worker continua incompleta.
+
+
+## Marco 2.2 — 2026-10-09
+
+Checkout limpo verificado em `5eac9ff`; sem AGENTS.md aplicável ao projeto/ancestrais. Seções anteriores são históricas, não evidência atual. Containers app/PostgreSQL/RabbitMQ já estavam ativos; nenhum start, rebuild, reset ou restart. Sem alteração de credenciais, dependências/lockfile, migrações originais ou dados da aplicação; sem commit/push.
+
+Cargo via `docker compose exec -T app` nas ferramentas Docker existentes (cargo nativo ausente no PATH do host). Rustdoc: `docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps`.
+
+| Check final realmente executado | Resultado |
+| --- | --- |
+| cargo fmt --check | Passou após formatação |
+| cargo clippy --locked --all-targets --all-features -- -D warnings | Passou, incluindo teste lifecycle ajustado |
+| cargo test --locked | Passou: 32 testes; 19 casos opt-in ignorados na invocação padrão |
+| cargo test --locked --test delivery_ownership_schema -- --ignored | Passou: 1 caso PostgreSQL isolado da migração |
+| cargo test --locked --test postgres_repository -- --ignored --test-threads=4 | Passou: 15 casos existentes isolados |
+| cargo test --locked --test rabbitmq_publisher -- --ignored | Passou: 2 casos existentes no broker |
+| cargo test --locked --lib infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable -- --ignored | Passou: 1 caso existente no broker |
+| cargo build --locked | Passou |
+| cargo doc --locked --no-deps com rustdoc estrito | Passou |
+| Links Markdown relativos e git diff --check | Passaram |
+| sqlx migrate info somente leitura | Duas originais instaladas; migração de posse pending no banco de desenvolvimento |
+| Consultas limitadas somente leitura de catálogo/outbox | 0 bancos relay_it_ restantes; 0 linhas outbox compartilhadas |
+
+Novo caso isolado insere evento no schema antigo, compara todas colunas originais após migração, rejeita cada combinação parcial de posse e token/tempo/estado/contador inválidos, aceita lease coerente, verifica observação pelo reader sem mutação, limpa posse com processed válido, confirma exclusão pelo reader, aplica down e preserva identidade. Harness fecha pools, remove só banco gerado exato e verifica ausência. Migração nova nunca aplicada a dados compartilhados/de desenvolvimento. Suíte PostgreSQL anterior conserva fixtures do schema original. Job CI inclui novo caso isolado; sem execução remota.
+
+Primeira e segunda execuções completas falharam apenas na assertion existente health_and_graceful_shutdown de que conexão TCP síncrona imediata deve falhar após retorno do servidor. Rerun do target passou sem alteração. Sondagem única substituída por verificação assíncrona limitada que exige listener indisponível dentro do mesmo orçamento de três segundos; sem mudança produtiva HTTP. Suíte completa final passou. Causa precisa da observação intermitente do socket não estabelecida; novo check não comprova mecanismo de shutdown não testado.
+
+Cinco testes novos puros/fake verificam duração/token/timestamps, limite exato de expiração, forma terminal, elegibilidade, rejeição de dono antigo/expirado, substituição, repetição rejeitada, contador sem mutação parcial, ID estável e contratos Send/estáticos. Não são evidência de locks/concorrência/durabilidade PostgreSQL. Nenhuma operação produtiva de adquirir/concluir/liberar ou orquestração implementada. Operações, amostra do relógio após espera por lock, donos concorrentes, predicados contra dono antigo, commit incerto e integração concorrente pertencem a 2.3. Worker/recuperação ponta a ponta, desempenho produtivo, perda de energia, Rust nativo e CI remoto continuam não validados. Nenhum check obrigatório do escopo implementado ficou bloqueado.
+
+Check Markdown inicial encontrou quatro links antigos para HANDOFF_MARCO_1.pdf, ausente do checkout/arquivos rastreados. Navegação atual aponta à fonte Markdown histórica existente; registros históricos de geração do PDF preservados.
+
+Extensão final de cobertura diagnóstica: `cargo test --locked --test persistence_contract` passou os 5 casos, incluindo sanitização/fonte de CommitUncertain; formatação e Clippy estrito finais passaram novamente.

@@ -1,5 +1,9 @@
 [Português brasileiro](../pt-BR/failure-and-transaction-semantics.md) | [README](../../README.md)
 
+
+## Current extension — Milestone 2.2
+
+[Delivery state and ownership](milestone-2-2.md) and [ADR 007](adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
 # Failure and transaction semantics - Milestone 1.8
 
 Milestone 1 supplies a durable representation and a read-only adapter, not a working delivery engine. This document closes the semantics/documentation acceptance criterion without implementing producer writes, ownership, transitions or destinations. Reviewed base: `7cba38d`; closing changes are uncommitted. See [review](milestone-1-review.md) and [current validation](validation-results.md#milestone-18-and-milestone-1-closure-2026-10-08).

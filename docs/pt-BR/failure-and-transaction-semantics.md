@@ -1,5 +1,9 @@
 [English](../en/failure-and-transaction-semantics.md) | [README](../../README.pt-BR.md)
 
+
+## Extensão atual — Marco 2.2
+
+[Estado de entrega e posse](milestone-2-2.md) e [ADR 007](adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.
 # Semântica de falhas e transações - Marco 1.8
 
 O Marco 1 fornece representação durável e adapter somente leitura, sem engine de entrega funcional. Este documento conclui o critério de semântica/documentação sem implementar escrita de produtores, propriedade, transições ou destinos. Base revisada: `7cba38d`; mudanças de fechamento não commitadas. Veja [revisão](milestone-1-review.md) e [validação atual](validation-results.md#marco-18-e-fechamento-do-marco-1-2026-10-08).

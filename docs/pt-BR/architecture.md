@@ -1,10 +1,14 @@
 [English](../en/architecture.md) | [README](../../README.pt-BR.md)
 
+
+## Extensão atual — Marco 2.2
+
+[Estado de entrega e posse](milestone-2-2.md) e [ADR 007](adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.
 # Arquitetura
 
 ## Marco 2.1 — Publisher e gestão local de processos
 
-A aplicação agora expõe `EventPublisher`; `infrastructure/rabbitmq.rs` implementa com Lapin e controla conexão AMQP, topologia, mandatory e confirms. Runtime HTTP continua independente das chamadas ao adapter. Supervisor gerencia HTTP compilado; RabbitMQ e PostgreSQL permanecem serviços Compose separados. Nenhum use case conecta snapshots à publicação. Veja [escopo/semântica](milestone-2-1.md) e [ADR 006](adr/006-rabbitmq-publisher-and-supervisor.md). Estado/propriedade/retries do Marco 2 ficam adiados; entrega pelo menos uma vez não está completa.
+A aplicação agora expõe `EventPublisher`; `infrastructure/rabbitmq.rs` implementa com Lapin e controla conexão AMQP, topologia, mandatory e confirms. Runtime HTTP continua independente das chamadas ao adapter. Supervisor gerencia HTTP compilado; RabbitMQ e PostgreSQL permanecem serviços Compose separados. Nenhum use case conecta snapshots à publicação. Veja [escopo/semântica](milestone-2-1.md) e [ADR 006](adr/006-rabbitmq-publisher-and-supervisor.md). Marco 2.2 define estado/posse; mutações produtivas/retries ficam adiados, e entrega pelo menos uma vez não está completa.
 
 ## Base implementada
 

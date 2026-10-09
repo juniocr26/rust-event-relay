@@ -1,7 +1,7 @@
-//! Application-facing, read-only outbox persistence boundary.
+//! Application-facing outbox observation and ownership boundaries.
 //!
 //! Returned pending events are snapshots, not claims. Producer transactions and
-//! relay lifecycle mutations require separate ownership/recovery contracts later.
+//! relay lifecycle mutations use separate ownership contracts, without adapters yet.
 mod error;
 mod model;
 
@@ -35,3 +35,9 @@ pub trait OutboxReader: Send + Sync {
         request: EligibleRead,
     ) -> impl Future<Output = Result<Vec<PendingOutboxEvent>, PersistenceError>> + Send;
 }
+
+mod ownership;
+pub use ownership::{
+    AcquireRequest, OutboxAcquirer, OutboxCompleter, OutboxReleaser, OwnedEventKey,
+    OwnedOutboxEvent, TransitionOutcome,
+};

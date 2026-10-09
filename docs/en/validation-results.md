@@ -592,3 +592,35 @@ Executed on the user's Docker Desktop host with Rust 1.95.0, Lapin 4.12.0, Rabbi
 An initial management diagnostic attempted the permission-listing API and received 401 because the management-only tag does not grant administrative permission listing. `/api/whoami` authenticated successfully; the diagnostic was corrected to validate visible vhosts via API and actual permission regex through the node CLI. No password, tag or broker data was reset to resolve that diagnostic error.
 
 **Not directly tested:** browser form login (no host browser-control tool available), remote GitHub CI, production TLS/HA, broker power loss, real broker nack injection, prolonged HTTP drain beyond Supervisor's budget, exhausted publication-admission load, or abrupt integration-harness death. Publisher serialization failure is a defensive category, not a deliberately injected failure of the validated current envelope. HTTP/API verification is not reported as browser login. At-least-once worker delivery remains incomplete.
+
+
+## Milestone 2.2 — 2026-10-09
+
+Verified clean checkout at `5eac9ff`; no applicable project/ancestor AGENTS.md. Earlier sections record historical checks, not current evidence. Existing app/PostgreSQL/RabbitMQ containers were already running; no services started, rebuilt, reset or restarted. No credentials, dependencies/lockfile, original migrations or application data changed; no commit/push.
+
+All Cargo commands ran via `docker compose exec -T app` in existing Docker tooling (native cargo is unavailable in host PATH). Rustdoc used `docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps`.
+
+| Actual final check | Result |
+| --- | --- |
+| cargo fmt --check | Passed after formatting |
+| cargo clippy --locked --all-targets --all-features -- -D warnings | Passed, including updated lifecycle test |
+| cargo test --locked | Passed: 32 tests; 19 opt-in infrastructure tests ignored in standard invocation |
+| cargo test --locked --test delivery_ownership_schema -- --ignored | Passed: 1 isolated PostgreSQL migration case |
+| cargo test --locked --test postgres_repository -- --ignored --test-threads=4 | Passed: 15 isolated existing integration cases |
+| cargo test --locked --test rabbitmq_publisher -- --ignored | Passed: 2 existing broker cases |
+| cargo test --locked --lib infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable -- --ignored | Passed: 1 existing broker case |
+| cargo build --locked | Passed |
+| Strict cargo doc --locked --no-deps | Passed |
+| Markdown relative file-link check and git diff --check | Passed |
+| sqlx migrate info (read-only) | Original two installed; new ownership migration pending in development database |
+| Bounded read-only catalog/outbox queries | 0 relay_it_ databases remaining; 0 shared outbox rows |
+
+The isolated new case seeds an original-schema event, compares all original columns after migration, rejects each partial ownership-field combination and invalid token/time/state/count combination, accepts coherent ownership, verifies the existing reader observes leased pending data without mutation, clears ownership with valid processed shape, checks reader exclusion, applies down and verifies event identity remains. Existing harness closes pools, drops only its exact generated database and verifies absence. New migration was never applied to shared/development data. Existing PostgreSQL tests intentionally retain original schema fixtures. CI job now includes new isolated schema case; no remote CI run.
+
+Initial and second full-suite invocations failed only the existing health_and_graceful_shutdown assertion that an immediate synchronous TCP connection must fail after server return. Its target rerun passed unchanged. Replaced the one-shot probe with bounded asynchronous checks requiring eventual listener unavailability within the same three-second budget; no HTTP production change. The final complete suite passed. Exact cause of the intermittent socket observation was not established; do not interpret the new check as evidence for an untested shutdown mechanism.
+
+Five new pure/fake tests verify duration/token/timestamp validity, exact expiry, terminal shape, eligibility, stale/expired owner rejection, replacement, repeat rejection, counter boundaries without partial mutation, stable event identity and Send/static contracts. They are not PostgreSQL locking/concurrency/durability evidence. No production acquisition/completion/release or orchestration is implemented. Those operations, clock sampling after lock waits, competing owners, stale mutation predicates, commit uncertainty and concurrency integration belong to 2.3. Worker/end-to-end recovery, production performance, power-loss behavior, native-host Rust and remote CI remain unvalidated. No required implemented-scope check remains blocked.
+
+The Markdown check initially found four existing links to HANDOFF_MARCO_1.pdf, which is absent from this checkout and tracked files. Current navigation now links the existing historical Markdown source; historical PDF generation records remain unchanged.
+
+Final diagnostic coverage extension: `cargo test --locked --test persistence_contract` passed all 5 cases including CommitUncertain redaction/source retention; final formatting and strict Clippy passed again.

@@ -9,6 +9,8 @@ pub enum PersistenceErrorKind {
     InvalidStoredData,
     /// Another storage operation failure; classification remains adapter-owned.
     OperationFailed,
+    /// A mutation may have committed; never interpret this as a known rollback.
+    CommitUncertain,
 }
 
 /// Storage error with optional diagnostic source and sanitized public formatting.
@@ -49,6 +51,7 @@ impl fmt::Display for PersistenceError {
             PersistenceErrorKind::Unavailable => "persistence unavailable",
             PersistenceErrorKind::InvalidStoredData => "invalid stored outbox data",
             PersistenceErrorKind::OperationFailed => "persistence operation failed",
+            PersistenceErrorKind::CommitUncertain => "persistence commit uncertain",
         })
     }
 }

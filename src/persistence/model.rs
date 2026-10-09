@@ -84,7 +84,8 @@ impl PendingOutboxEvent {
         &self.event
     }
 
-    /// Observed non-negative attempt count, not permission to increment it.
+    /// Observed count of committed acquisitions (historical values preserved),
+    /// not actual broker sends or permission to increment it.
     pub fn attempt_count(&self) -> u32 {
         self.attempt_count
     }

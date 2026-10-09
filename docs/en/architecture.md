@@ -1,10 +1,14 @@
 [Português brasileiro](../pt-BR/architecture.md) | [README](../../README.md)
 
+
+## Current extension — Milestone 2.2
+
+[Delivery state and ownership](milestone-2-2.md) and [ADR 007](adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
 # Architecture
 
 ## Milestone 2.1 — Publisher and local process control
 
-The application now exposes `EventPublisher`; `infrastructure/rabbitmq.rs` implements it with Lapin and owns AMQP connection, topology, mandatory routing and confirmation. The HTTP runtime remains independent of adapter calls. Supervisor manages the compiled HTTP program; RabbitMQ and PostgreSQL remain separate Compose services. No use case connects snapshots to publication yet. See [scope and semantics](milestone-2-1.md) and [ADR 006](adr/006-rabbitmq-publisher-and-supervisor.md). Milestone 2 delivery state/ownership/retries remain deferred; at-least-once delivery is not complete.
+The application now exposes `EventPublisher`; `infrastructure/rabbitmq.rs` implements it with Lapin and owns AMQP connection, topology, mandatory routing and confirmation. The HTTP runtime remains independent of adapter calls. Supervisor manages the compiled HTTP program; RabbitMQ and PostgreSQL remain separate Compose services. No use case connects snapshots to publication yet. See [scope and semantics](milestone-2-1.md) and [ADR 006](adr/006-rabbitmq-publisher-and-supervisor.md). Milestone 2.2 defines delivery state/ownership; production mutations and retries remain deferred, and at-least-once delivery is not complete.
 
 ## Implemented foundation
 

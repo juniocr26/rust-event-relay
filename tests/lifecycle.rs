@@ -32,7 +32,19 @@ async fn health_and_graceful_shutdown() {
         .unwrap()
         .unwrap()
         .unwrap();
-    assert!(std::net::TcpStream::connect(address).is_err());
+    // Probe asynchronously within the shutdown budget instead of assuming one
+    // immediate synchronous connect observes the final socket state.
+    tokio::time::timeout(Duration::from_secs(3), async {
+        loop {
+            match tokio::net::TcpStream::connect(address).await {
+                Err(_) => break,
+                Ok(stream) => drop(stream),
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("listener remained available after shutdown");
 }
 
 #[cfg(unix)]

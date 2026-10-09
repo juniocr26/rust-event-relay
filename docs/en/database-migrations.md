@@ -1,5 +1,9 @@
 [Português brasileiro](../pt-BR/database-migrations.md) | [README](../../README.md)
 
+
+## Current extension — Milestone 2.2
+
+[Delivery state and ownership](milestone-2-2.md) and [ADR 007](adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
 # Database migrations — Milestone 1.3
 
 ## Purpose and tooling
@@ -87,7 +91,7 @@ Changing `.env` does not update an initialized cluster. A missing role can produ
 
 Raw Compose config, environment dumps and SQLx help can reveal secrets; inspect through a parser reporting only non-sensitive fields/equality checks and redact identifying credentials before sharing logs. See [PostgreSQL repair](postgresql.md#authentication-remediation-on-the-real-local-cluster) and [actual remediation results](validation-results.md#local-postgresql-authentication-remediation).
 
-The current last migration is create_outbox_events. Revert drops only that table (and its own indexes/constraints), preserving relay; inspect for data first. Re-apply with migrate run. [Outbox schema](outbox-schema.md) documents the full mapping and destructive rollback limitations.
+The latest source migration is add_delivery_ownership; its down removes authority fields and must not run with active workers. The following rollback description applies only to the earlier create_outbox_events migration. Revert drops only that table (and its own indexes/constraints), preserving relay; inspect for data first. Re-apply with migrate run. [Outbox schema](outbox-schema.md) documents the full mapping and destructive rollback limitations.
 
 ## PostgreSQL repository — Milestone 1.6 implemented
 

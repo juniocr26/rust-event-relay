@@ -1,5 +1,9 @@
 [Português brasileiro](../pt-BR/postgres-repository.md) | [README](../../README.md)
 
+
+## Current extension — Milestone 2.2
+
+[Delivery state and ownership](milestone-2-2.md) and [ADR 007](adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
 # PostgreSQL repository — Milestone 1.6
 
 `PostgresOutboxRepository::new(pool)` is the usable infrastructure construction boundary. The caller creates/configures a `PgPool` (for example with `PgPoolOptions::connect_with` and `PgConnectOptions`) and owns shutdown. Query methods never read environment variables or create global connections. Existing HTTP startup remains HTTP-only. Infrastructure implements the existing `OutboxReader` and depends on persistence/domain; SQLx types never enter those modules. Private `StoredEvent` data and decoding belong exclusively to infrastructure. Models contain validation/conversion, no queries. ADR 005 remains unchanged.

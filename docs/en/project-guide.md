@@ -1,5 +1,9 @@
 [Português brasileiro](../pt-BR/project-guide.md) | [README](../../README.md)
 
+
+## Current extension — Milestone 2.2
+
+[Delivery state and ownership](milestone-2-2.md) and [ADR 007](adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
 # Project guide
 
 ```text
@@ -76,7 +80,7 @@ See [query, restoration, bounds and errors](postgres-repository.md), [integratio
 
 ## Milestone 1 handoff
 
-Milestone 1 is closed; [Milestone 2.1](milestone-2-1.md) now implements the publisher slice. Read the [review and acceptance evidence](milestone-1-review.md), [failure/transaction semantics](failure-and-transaction-semantics.md), [Portuguese handoff source](../pt-BR/handoff-marco-1.md) and [standalone PDF](../../HANDOFF_MARCO_1.pdf). The reviewed base is 7cba38d; closing changes are uncommitted.
+Milestone 1 is closed; [Milestone 2.1](milestone-2-1.md) now implements the publisher slice. Read the [review and acceptance evidence](milestone-1-review.md), [failure/transaction semantics](failure-and-transaction-semantics.md), [Portuguese handoff source](../pt-BR/handoff-marco-1.md). The historical closure reviewed base was 7cba38d; current verified baseline is 5eac9ff.
 
 Controllers should delegate to use cases; use cases orchestrate application/business work; repositories own queries and focused contracts; external API/messaging goes in adapters; services hold reusable business behavior; helpers hold generic utilities; models hold data, invariants and model conversions. Infrastructure depends inward. These boundaries are applied proportionally: the fixed HTTP health response needs no unused use-case/service layers. No forwarding classes or generic CRUD layer were added.
 

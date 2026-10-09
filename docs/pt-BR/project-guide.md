@@ -1,5 +1,9 @@
 [English](../en/project-guide.md) | [README](../../README.pt-BR.md)
 
+
+## Extensão atual — Marco 2.2
+
+[Estado de entrega e posse](milestone-2-2.md) e [ADR 007](adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.
 # Guia do projeto
 
 ```text
@@ -77,7 +81,7 @@ Marco 1.7 adiciona job CI dedicado PostgreSQL 18.6 com credenciais descartáveis
 
 ## Handoff do Marco 1
 
-Marco 1 fechado; [Marco 2.1](milestone-2-1.md) agora implementa o recorte publisher. Leia [revisão e critérios](milestone-1-review.md), [semântica de falhas/transações](failure-and-transaction-semantics.md), [fonte Markdown do handoff](handoff-marco-1.md) e [PDF independente](../../HANDOFF_MARCO_1.pdf). Base revisada 7cba38d; mudanças de fechamento não commitadas.
+Marco 1 fechado; [Marco 2.1](milestone-2-1.md) agora implementa o recorte publisher. Leia [revisão e critérios](milestone-1-review.md), [semântica de falhas/transações](failure-and-transaction-semantics.md), [fonte Markdown do handoff](handoff-marco-1.md). Base histórica do fechamento: 7cba38d; base atual verificada: 5eac9ff.
 
 Controllers delegam a casos de uso; casos de uso orquestram aplicação/negócio; repositórios controlam consultas e contratos focados; API/mensageria externa fica em adapters; services têm comportamento de negócio reutilizável; helpers têm utilidades genéricas; modelos têm dados, invariantes e conversões próprias. Infraestrutura depende para dentro. Aplicação proporcional: resposta fixa de health não exige camadas vazias de caso de uso/service. Sem classes de encaminhamento nem CRUD genérico.
 
