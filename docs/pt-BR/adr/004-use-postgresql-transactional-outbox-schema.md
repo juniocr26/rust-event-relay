@@ -32,4 +32,4 @@ Schema neutro de transporte e voltado ao produtor; repositórios, destinos e wor
 
 JSONB enfraquece tipagem relacional de negócio e normaliza representação; tempo tem limites de precisão/zona. UUIDs não representam tokens externos arbitrários. BIGINT ocupa mais espaço que INTEGER, mas preserva intervalo Rust. Índices custam armazenamento/escrita; sem índices especulativos de agregado/payload. Outbox reduz inconsistência dual-write local, não garante exatamente uma vez: publicação pode duplicar, exigindo idempotência e testes de crash futuros. Down é destrutivo após dados reais; sem afirmação de recuperação sofisticada em produção ou desempenho.
 
-Veja [schema completo e limitações](../outbox-schema.md).
+Veja [schema completo e limitações](../database/outbox-schema.md).

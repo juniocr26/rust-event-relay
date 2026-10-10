@@ -1,0 +1,67 @@
+[Português brasileiro](../../pt-BR/architecture/failure-and-transactions.md) | [README](../../../README.md)
+
+
+# Failure and transaction semantics - Milestone 1.8
+
+## Current extension — Milestone 2.2
+
+[Delivery state and ownership](milestone-2-2.md) and [ADR 007](../adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
+
+
+Milestone 1 supplies a durable representation and a read-only adapter, not a working delivery engine. This document closes the semantics/documentation acceptance criterion without implementing producer writes, ownership, transitions or destinations. Reviewed base: `7cba38d`; closing changes are uncommitted. See [review](../operations/milestone-1-review.md) and [current validation](../testing/validation-results.md#milestone-18-and-milestone-1-closure-2026-10-08).
+
+## Producer boundary
+
+Business changes and insertion into `relay.outbox_events` must participate in the **same producer-owned local database transaction**. Atomicity groups those writes together; separate commits leave a gap in which only one operation succeeds. This follows [PostgreSQL 18 transaction semantics](https://www.postgresql.org/docs/18/tutorial-transactions.html). The standalone relay neither owns that business transaction nor exposes an OutboxWriter. A remote broker or a different database is outside that boundary.
+
+An interrupted COMMIT acknowledgement leaves the producer unable to infer whether the commit succeeded. This is an engineering inference from separate database completion and client acknowledgement in the [PostgreSQL protocol](https://www.postgresql.org/docs/18/protocol-flow.html#PROTOCOL-FLOW-SIMPLE-QUERY), not a tested failure injection. Recovery must reconcile the intended business operation and event. A duplicate primary key proves identity already exists; it does not prove identical payload, metadata or business effects. Producer idempotency, content comparison and reconciliation policy remain undecided. Blindly regenerating identity on retry can create duplicate logical events.
+
+## Current read boundary
+
+The adapter executes one parameterized SELECT through the injected PgPool, with no explicit multi-statement transaction or isolation override. Each SELECT observes a consistent snapshot under the connection's effective isolation. At Read Committed the snapshot is taken at statement start; stronger transaction isolation can use an earlier transaction snapshot. PostgreSQL 18 documents these distinctions in [transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html). The local validation observed Read Committed; the adapter does not require every deployment to share that setting.
+
+Eligibility is pending status and `available_at <=` the caller's explicit UTC cutoff, with at most the positive count limit. The adapter orders by availability, creation and ID for deterministic selection of unchanged fixtures; neither the contract nor UUID v7 promises business delivery order. It performs no `FOR UPDATE/SHARE`, ownership claim, reservation or lifecycle write. A plain SELECT still takes normal table locks such as ACCESS SHARE and can interact with DDL; “read-only” does not mean “lock-free”. See [PostgreSQL 18 locking](https://www.postgresql.org/docs/18/explicit-locking.html).
+
+Other readers can observe the same event. Returned metadata can become stale immediately. Repeated reads perform no lifecycle mutations but may observe changed rows. An empty batch means no eligible rows in this snapshot, not an empty or permanently exhausted backlog. The count bound limits neither payload bytes nor total worker concurrency. Pool sizing, statement deadlines, polling and admission caps belong to the composition/application boundary; the adapter does not configure them. The integration harness's deadlines are test settings, not production defaults.
+
+## Failure matrix
+
+Evidence labels: **I** = current real-PostgreSQL integration; **U** = database-independent unit/contract test; **S** = official semantics or inspected code; **F** = future analysis, not executed delivery behavior. Test names are in [postgres_repository.rs](../../../tests/postgres_repository.rs) and [postgres/mod.rs](../../../src/infrastructure/postgres/mod.rs).
+
+| Failure / crash point | Observable outcome | Durable implications | Current behavior | Recovery owner | Evidence | Deferred work |
+| --- | --- | --- | --- | --- | --- | --- |
+| Storage unreachable, I/O/TLS/authentication/shutdown error | No successful batch; mapped access errors become Unavailable | Reader writes nothing; cannot infer whether other actors committed | Classified error and retained source; no automatic retry | Caller and database operator | U: driver classification; S: mapping. Prior 1.7 unavailable-configuration probe is historical | Reconnection, admission and retry policy |
+| Pool closed / acquisition deadline exhausted | PoolClosed / PoolTimedOut maps to Unavailable | No outbox transition by this read | Pool is caller-owned; error returned | Composition boundary / caller | U: public closed-pool case and timeout mapping; S: SQLx pool documentation. No exhausted-pool integration injection | Operational pool settings and recovery |
+| Missing table or other SQL operation error | OperationFailed; missing table retains SQLx Database source | No outbox write by adapter | No schema creation or repair during reads | Schema/deployment operator; caller handles failure | I: missing_table_preserves_typed_database_failure; U: SQLSTATE mapping | Deployment controls and transaction retry policy |
+| Selected row fails decoding/domain validation | Entire batch fails with InvalidStoredData, no partial success | Stored invalid row remains; no quarantine | Checked private decoding/restoration; source retained | Producer/data owner and operator | I: blank fields, infinity and out-of-Chrono timestamp cases; correction then valid read | Authorized repair/quarantine and incident policy |
+| Read future cancelled or caller exits | Caller may receive no batch/error; server completion is not known from dropped future alone | No durable claim or lifecycle write created | Plain SELECT only; no application cancellation protocol | Caller/pool owner; database bounds resource usage | S: query inspection and PostgreSQL cancellation semantics; no query-cancellation timing test | Production cancellation/deadlines and server observability |
+| Relay process restarts | In-memory snapshots disappear; application currently restarts HTTP only | Reader has not changed committed outbox rows; storage survival has separate conditions | No worker resume or claimed state | Future application orchestrator / operator | S: main/bootstrap and read-only SQL; I: unchanged rows. No abrupt restart/crash injection | Worker recovery and draining |
+| Future publication succeeds, crash occurs before database acknowledgement commits | Destination may have acted; later retry can duplicate | Row may remain pending despite external success | Publisher exists; ownership completion contract exists, but no orchestration/production completion adapter | Future worker plus idempotent consumer | F: boundary analysis, not a test | Ownership, acknowledgement authority, deduplication |
+| Future processed acknowledgement commits before publication | Subsequent eligible reads exclude that row even if nothing was delivered | A durable completion record can conceal lost delivery | No such transition is implemented | Future worker design | F: analysis; I confirms processed rows are filtered | Publish/ack sequencing; avoid this loss window |
+| Future publication/producer COMMIT loses its response | Outcome may be uncertain rather than a known failure | The external operation/commit may have succeeded | No producer writer or delivery orchestration exists; publisher handles uncertain acceptance separately | Producer or future worker reconciles outcome | S/F: separate commit/response boundaries; no injection | Idempotent reconciliation and consumer effects |
+
+A persistently malformed eligible row can fail every batch that selects it, repeatedly blocking progress for otherwise valid selected rows. The adapter never silently skips, repairs or quarantines it. Malformed rows excluded by status/cutoff do not poison an eligible read, as tested. An operator must not interpret this as permission for broad deletion.
+
+Error categories express failure meaning, not retry policy or promised retry success. Unknown SQL errors fall back to OperationFailed. Display/Debug expose only classification/source presence; typed SQLx, domain and conversion sources remain available through Error::source. Source chains can contain credentials or payload details: redact before logging. See [error mapping](../database/postgres-repository.md).
+
+## Cancellation and pool lifecycle
+
+PostgreSQL cancellation is a separate protocol request and need not take effect before the query finishes; client cancellation does not prove immediate server termination. See [PostgreSQL 18 cancellation](https://www.postgresql.org/docs/18/protocol-flow.html#PROTOCOL-FLOW-CANCELING-REQUESTS). No timing guarantee is inferred from dropping a SQLx future.
+
+SQLx 0.8.6 documents that [Pool::close](https://docs.rs/sqlx/0.8.6/sqlx/struct.Pool.html#method.close) prevents new acquisition and waits for checked-out connections to return/close; it does not itself forcibly cancel every checked-out operation. [PoolOptions::acquire_timeout](https://docs.rs/sqlx/0.8.6/sqlx/pool/struct.PoolOptions.html#method.acquire_timeout) bounds acquisition, not the total query. Production composition must choose separate query/operation limits. These are documented driver semantics, not a new application behavior.
+
+## Durable state, storage and recovery
+
+Committed state and deployment durability are different concerns. PostgreSQL's [synchronous versus asynchronous commit](https://www.postgresql.org/docs/18/wal-async-commit.html) affects whether a successful acknowledgement precedes durable WAL flushing. [fsync, synchronous_commit and full_page_writes](https://www.postgresql.org/docs/18/runtime-config-wal.html) interact with storage correctness. Local validation read all three as on; this is a configuration observation, not a power-loss/storage audit, replica guarantee or production SLA.
+
+The bind mount preserves local cluster files across normal container recreation; it is **not a backup strategy**. Backups, restore drills, retention, capacity, access controls and deployment topology need a separate operational design. PostgreSQL describes [backup/restore approaches](https://www.postgresql.org/docs/18/backup.html). Neither successful tests nor Docker persistence demonstrate production durability, performance or crash recovery.
+
+Versioned migration SQL is source history; SQLx's applied `_sqlx_migrations` metadata is database state and physically persists with the cluster. Down migrations remove schema objects with RESTRICT; once outbox data exists, dropping its table destroys it. Rollback is not data recovery, and rebuilding/reapplying migrations does not restore deleted rows or credentials. No shared rollback/reset was executed for closure.
+
+The integration harness closes test pools before dropping exactly its generated database, verifies absence, and exercises panic/error cleanup. Abrupt process termination, failed cleanup or server loss can still leave an isolated database. Identify the exact fixture name and ownership before manual removal; do not broadly reset or drop databases. No such abrupt-termination test was performed.
+
+## Evidence and open decisions
+
+Current tests establish envelope invariants, representable storage, selected-row restoration, inclusive cutoff/bounds, filtering, repeated unchanged observations, no stored-row mutation, two-reader observation, error/source handling and isolated cleanup. The committed schema fixture adds 25 assertions followed by rollback. PostgreSQL snapshot/lock/durability descriptions above come from official version-18 documentation; SQLx behavior is linked specifically to 0.8.6. The suite does not enumerate every concurrent write schedule or inject every failure in the matrix.
+
+A durable table and observation API alone provide no working delivery guarantee. Future publication can precede database acknowledgement and duplicate on retry; acknowledgement before publication can lose delivery. Consumer idempotency must coordinate deduplication with business effects. ADR 007 now selects lease/token authority and attempt semantics; production concurrent ownership, retry classification/backoff, dead-letter/quarantine/replay, operational byte/count/concurrency limits, retention, producer duplicate semantics and per-aggregate ordering remain open. This document does not choose or implement them, and end-to-end worker delivery is not implemented. Milestones 2.1/2.2 separately implement publisher and ownership models/contracts/schema. ADRs 001-005 remain the applicable decisions; no new ADR is needed for documentation closure.

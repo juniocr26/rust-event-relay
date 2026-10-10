@@ -19,7 +19,7 @@ from reportlab.platypus import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "docs/pt-BR/handoff-marco-1.md"
+SOURCE = ROOT / "docs/pt-BR/operations/handoff-marco-1.md"
 OUTPUT = ROOT / "HANDOFF_MARCO_1.pdf"
 NAVY = colors.HexColor("#18354a")
 TEAL = colors.HexColor("#087d8b")

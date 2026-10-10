@@ -14,4 +14,4 @@ Run foreground Supervisor under Compose init as developer, with repository confi
 
 Alternatives: direct AMQP types in application couple business orchestration to transport; fire-and-forget cannot establish acceptance; automatic retry after loss can duplicate; a pool/reconnection framework adds speculative ownership. `cargo run` as child obscures binary lifecycle; a fake worker misrepresents scope; supervising databases inside app duplicates Compose responsibilities. Serialized sends trade throughput for bounded correlation and a simpler cancellation boundary. Declaring topology requires configure privileges; future deployments may preprovision it with stricter roles. A single local queue/broker is educational infrastructure, not production HA or exactly-once processing. Outbox claims, state updates, retries and idempotency remain prerequisites for later delivery guarantees.
 
-See [implementation, official sources and validation](../milestone-2-1.md).
+See [implementation, official sources and validation](../architecture/milestone-2-1.md).

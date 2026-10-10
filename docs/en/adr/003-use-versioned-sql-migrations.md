@@ -31,4 +31,4 @@ Migration files own schema evolution and are committed with code. Shared applied
 
 Docker builds take longer and include Python for reliable URL encoding. SQL must be written and reviewed, including rollback. Each PostgreSQL migration is transactional by default, with exceptions requiring explicit nontransactional handling. Down scripts cannot restore all lost data and are not a production recovery guarantee. The empty namespace is an architectural boundary, not outbox persistence. Version and lockfile pinning do not make upstream base-image/package rebuilds immutable.
 
-See [workflow and limitations](../database-migrations.md).
+See [workflow and limitations](../database/migrations.md).

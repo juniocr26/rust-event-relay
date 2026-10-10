@@ -10,7 +10,7 @@ The intended relay needs durable event records and a producer transaction bounda
 
 ## Decision
 
-Select PostgreSQL for future durable event storage and the transactional outbox. Start local development with `postgres:18.6-bookworm`, loopback host access on 5433, internal port 5432 and a physical `.dockerized-postgres/` bind mount. Use a server healthcheck without adding application persistence. See the [detailed decision](../postgresql.md).
+Select PostgreSQL for future durable event storage and the transactional outbox. Start local development with `postgres:18.6-bookworm`, loopback host access on 5433, internal port 5432 and a physical `.dockerized-postgres/` bind mount. Use a server healthcheck without adding application persistence. See the [detailed decision](../database/postgresql.md).
 
 ## Alternatives considered
 

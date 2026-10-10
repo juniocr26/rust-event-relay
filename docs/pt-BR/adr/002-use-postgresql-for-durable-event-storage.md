@@ -10,7 +10,7 @@ O relay pretendido precisa de registros duráveis de eventos e de uma fronteira 
 
 ## Decisão
 
-Selecionar PostgreSQL para armazenamento durável futuro e outbox transacional. Iniciar o desenvolvimento local com `postgres:18.6-bookworm`, acesso pelo loopback do host em 5433, porta interna 5432 e bind mount físico `.dockerized-postgres/`. Usar healthcheck do servidor sem adicionar persistência à aplicação. Consulte a [decisão detalhada](../postgresql.md).
+Selecionar PostgreSQL para armazenamento durável futuro e outbox transacional. Iniciar o desenvolvimento local com `postgres:18.6-bookworm`, acesso pelo loopback do host em 5433, porta interna 5432 e bind mount físico `.dockerized-postgres/`. Usar healthcheck do servidor sem adicionar persistência à aplicação. Consulte a [decisão detalhada](../database/postgresql.md).
 
 ## Alternativas consideradas
 

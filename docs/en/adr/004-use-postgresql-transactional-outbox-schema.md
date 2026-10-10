@@ -32,4 +32,4 @@ The schema is transport-neutral and producer-facing; repositories, destinations 
 
 JSONB weakens business-field relational typing and normalizes representation; time storage has precision/zone limits. UUID metadata cannot represent arbitrary external correlation tokens. BIGINT uses more space than INTEGER but preserves the Rust range. Indexes add storage/write cost; no speculative aggregate/payload indexes. Outbox reduces local dual-write inconsistency, not exactly-once delivery: remote publication may duplicate, requiring future idempotency and crash tests. Down is destructive once data exists; this is not production recovery sophistication or a performance claim.
 
-See [full schema and limitations](../outbox-schema.md).
+See [full schema and limitations](../database/outbox-schema.md).

@@ -32,4 +32,4 @@ Testes usam fake de uma resposta em código async genérico sem banco. Demonstra
 
 Abstração adiciona tipos/interface; Send/dispatch estático públicos afetam compatibilidade e excluem dyn sem redesenho. Esconder driver pode ocultar semântica, tratado por garantias/exclusões explícitas. Modelo é visão pending, não todas colunas SQL; visões/tokens futuros evoluem conforme necessidade. Outros adapters são possíveis, mas portabilidade/desempenho não são objetivos ou alegações validadas. API standalone não produz atomicidade do negócio do produtor.
 
-Veja [semântica, modelos, questões abertas e diagramas](../persistence-abstraction.md).
+Veja [semântica, modelos, questões abertas e diagramas](../architecture/persistence-contracts.md).

@@ -31,4 +31,4 @@ Migrações controlam evolução do schema e são commitadas com código. Histó
 
 Builds Docker ficam mais longos e incluem Python para encoding confiável da URL. SQL precisa ser escrito e revisado, inclusive rollback. Cada migração PostgreSQL é transacional por padrão, com exceções exigindo tratamento explícito sem transação. Down não restaura todos os dados perdidos nem garante recuperação em produção. Namespace vazio é fronteira arquitetural, não persistência outbox. Fixar versão/lockfile não torna reconstruções de imagens e pacotes upstream imutáveis.
 
-Veja [fluxo e limitações](../database-migrations.md).
+Veja [fluxo e limitações](../database/migrations.md).

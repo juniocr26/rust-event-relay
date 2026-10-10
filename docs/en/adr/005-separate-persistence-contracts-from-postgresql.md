@@ -32,4 +32,4 @@ New tests can use a one-response scripted fake through generic async code withou
 
 Abstraction adds interface/types; public Send/static dispatch choices affect future compatibility and rule out dyn without redesign. Hiding driver features risks hiding semantics, addressed through explicit guarantees and exclusions. The model is a pending view rather than every SQL column; future views/authority tokens can evolve when needed. Other adapters are possible but portability/performance are not goals or validated claims. Producer atomicity cannot be manufactured by a standalone relay API.
 
-See [contract semantics, models, open questions and diagrams](../persistence-abstraction.md).
+See [contract semantics, models, open questions and diagrams](../architecture/persistence-contracts.md).

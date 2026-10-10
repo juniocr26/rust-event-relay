@@ -6,13 +6,20 @@ A Rust service exploring reliable event delivery, retries, idempotency, backpres
 
 This open-source engineering portfolio and study project investigates distributed event delivery under failure. Rust is the implementation tool; the engineering problem is the reason for the repository. English is the canonical documentation language; the Portuguese documentation covers the same scope.
 
+## Documentation catalog and reading path
+
+- [Complete categorized catalog](docs/en/index.md)
+- [Review checklist and evidence gaps](docs/en/operations/completion-checklist.md)
+
+Read purpose/setup first, then architecture and contracts, security and failures, tests/evidence, and local deployment/recovery. This is an independent portfolio project; runtime procedures in the documentation were not executed in the 2026-10-10 review.
+
 ## Current status and scope
 
 **Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a read-only PostgreSQL repository (no application writes), isolated opt-in PostgreSQL repository integration tests, a confirmed RabbitMQ publisher adapter, local broker management and Supervisor process control, validated delivery-state/ownership types and focused mutation contracts, a durable lease migration (not applied automatically), CI checks and bilingual documentation.
 
-**Planned / future exploration:** outbox writes and processing, production PostgreSQL acquisition/completion/release (2.3), delivery orchestration (2.4), polling worker (2.5), crash/recovery experiments (2.6), retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture.md).
+**Planned / future exploration:** outbox writes and processing, production PostgreSQL acquisition/completion/release (2.3), delivery orchestration (2.4), polling worker (2.5), crash/recovery experiments (2.6), retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
 
-[Milestone 2.2](docs/en/milestone-2-2.md) implements the ownership decision, models, contracts and schema only. Leased events remain pending; expired owners cannot complete/release. Tokens protect database transitions but do not fence publication or establish end-to-end delivery.
+[Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements the ownership decision, models, contracts and schema only. Leased events remain pending; expired owners cannot complete/release. Tokens protect database transitions but do not fence publication or establish end-to-end delivery.
 
 ## Architecture
 
@@ -31,7 +38,7 @@ docker compose run --rm --no-deps app cargo build --locked
 python3 scripts/start-local.py
 ```
 
-In another terminal: `curl --fail http://localhost:8080/health`. Supervisor manages the `http` binary. Open **http://localhost:15672/** and log in with `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` from ignored `.env`. See [Milestone 2.1](docs/en/milestone-2-1.md) for exact collective/named/interactive commands, build/start workflow and existing-volume credential handling. Source changes require stop, build and start; there is no automatic reload.
+In another terminal: `curl --fail http://localhost:8080/health`. Supervisor manages the `http` binary. Open **http://localhost:15672/** and log in with `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` from ignored `.env`. See [Milestone 2.1](docs/en/architecture/milestone-2-1.md) for exact collective/named/interactive commands, build/start workflow and existing-volume credential handling. Source changes require stop, build and start; there is no automatic reload.
 
 ```bash
 docker compose exec app bash
@@ -58,7 +65,7 @@ docker compose exec app cargo test --locked
 
 ## Local PostgreSQL
 
-Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses POSTGRES_DB/USER/PASSWORD from your local configuration, matching persisted cluster credentials. Changing initialization variables does not update an existing cluster. `.dockerized-postgres/` persists through Compose down. SQLx CLI 0.8.6 provides explicit migrations creating the relay namespace and relay.outbox_events; application writes and outbox worker delivery remain future work. See [PostgreSQL and destructive reset](docs/en/postgresql.md) and [migration commands](docs/en/database-migrations.md).
+Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses POSTGRES_DB/USER/PASSWORD from your local configuration, matching persisted cluster credentials. Changing initialization variables does not update an existing cluster. `.dockerized-postgres/` persists through Compose down. SQLx CLI 0.8.6 provides explicit migrations creating the relay namespace and relay.outbox_events; application writes and outbox worker delivery remain future work. See [PostgreSQL and destructive reset](docs/en/database/postgresql.md) and [migration commands](docs/en/database/migrations.md).
 
 ## RabbitMQ and Supervisor
 
@@ -72,20 +79,20 @@ supervisorctl start http
 supervisorctl restart http
 ```
 
-The same arguments work with `supervisor`; run either command without arguments for its interactive console. `all` controls app programs only, currently `http`. Browser login and initialization behavior are documented in [Milestone 2.1](docs/en/milestone-2-1.md).
+The same arguments work with `supervisor`; run either command without arguments for its interactive console. `all` controls app programs only, currently `http`. Browser login and initialization behavior are documented in [Milestone 2.1](docs/en/architecture/milestone-2-1.md).
 
 ## Documentation
 
-- [Architecture, trade-offs and roadmap](docs/en/architecture.md)
-- [PostgreSQL decision and trade-offs](docs/en/postgresql.md)
-- [Database migrations](docs/en/database-migrations.md)
-- [Outbox schema](docs/en/outbox-schema.md)
-- [Persistence abstraction](docs/en/persistence-abstraction.md)
-- [Dependency recovery](docs/en/development-dependencies.md)
-- [Docker and configuration](docs/en/docker-and-configuration.md)
-- [Project guide and dependency choices](docs/en/project-guide.md)
-- [Testing](docs/en/testing.md)
-- [Validation results](docs/en/validation-results.md)
+- [Architecture, trade-offs and roadmap](docs/en/architecture/overview.md)
+- [PostgreSQL decision and trade-offs](docs/en/database/postgresql.md)
+- [Database migrations](docs/en/database/migrations.md)
+- [Outbox schema](docs/en/database/outbox-schema.md)
+- [Persistence abstraction](docs/en/architecture/persistence-contracts.md)
+- [Dependency recovery](docs/en/guides/dependencies.md)
+- [Docker and configuration](docs/en/docker/configuration.md)
+- [Project guide and dependency choices](docs/en/guides/project-guide.md)
+- [Testing](docs/en/testing/strategy.md)
+- [Validation results](docs/en/testing/validation-results.md)
 - [ADR 001: Rust](docs/en/adr/001-use-rust-for-the-relay.md)
 - [ADR 002: PostgreSQL](docs/en/adr/002-use-postgresql-for-durable-event-storage.md)
 - [ADR 003: Versioned SQL migrations](docs/en/adr/003-use-versioned-sql-migrations.md)
@@ -93,7 +100,7 @@ The same arguments work with `supervisor`; run either command without arguments 
 - [ADR 005: Persistence boundary](docs/en/adr/005-separate-persistence-contracts-from-postgresql.md)
 - [ADR 006: RabbitMQ publisher and Supervisor](docs/en/adr/006-rabbitmq-publisher-and-supervisor.md)
 - [ADR 007: Durable delivery ownership](docs/en/adr/007-durable-delivery-ownership.md)
-- [Milestone 2.2: Ownership types, contracts and schema](docs/en/milestone-2-2.md)
+- [Milestone 2.2: Ownership types, contracts and schema](docs/en/architecture/milestone-2-2.md)
 
 ## Limits and philosophy
 
@@ -101,4 +108,4 @@ The same arguments work with `supervisor`; run either command without arguments 
 
 MIT licensed; see [LICENSE](LICENSE).
 
-[Milestone 1 is closed](docs/en/milestone-1-review.md): envelope, PostgreSQL, migrations, schema, contracts, repository, integration and [failure/transaction semantics](docs/en/failure-and-transaction-semantics.md). [Milestone 2.1](docs/en/milestone-2-1.md) implements the publisher; [Milestone 2.2](docs/en/milestone-2-2.md) implements state/ownership contracts, with production mutation and delivery orchestration deferred. [Historical Portuguese handoff source](docs/pt-BR/handoff-marco-1.md).
+[Milestone 1 is closed](docs/en/operations/milestone-1-review.md): envelope, PostgreSQL, migrations, schema, contracts, repository, integration and [failure/transaction semantics](docs/en/architecture/failure-and-transactions.md). [Milestone 2.1](docs/en/architecture/milestone-2-1.md) implements the publisher; [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements state/ownership contracts, with production mutation and delivery orchestration deferred. [Historical Portuguese handoff source](docs/pt-BR/operations/handoff-marco-1.md).

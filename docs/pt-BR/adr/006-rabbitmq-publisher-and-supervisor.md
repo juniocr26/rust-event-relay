@@ -14,4 +14,4 @@ Supervisor em primeiro plano sob init Compose como developer, config versionada 
 
 Alternativas: tipos AMQP na aplicação acoplam orquestração ao transporte; fire-and-forget não estabelece aceitação; retry automático após perda pode duplicar; pool/framework de reconexão acrescentam propriedade especulativa. Filho `cargo run` obscurece ciclo do binário; worker fictício distorce escopo; bancos supervisionados no app duplicam Compose. Serialização troca throughput por correlação limitada e cancelamento simples. Declarar topologia exige configure; futuro deploy pode provisionar com papéis mais restritos. Fila/broker local único são infraestrutura educacional, sem HA produtiva ou processamento exatamente uma vez. Claims, estado, retries e idempotência continuam pré-requisitos de entrega futura.
 
-Veja [implementação, fontes oficiais e validação](../milestone-2-1.md).
+Veja [implementação, fontes oficiais e validação](../architecture/milestone-2-1.md).
