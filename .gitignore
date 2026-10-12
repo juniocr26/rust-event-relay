@@ -17,3 +17,6 @@
 /frontend/.env
 /frontend/.env.*
 !/frontend/.env.example
+
+/frontend/test-results/
+/frontend/playwright-report/

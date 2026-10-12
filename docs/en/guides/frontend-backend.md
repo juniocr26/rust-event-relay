@@ -1,6 +1,6 @@
 # Frontend/backend preparation — 2026-10-12
 
-The repository now separates `frontend/` (Vue presentation) and `backend/` (Rust ownership, delivery and persistence). This is structural preparation; UI prototyping and Milestone 3 remain separate work.
+The repository now separates `frontend/` (Vue presentation) and `backend/` (Rust ownership, delivery and persistence). The presentation prototype is now implemented; Milestone 3 remains separate work.
 
 ## Organization and responsibilities
 
@@ -11,14 +11,15 @@ docker/Dockerfile         Rust development container
 docker/supervisor/normal.conf  physical http/relay configuration and launchers
 docker/rabbitmq.conf     broker configuration
 docs/                     bilingual shared documentation
-Reports/                  structural handoff
 scripts/                  shared environment diagnostics and documentation generation
 compose.yaml              root orchestration
 ```
 
 No root Cargo workspace is needed. Rust public modules and APIs retain their names. `domain` owns models/invariants; `persistence/model` owns persistence-facing data and meaningful conversions; focused `persistence` and `application/publisher` contracts are interfaces. `infrastructure/postgres` contains repositories; `infrastructure/rabbitmq` is the existing adapter. `application/delivery` and `application/worker` contain use cases and scheduling. HTTP handling in `application.rs` is the controller boundary; fixed health needs no artificial use case. Composition roots construct infrastructure outside application orchestration. Models/contracts remain independent of SQLx, Lapin and Vue. No empty services/helpers or generic CRUD layers were added.
 
-Vue SFCs are views, using Composition API and script setup. Future composables may coordinate presentation; API adapters implement focused application contracts when needed. Delivery rules, database repositories and ownership authority stay in Rust. The current accessible shell has a project heading and honest scope text, with no API calls, metrics, fixtures, dashboard, routing, global state or auth. Reusable components will be extracted when actual reuse warrants typed props and explicit events.
+Vue SFCs are views, using Composition API and script setup. Future composables may coordinate presentation; API adapters implement focused application contracts when needed. Delivery rules, database repositories and ownership authority stay in Rust. The current frontend is a full-viewport blue landing page with a compact scenario launcher and a native accessible dialog. Reusable controls, modal lifecycle, progress, message flow, illustrative activity, input/output envelopes and explanatory trace are composed from typed Vue components. Scenario fixtures are separate from rendering; `usePlayback` owns a single cancellable presentation timer and cleans up on replay and unmount. Escape/Close restore focus, the native modal makes the background inert, and body scrolling is blocked while open. Dialog content scrolls internally and reflows at mobile sizes; reduced motion disables animation without accelerating the explanation.
+
+Five local scenarios illustrate confirmed delivery, post-confirmation crash/recovery, competing workers, lost completion acknowledgement and future consumer deduplication. Interrupted/skipped/uncertain/future stages keep their own labels. Broker acceptance is not consumer processing. Recovery can duplicate stable event IDs; database tokens do not fence RabbitMQ publication. CommitUncertain proves neither commit nor rollback; independent committed observation is this scenario's chosen result. The future consumer models deduplication plus a local database effect in one transaction, not an implemented consumer or atomic external effect. No network calls or infrastructure mutations occur. Shared CSS tokens govern the presentation. See [frontend component and test guide](../../../frontend/README.md).
 
 ## Development and environment
 
@@ -42,7 +43,7 @@ Management stays at [http://localhost:15672/](http://localhost:15672/) on loopba
 
 CI retains all isolated PostgreSQL, RabbitMQ and integrated-recovery jobs, with Cargo working directory backend. Added binary build, strict rustdoc and a frontend npm-ci/type-check/build job. Remote CI is configured, not executed by this local preparation. Run backend fmt, strict all-target/all-feature Clippy, standard tests, both binaries and `RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps`; opt-in suites retain isolated databases and UUID broker resources. Documentation validation remains in Engineering Library tools.
 
-Delivery semantics remain the accepted at-least-once foundation under explicit assumptions; broker acceptance is not consumer effect, ownership does not fence external publication, and duplicates still require consumer idempotency. Shared ownership rollout remains pending. Read the [Milestone 2 review](../operations/milestone-2-review.md), then the [structural handoff](../../../Reports/FRONTEND_BACKEND_PREPARATION_HANDOFF.md). Next step is UI design/prototyping with agreed needs; retry/backoff, quarantine and replay belong to separately scoped Milestone 3.
+Delivery semantics remain the accepted at-least-once foundation under explicit assumptions; broker acceptance is not consumer effect, ownership does not fence external publication, and duplicates still require consumer idempotency. Shared ownership rollout remains pending. Read the [Milestone 2 review](../operations/milestone-2-review.md), then the [frontend component guide](../../../frontend/README.md). Future API integration requires separately agreed contracts; retry/backoff, quarantine and replay belong to separately scoped Milestone 3.
 
 ## Actual local outcome and operational limitation
 
