@@ -133,49 +133,9 @@ async fn routed_envelope_properties_and_mandatory_return() {
     result.unwrap().unwrap();
 }
 
-/// Withhold broker-to-client bytes after setup on a test-owned TCP proxy.
-/// This changes no shared broker state or other clients' connections.
-async fn proxy() -> (
-    String,
-    std::sync::Arc<std::sync::atomic::AtomicBool>,
-    tokio::task::JoinHandle<()>,
-) {
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap();
-    let mut url = url::Url::parse(&uri()).unwrap();
-    let target = format!("{}:{}", url.host_str().unwrap(), url.port().unwrap_or(5672));
-    url.set_host(Some("127.0.0.1")).unwrap();
-    url.set_port(Some(address.port())).unwrap();
-    let hold = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let flag = hold.clone();
-    let task = tokio::spawn(async move {
-        let (client, _) = listener.accept().await.unwrap();
-        let broker = tokio::net::TcpStream::connect(target).await.unwrap();
-        let (mut client_read, mut client_write) = client.into_split();
-        let (mut broker_read, mut broker_write) = broker.into_split();
-        let outgoing = async {
-            let _ = tokio::io::copy(&mut client_read, &mut broker_write).await;
-        };
-        let incoming = async {
-            let mut buffer = [0; 8192];
-            loop {
-                let size = broker_read.read(&mut buffer).await.unwrap_or(0);
-                if size == 0 {
-                    break;
-                }
-                if flag.load(std::sync::atomic::Ordering::Acquire) {
-                    std::future::pending::<()>().await;
-                }
-                if client_write.write_all(&buffer[..size]).await.is_err() {
-                    break;
-                }
-            }
-        };
-        tokio::select! { () = outgoing => {}, () = incoming => {} }
-    });
-    (url.into(), hold, task)
-}
+use faults::proxy;
+#[path = "support/faults.rs"]
+mod faults;
 
 #[tokio::test]
 #[ignore = "requires a real RabbitMQ broker and explicit credentials"]

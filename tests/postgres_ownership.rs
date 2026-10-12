@@ -477,69 +477,9 @@ async fn statement_rejection_before_commit_is_not_commit_uncertainty() {
     }).await;
 }
 
-// Test-owned plaintext PostgreSQL protocol proxy. It discards CommandComplete
-// COMMIT rather than forwarding it to SQLx; shared services are never interrupted.
-async fn lost_commit_ack_pool(pool: &PgPool) -> (PgPool, tokio::task::JoinHandle<bool>) {
-    use sqlx::postgres::{PgPoolOptions, PgSslMode};
-    use tokio::{
-        io::{AsyncReadExt, AsyncWriteExt},
-        net::{TcpListener, TcpStream},
-    };
-    let original = pool.connect_options();
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("proxy bind");
-    let port = listener.local_addr().unwrap().port();
-    let host = original.get_host().to_owned();
-    let upstream_port = original.get_port();
-    let task = tokio::spawn(async move {
-        let (client, _) = listener.accept().await.expect("proxy client");
-        let server = TcpStream::connect((host.as_str(), upstream_port))
-            .await
-            .expect("proxy upstream");
-        let (mut client_read, mut client_write) = client.into_split();
-        let (mut server_read, mut server_write) = server.into_split();
-        let frontend = tokio::io::copy(&mut client_read, &mut server_write);
-        let backend = async {
-            loop {
-                let mut header = [0u8; 5];
-                if server_read.read_exact(&mut header).await.is_err() {
-                    return false;
-                }
-                let length = u32::from_be_bytes(header[1..].try_into().unwrap());
-                assert!((4..=16_777_216).contains(&length), "bounded protocol frame");
-                let mut body = vec![0; usize::try_from(length - 4).unwrap()];
-                if server_read.read_exact(&mut body).await.is_err() {
-                    return false;
-                }
-                if header[0] == b'C' && body == b"COMMIT\0" {
-                    return true;
-                }
-                if client_write.write_all(&header).await.is_err()
-                    || client_write.write_all(&body).await.is_err()
-                {
-                    return false;
-                }
-            }
-        };
-        tokio::select! {
-            _=frontend=>false,
-            committed=backend=>committed,
-        }
-    });
-    let options = (*original)
-        .clone()
-        .host("127.0.0.1")
-        .port(port)
-        .ssl_mode(PgSslMode::Disable);
-    let proxy_pool = checked(
-        PgPoolOptions::new()
-            .max_connections(1)
-            .acquire_timeout(Duration::from_secs(5))
-            .connect_with(options)
-            .await,
-        "connect isolated proxy pool",
-    );
-    (proxy_pool, task)
-}
+use faults::lost_commit_ack_pool;
+#[path = "support/faults.rs"]
+mod faults;
 
 #[tokio::test]
 #[ignore = "requires PostgreSQL and CREATE DATABASE"]

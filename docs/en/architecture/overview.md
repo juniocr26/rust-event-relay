@@ -168,3 +168,8 @@ See [full contracts and open questions](persistence-contracts.md), [ADR 005](../
 `src/infrastructure/postgres/` implements the existing `OutboxReader` using an injected `PgPool`. Infrastructure depends inward on persistence and domain; SQL, SQLx, private rows and driver mapping stay in infrastructure. Models own validation/conversion and contain no queries. No duplicate interface, empty layers, new migration or ADR is needed under ADR 005. Native Send futures/static dispatch remain intact. HTTP startup remains independent of PostgreSQL.
 
 See [query, restoration, bounds and errors](../database/postgres-repository.md), [integration test guidance](../testing/strategy.md) and [executed validation](../testing/validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](failure-and-transactions.md). Milestone 1 is closed; [Milestone 2.1](milestone-2-1.md) adds the publisher while worker delivery remains deferred.
+
+
+## Milestone 2.6 — Current scope
+
+[Integrated experiments](../architecture/milestone-2-6.md) and [Milestone 2 review](../operations/milestone-2-review.md) update acceptance under explicit assumptions. Shared rollout remains pending; earlier records retain their historical context.

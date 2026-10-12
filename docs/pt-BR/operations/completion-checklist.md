@@ -52,3 +52,8 @@ Categorias presentes no índice contêm conteúdo mantido; categorias tratadas e
 ## Lacunas restantes dependentes de evidência
 
 SQL/concorrência de ownership, worker, efeitos produtor/consumidor, linhas inválidas, retry/recuperação, TLS/HA e desempenho.
+
+
+## Marco 2.6 — Escopo atual
+
+[Experimentos integrados](../architecture/milestone-2-6.md) e [revisão do Marco 2](../operations/milestone-2-review.md) atualizam a aceitação sob premissas explícitas. Rollout compartilhado continua pendente; registros anteriores mantêm seu contexto histórico.

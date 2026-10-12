@@ -241,3 +241,8 @@ Reutilizar containers existentes; suíte aplica migração de posse apenas dentr
 ```bash
 docker compose exec -T app cargo test --locked --test postgres_ownership -- --ignored --test-threads=4
 ```
+
+
+## Marco 2.6 — Escopo atual
+
+[Experimentos integrados](../architecture/milestone-2-6.md) e [revisão do Marco 2](../operations/milestone-2-review.md) atualizam a aceitação sob premissas explícitas. Rollout compartilhado continua pendente; registros anteriores mantêm seu contexto histórico.

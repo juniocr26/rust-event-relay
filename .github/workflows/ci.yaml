@@ -71,3 +71,48 @@ jobs:
           rustup default 1.95.0
       - run: cargo test --locked --test rabbitmq_publisher -- --ignored
       - run: cargo test --locked --lib infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable -- --ignored
+  integrated-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18.6-bookworm
+        env:
+          POSTGRES_USER: relay_test
+          POSTGRES_PASSWORD: disposable_test_password
+          POSTGRES_DB: relay_test_admin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U relay_test -d relay_test_admin"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      rabbitmq:
+        image: rabbitmq:4.3.6-management
+        env:
+          RABBITMQ_DEFAULT_USER: relay_test
+          RABBITMQ_DEFAULT_PASS: disposable_test_password
+          RABBITMQ_DEFAULT_VHOST: relay
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_running"
+          --health-interval 5s --health-timeout 5s --health-retries 24
+    env:
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: relay_test
+      POSTGRES_PASSWORD: disposable_test_password
+      POSTGRES_DB: relay_test_admin
+      RABBITMQ_HOST: 127.0.0.1
+      RABBITMQ_PORT: 5672
+      RABBITMQ_DEFAULT_USER: relay_test
+      RABBITMQ_DEFAULT_PASS: disposable_test_password
+      RABBITMQ_DEFAULT_VHOST: relay
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup default 1.95.0
+      - run: cargo test --locked --test worker_smoke compiled_worker_confirms -- --ignored
+      - run: cargo test --locked --test integrated_recovery -- --ignored --test-threads=1

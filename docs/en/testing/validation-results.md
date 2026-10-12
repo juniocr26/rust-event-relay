@@ -704,6 +704,34 @@ Read-only `sqlx migrate info` before and after app recreation: two original migr
 
 Nine controlled worker/config tests use paused Tokio time and notifications. They cover every outcome decision and independent release combinations, fresh tokens, paced idle/failure, replacement only where warranted, no acquisition with missing/known unusable publisher, interrupted waits, preexisting shutdown, in-flight drain and bounded cleanup. The fake stalled close consumes the same absolute overall deadline; it proves policy, not every real SQLx shutdown schedule. Three opt-in compositions own generated databases/exact UUID broker names; the real binary preserves event ID/payload, confirms and acknowledges processed with one acquisition. Test child/daemon cleanup precedes exact queue/exchange deletion and test database removal. Supervisor test derives its temporary physical config from versioned source, preserves autostart false, uses an ephemeral HTTP binding and tests both aliases with stop/start/restart of relay/http/all. It is a local Linux container check, not a new Supervisor CI job.
 
-Configuration check: Compose validation and installed/source Supervisor equality plus executable launchers; shared read-only migration/status and HTTP probe. Documentation checker from sibling tools validates 216 documents, zero errors and 18 existing restricted-fixture warnings; [handoff](../../../Reports/MILESTONE_2_5_HANDOFF.md) links checked separately. git diff --check passes in both projects. Library changes are Markdown only; application/runtime tests or remote GitHub Actions execution were not claimed.
+Configuration check: Compose validation and installed/source Supervisor equality plus executable launchers; shared read-only migration/status and HTTP probe. Documentation checker from sibling tools validates 216 documents, zero errors and 18 existing restricted-fixture warnings; handoff (2.5 report absent from this checkout) links checked separately. git diff --check passes in both projects. Library changes are Markdown only; application/runtime tests or remote GitHub Actions execution were not claimed.
 
 No throughput/fairness/consumer-effect/end-to-end at-least-once claim follows. Happy path, fake cancellation and isolated named operation do not establish crash-window or two-worker recovery: those remain 2.6. [Current operation, settings and rollout](../architecture/milestone-2-5.md) describes budgets/limits. Shared migration/application startup is deliberately pending authorization; no UI, readiness framework, metrics or dashboard added.
+
+
+## Milestone 2.6 — 2026-10-12
+
+Started clean at Rust `d6f529b` and Library `88f8e62`. Missing 2.5 handoff was not reconstructed; versioned code/docs/history provided the baseline. [Matrix and actual observations](../architecture/milestone-2-6.md), [acceptance review](../operations/milestone-2-review.md), [handoff](../../../Reports/MILESTONE_2_6_HANDOFF.md) and [sanitized final transcript](../../../Reports/MILESTONE_2_6_EXPERIMENTS.txt) record the evidence.
+
+| Executed command in existing app (`docker compose exec -T app`) | Actual result |
+| --- | --- |
+| cargo fmt --check | Passed |
+| cargo clippy --locked --all-targets --all-features -- -D warnings | Passed |
+| cargo test --locked | 47 passed, 45 opt-in ignored, no failures |
+| cargo test --locked --test integrated_recovery -- --ignored --test-threads=1 --nocapture | 11 passed, including one internal no-op entry; ten experiment tests; final suite 27.09 s |
+| cargo test --locked --test postgres_ownership -- --ignored --test-threads=4 | 12 passed |
+| cargo test --locked --test postgres_repository -- --ignored --test-threads=4 | 15 passed |
+| cargo test --locked --test delivery_ownership_schema -- --ignored | 1 passed |
+| cargo test --locked --test rabbitmq_publisher -- --ignored | 2 passed |
+| cargo test --locked --lib infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable -- --ignored | 1 passed |
+| cargo test --locked --test worker_smoke -- --ignored --test-threads=1 | 3 passed; isolated physical Supervisor included; 22.81 s |
+| cargo build --locked --bins | Both binaries built |
+| cargo doc --locked --no-deps --all-features with RUSTDOCFLAGS='-D warnings' | Passed |
+
+Compose configuration passed `docker compose config --quiet`; Ruby/Psych parsed the workflow and its four jobs. Supervisor configuration/launchers were unchanged; its isolated regression passed. New combined CI services/job are configured, not remotely executed. An intermediate Clippy error from test helper import/unused function was corrected; no production defect was confirmed. The deliberate cleanup assertion is expected and the enclosing regression passes only after independent absence checks.
+
+Real expiration, durable states and original broker identities support the tested recovery schedules; finite tests are not universal liveness/exactly-once proof. Broker disconnect during delivery used a real worker with test-scoped lifecycle; crash barriers used an instrumented test executable with real use case/adapters; restarted workers, concurrency and signal scenarios used the unmodified relay binary. Response-loss proxy demonstrates one already-committed uncertain completion. No source/schema/dependency changes, durable retry/quarantine/replay or producer/consumer business behavior added.
+
+Final read-only environment checks: original services continuously running; http RUNNING, relay STOPPED; two original migrations installed, ownership migration 20261009000000 pending. Zero fixture databases, no fixture queues/exchanges, no test worker/helper process or relay_recovery_ directory remained. No shared migration, service restart/recreation, queue purge or unrelated session termination. Exact cleanup also passed after intentional assertion failure. Shared rollout remains separately unauthorized.
+
+Final documentation validation: read-only Library validator from parent workspace checked 220 documents, zero errors, 18 existing restricted-fixture warnings. Handoff relative file/anchor links checked separately because Reports is outside the catalog scan. git diff --check passed in both repositories. Library changes are Markdown only; no Library application/dependency/runtime edits, no Viva Bem edits, no commit/push.

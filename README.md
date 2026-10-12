@@ -2,7 +2,7 @@
 
 # Reliable Event Relay
 
-[Milestone 2.5 — Worker composition and operation](docs/en/architecture/milestone-2-5.md): implemented as a separate sequential `relay` binary. Shared ownership migration remains pending; relay autostart is disabled. Next: 2.6 integrated crash/failure/recovery experiments.
+[Milestone 2.6 — Integrated recovery](docs/en/architecture/milestone-2-6.md): real crash, uncertainty, concurrency and shutdown experiments completed. [Milestone 2 closed under explicit assumptions](docs/en/operations/milestone-2-review.md). Shared migration pending; relay STOPPED/autostart=false.
 
 A Rust service exploring reliable event delivery, retries, idempotency, backpressure, dead-letter handling, and failure recovery in distributed systems.
 
@@ -19,11 +19,11 @@ Read purpose/setup first, then architecture and contracts, security and failures
 
 **Implemented today:** a sequential relay worker with explicit pacing/reconnection and bounded shutdown, environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a PostgreSQL observation repository and production ownership operations, isolated opt-in PostgreSQL repository integration tests, a confirmed RabbitMQ publisher adapter, local broker management and Supervisor process control, validated delivery-state/ownership types and focused mutation contracts, a durable lease migration (not applied automatically), real ownership concurrency/expiration tests, CI checks and bilingual documentation.
 
-**Planned / future exploration:** producer outbox writes, crash/recovery experiments (2.6), retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
+**Planned / future exploration:** producer outbox writes, retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
 
 [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements the ownership decision, models, contracts and schema only. Leased events remain pending; expired owners cannot complete/release. Tokens protect database transitions but do not fence publication or establish end-to-end delivery.
 
-[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. Development ownership migration remains pending. [Continuity report (pt-BR)](Reports/MILESTONE_2_5_HANDOFF.md). 2.5 now composes the worker; end-to-end guarantees remain unestablished.
+[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. Development ownership migration remains pending. Continuity report (pt-BR) (2.5 report absent from this checkout); [current handoff](Reports/MILESTONE_2_6_HANDOFF.md). 2.6 validates an at-least-once foundation under explicit assumptions, without exactly-once consumer effects.
 
 ## Architecture
 

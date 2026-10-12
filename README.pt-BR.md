@@ -2,7 +2,7 @@
 
 # Reliable Event Relay
 
-[Marco 2.5 — Composição e operação do worker](docs/pt-BR/architecture/milestone-2-5.md): implementado como binário `relay` sequencial separado. Migração de posse compartilhada continua pendente; autostart do relay desabilitado. Próximo: 2.6, experimentos integrados de crash/falha/recuperação.
+[Marco 2.6 — Recuperação integrada](docs/pt-BR/architecture/milestone-2-6.md): experimentos reais de crash, incerteza, concorrência e shutdown concluídos. [Marco 2 fechado sob premissas explícitas](docs/pt-BR/operations/milestone-2-review.md). Migração compartilhada pendente; relay STOPPED/autostart=false.
 
 Um serviço Rust que explora entrega confiável de eventos, tentativas, idempotência, contrapressão, isolamento de mensagens problemáticas e recuperação de falhas em sistemas distribuídos.
 
@@ -19,11 +19,11 @@ Leia propósito/setup, arquitetura e contratos, segurança/falhas, testes/evidê
 
 **Implementado hoje:** worker relay sequencial com pacing/reconexão explícitos e shutdown limitado, configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial e contratos de persistência da aplicação e repositório PostgreSQL de observação e operações produtivas de posse, testes opt-in isolados de integração PostgreSQL, adapter publisher RabbitMQ confirmado, management local do broker e gestão Supervisor, tipos validados de estado/posse e contratos focados de mutação, migração de lease durável (sem aplicação automática), testes reais de concorrência/expiração de posse, verificações de CI e documentação bilíngue.
 
-**Planejado / exploração futura:** gravações de produtor, experimentos de crash/recuperação (2.6), orquestração de retries, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. O binário HTTP não executa worker outbox; o publisher é chamável separadamente. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture/overview.md).
+**Planejado / exploração futura:** gravações de produtor, orquestração de retries, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. O binário HTTP não executa worker outbox; o publisher é chamável separadamente. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture/overview.md).
 
 [Marco 2.2](docs/pt-BR/architecture/milestone-2-2.md) implementa decisão de posse, modelos, contratos e schema. Eventos com lease permanecem pending; donos expirados não podem concluir/liberar. Tokens protegem transições no banco, mas não impedem publicação nem estabelecem entrega ponta a ponta.
 
-[Marco 2.3](docs/pt-BR/architecture/milestone-2-3.md) implementa operações PostgreSQL com transações curtas e relógio pós-lock. Migração de posse continua pendente no desenvolvimento. [Relatório de continuidade](Reports/MILESTONE_2_5_HANDOFF.md). 2.5 agora compõe o worker; sem garantia ponta a ponta.
+[Marco 2.3](docs/pt-BR/architecture/milestone-2-3.md) implementa operações PostgreSQL com transações curtas e relógio pós-lock. Migração de posse continua pendente no desenvolvimento. Relatório de continuidade (relatório 2.5 ausente neste checkout); [handoff atual](Reports/MILESTONE_2_6_HANDOFF.md). 2.6 valida uma fundação pelo menos uma vez sob premissas explícitas, sem efeitos exactly-once.
 
 ## Arquitetura
 

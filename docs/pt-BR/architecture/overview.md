@@ -168,3 +168,8 @@ Veja [contratos e questões abertas](persistence-contracts.md), [ADR 005](../adr
 `src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
 
 Veja [consulta, restauração, limites e erros](../database/postgres-repository.md), [testes de integração](../testing/strategy.md) e [validação executada](../testing/validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marcos 1.7 e 1.8 concluídos: integração e [semântica de falhas/transações](failure-and-transactions.md). Marco 1 fechado; Marcos 2.1/2.2 adicionam publisher e contratos/schema de ownership; mutações produtivas e worker continuam adiados.
+
+
+## Marco 2.6 — Escopo atual
+
+[Experimentos integrados](../architecture/milestone-2-6.md) e [revisão do Marco 2](../operations/milestone-2-review.md) atualizam a aceitação sob premissas explícitas. Rollout compartilhado continua pendente; registros anteriores mantêm seu contexto histórico.

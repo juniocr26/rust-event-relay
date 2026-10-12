@@ -52,3 +52,8 @@ Categories present in the index contain maintained content; categories covered e
 ## Remaining evidence-dependent gaps
 
 Production ownership SQL/concurrency, worker orchestration, producer/consumer effects, poison rows, retry/recovery experiments, TLS/HA and performance.
+
+
+## Milestone 2.6 — Current scope
+
+[Integrated experiments](../architecture/milestone-2-6.md) and [Milestone 2 review](../operations/milestone-2-review.md) update acceptance under explicit assumptions. Shared rollout remains pending; earlier records retain their historical context.

@@ -67,13 +67,14 @@ async fn smoke(supervised: bool) {
                 ctl(&case_config,"supervisorctl",&["start","relay"]).await;
             }
             loop {
-                let processed: bool=checked(sqlx::query_scalar("SELECT status='processed' AND ownership_token IS NULL AND attempt_count=1 FROM relay.outbox_events WHERE id=$1").bind(event_id).fetch_one(&case_pool).await,"completion observation");
+                let processed: bool=checked(sqlx::query_scalar("SELECT status='processed' AND processed_at IS NOT NULL AND ownership_token IS NULL AND acquired_at IS NULL AND expires_at IS NULL AND attempt_count=1 FROM relay.outbox_events WHERE id=$1").bind(event_id).fetch_one(&case_pool).await,"completion observation");
                 if processed { break; }
                 tokio::time::sleep(Duration::from_millis(10)).await;
             }
             let message=case_channel.basic_get(case_queue.clone().into(),BasicGetOptions::default()).await.unwrap().expect("confirmed test message");
             let envelope: reliable_event_relay::domain::event::EventEnvelope=serde_json::from_slice(&message.data).unwrap();
             assert_eq!(envelope.id(),event_id); assert_eq!(envelope.payload(),&serde_json::json!({"smoke":true}));
+            assert_eq!(message.properties.message_id().as_ref().unwrap().as_str(),event_id.to_string());
             message.ack(BasicAckOptions::default()).await.unwrap();
             if supervised {
                 for alias in ["supervisorctl","supervisor"] {

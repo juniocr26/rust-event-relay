@@ -241,3 +241,8 @@ Run the existing containers; this suite applies the ownership migration only ins
 ```bash
 docker compose exec -T app cargo test --locked --test postgres_ownership -- --ignored --test-threads=4
 ```
+
+
+## Milestone 2.6 — Current scope
+
+[Integrated experiments](../architecture/milestone-2-6.md) and [Milestone 2 review](../operations/milestone-2-review.md) update acceptance under explicit assumptions. Shared rollout remains pending; earlier records retain their historical context.

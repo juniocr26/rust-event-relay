@@ -21,3 +21,8 @@ SQLx migrations are versioned and explicitly applied, not applied automatically 
 Default tests validate domain, mapping and contracts plus HTTP/socket behavior. Opt-in PostgreSQL tests create exact generated fixture databases and verify cleanup; broker tests exercise routing and uncertainty. Some database-independent tests use local sockets, so independent does not mean no I/O. CI workflow presence is configuration evidence, not proof of remote success. Historical results remain in testing/validation-results. No Rust build, test, Docker call, migration, broker request or benchmark ran in this review.
 
 Performance is currently constrained by bounded row counts and one-in-flight publisher admission, but row count does not bound payload bytes. Reader `fetch_all` materializes a batch; invalid selected data fails the whole result and can block future repeated reads. No quarantine, backpressure policy, polling rate, throughput measurement, metrics endpoint or production pool sizing is delivered. Remaining evidence gaps: ownership SQL/concurrency, worker orchestration, duplicate/recovery experiments, poison-row policy, production TLS/HA, retention/backup restore and performance. These are not prerequisites already demonstrated by a green liveness probe.
+
+
+## Milestone 2.6 — Current scope
+
+[Integrated experiments](../architecture/milestone-2-6.md) and [Milestone 2 review](../operations/milestone-2-review.md) update acceptance under explicit assumptions. Shared rollout remains pending; earlier records retain their historical context.

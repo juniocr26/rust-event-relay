@@ -6,6 +6,8 @@ Reading path: purpose/setup → architecture/contracts → security/failures →
 
 ## architecture
 
+- [Milestone 2.6 — Integrated recovery](architecture/milestone-2-6.md)
+
 - [Milestone 2.5 — Worker](architecture/milestone-2-5.md)
 
 - [Milestone 2.4 — Delivery use case](architecture/milestone-2-4.md)
@@ -67,6 +69,8 @@ Verified boundaries and explicit non-integrations.
 - [Verified publisher integration](integrations/rabbitmq-contract.md)
 
 ## operations
+
+- [Milestone 2 acceptance review](operations/milestone-2-review.md)
 
 Diagnosis, recovery, review checklists and historical records.
 

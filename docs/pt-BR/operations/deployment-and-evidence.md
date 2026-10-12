@@ -21,3 +21,8 @@ Migrações SQLx são versionadas e aplicadas explicitamente, não pelo startup 
 Testes padrão validam domínio, mapeamento e contratos, além de HTTP/socket. Testes PostgreSQL opt-in criam bancos de fixture com nomes exatos e verificam limpeza; testes de broker exercitam roteamento e incerteza. Alguns testes independentes do banco usam sockets locais, portanto independência não significa ausência de I/O. Workflow CI é evidência de configuração, não prova de execução remota. Resultados históricos continuam em testing/validation-results. Nenhum build/teste Rust, comando Docker, migração, chamada ao broker ou benchmark foi executado nesta revisão.
 
 Desempenho tem limites de linhas e uma publicação em andamento, mas número de linhas não limita bytes de payload. `fetch_all` materializa lote; dado selecionado inválido falha o resultado inteiro e pode bloquear leituras repetidas. Não há quarentena, política de backpressure, frequência polling, medição de vazão, endpoint de métricas ou dimensionamento produtivo de pool entregue. Lacunas: SQL/concorrência de ownership, orquestração worker, experimentos de duplicata/recuperação, política de linha inválida, TLS/HA produtivo, retenção/restore e desempenho. Nada disso já foi comprovado por liveness verde.
+
+
+## Marco 2.6 — Escopo atual
+
+[Experimentos integrados](../architecture/milestone-2-6.md) e [revisão do Marco 2](../operations/milestone-2-review.md) atualizam a aceitação sob premissas explícitas. Rollout compartilhado continua pendente; registros anteriores mantêm seu contexto histórico.

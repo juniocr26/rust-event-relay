@@ -6,6 +6,8 @@ Percurso: propósito/setup → arquitetura/contratos → segurança/falhas → t
 
 ## architecture
 
+- [Marco 2.6 — Recuperação integrada](architecture/milestone-2-6.md)
+
 - [Milestone 2.5 — Worker](architecture/milestone-2-5.md)
 
 - [Marco 2.4 — Caso de uso de entrega](architecture/milestone-2-4.md)
@@ -67,6 +69,8 @@ Fronteiras verificadas e ausência de integrações.
 - [Integração verificada do publisher](integrations/rabbitmq-contract.md)
 
 ## operations
+
+- [Revisão de aceitação do Marco 2](operations/milestone-2-review.md)
 
 Diagnóstico, recuperação, checklists e registros históricos.
 

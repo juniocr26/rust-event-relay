@@ -704,6 +704,34 @@ Comandos executados com `docker compose exec -T app` e Cargo `--locked`; casos i
 
 Nove testes controlados worker/config usam tempo Tokio pausado/notificações: decisões de todos outcomes/releases, tokens novos, pacing, substituição apenas quando indicada, ausência de aquisição sem publisher/com publisher inutilizável, interrupção, shutdown prévio, drain e cleanup limitado. Close fake bloqueado usa mesmo deadline global; não prova todas as situações SQLx reais. Três composições opt-in usam bancos gerados e nomes UUID broker exatos; binário real preserva ID/payload, confirma e reconhece processed com uma aquisição. Child/daemon encerrados antes de deletar queue/exchange e remover banco próprio. Teste Supervisor deriva configuração física versionada, mantém autostart false, HTTP efêmero e controla relay/http/all pelos dois aliases. Evidência Linux local em container, sem novo job Supervisor CI.
 
-Configuração: validação Compose, igualdade instalada/fonte Supervisor, launchers executáveis e inspeção read-only migração/status/probe HTTP. Validador documental do sibling tools verifica 216 documentos, zero erros e 18 avisos existentes de fixtures restritas; links do [handoff](../../../Reports/MILESTONE_2_5_HANDOFF.md) verificados separadamente. git diff --check passa nos dois projetos. Library alterou apenas Markdown, sem alegar testes de aplicação/runtime ou execução remota GitHub Actions.
+Configuração: validação Compose, igualdade instalada/fonte Supervisor, launchers executáveis e inspeção read-only migração/status/probe HTTP. Validador documental do sibling tools verifica 216 documentos, zero erros e 18 avisos existentes de fixtures restritas; links do handoff (relatório 2.5 ausente neste checkout) verificados separadamente. git diff --check passa nos dois projetos. Library alterou apenas Markdown, sem alegar testes de aplicação/runtime ou execução remota GitHub Actions.
 
 Sem alegações de throughput/fairness/efeitos do consumidor/at-least-once ponta a ponta. Happy path, cancelamento fake e controles isolados não provam crash-window/two-worker recovery, escopo 2.6. [Operação/configuração/rollout](../architecture/milestone-2-5.md) detalha budgets/limites. Migração e startup compartilhados aguardam autorização deliberadamente; sem UI/readiness framework/métricas/dashboard.
+
+
+## Marco 2.6 — 2026-10-12
+
+Partida limpa: Rust `d6f529b`, Library `88f8e62`. Handoff 2.5 ausente não foi reconstruído; código/documentação/histórico versionados forneceram a base. [Matriz e observações](../architecture/milestone-2-6.md), [aceitação](../operations/milestone-2-review.md), [handoff](../../../Reports/MILESTONE_2_6_HANDOFF.md) e [transcript final sanitizado](../../../Reports/MILESTONE_2_6_EXPERIMENTS.txt) registram evidência.
+
+| Comando executado no app existente (`docker compose exec -T app`) | Resultado efetivo |
+| --- | --- |
+| cargo fmt --check | Passou |
+| cargo clippy --locked --all-targets --all-features -- -D warnings | Passou |
+| cargo test --locked | 47 passaram, 45 opt-in ignorados, zero falhas |
+| cargo test --locked --test integrated_recovery -- --ignored --test-threads=1 --nocapture | 11 entradas passaram, uma helper interna no-op; dez testes de experimento; execução final 27,09 s |
+| cargo test --locked --test postgres_ownership -- --ignored --test-threads=4 | 12 passaram |
+| cargo test --locked --test postgres_repository -- --ignored --test-threads=4 | 15 passaram |
+| cargo test --locked --test delivery_ownership_schema -- --ignored | 1 passou |
+| cargo test --locked --test rabbitmq_publisher -- --ignored | 2 passaram |
+| cargo test --locked --lib infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable -- --ignored | 1 passou |
+| cargo test --locked --test worker_smoke -- --ignored --test-threads=1 | 3 passaram, inclusive Supervisor físico isolado; 22,81 s |
+| cargo build --locked --bins | Ambos os binários compilados |
+| cargo doc --locked --no-deps --all-features com RUSTDOCFLAGS='-D warnings' | Passou |
+
+`docker compose config --quiet` passou; Ruby/Psych parseou workflow/quatro jobs. Configuração/launchers Supervisor não mudaram; regressão isolada passou. CI combinado foi configurado, não executado remotamente. Erro intermediário de Clippy por import/helper não usado foi corrigido; nenhum defeito produtivo confirmado. Assertion deliberada de cleanup é esperada; teste externo só passa após verificar ausência independente.
+
+Expiração real, estados duráveis e identidades originais sustentam recuperação nos schedules testados, sem prova universal/exactly-once. Desconexão broker em entrega usa worker real/lifecycle test-only; barreiras de crash usam executável de teste instrumentado com caso de uso/adapters reais. Reinício, concorrência e sinais usam relay original. Proxy de resposta perdida demonstra um completion incerto já commitado. Sem mudança de source/schema/dependências, retry/quarantine/replay duráveis ou negócio produtor/consumidor.
+
+Ambiente final somente leitura: serviços originais continuamente ativos; http RUNNING/relay STOPPED; duas migrações originais instaladas, ownership 20261009000000 pendente. Zero bancos fixture; nenhuma queue/exchange fixture, worker/helper de teste ou diretório relay_recovery_ remanescente. Sem migração compartilhada, restart/recriação, purge ou término de sessão alheia. Cleanup exato também passou após assertion intencional. Rollout permanece sem autorização específica.
+
+Validação documental final: checker read-only da Library, a partir do workspace pai, conferiu 220 documentos, zero erros e 18 avisos existentes de fixtures restritas. Links relativos/âncoras do handoff conferidos separadamente porque Reports não entra no catálogo. git diff --check passou nos dois projetos. Library mudou somente Markdown, sem aplicação/dependências/runtime; sem alteração Viva Bem, commit ou push.
