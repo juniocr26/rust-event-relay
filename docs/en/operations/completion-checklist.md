@@ -1,4 +1,7 @@
-# rust-event-relay: Repository completion checklist
+#
+Current worker behavior, configuration, cancellation and authorized rollout: [Milestone 2.5](../architecture/milestone-2-5.md). Earlier sections retain their historical scope.
+
+ rust-event-relay: Repository completion checklist
 
 ## Milestone 2.4 — 2026-10-12
 

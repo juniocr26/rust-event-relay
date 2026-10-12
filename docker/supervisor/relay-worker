@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+if [ ! -x /app/target/debug/relay ]; then
+  echo 'Missing relay binary: run docker compose exec app cargo build --locked --bins' >&2
+  exit 1
+fi
+exec /app/target/debug/relay

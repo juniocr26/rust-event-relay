@@ -1,5 +1,6 @@
 pub mod delivery;
 pub mod publisher;
+pub mod worker;
 use axum::{Router, routing::get};
 use std::{future::Future, io};
 use tokio::net::TcpListener;

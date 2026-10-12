@@ -1,4 +1,7 @@
-# Implantação, observabilidade e lacunas de evidência
+#
+Worker atual, configuração, cancelamento e rollout autorizado: [Marco 2.5](../architecture/milestone-2-5.md). Seções anteriores mantêm escopo histórico.
+
+ Implantação, observabilidade e lacunas de evidência
 
 [English](../../en/operations/deployment-and-evidence.md) | [Português brasileiro](deployment-and-evidence.md)
 

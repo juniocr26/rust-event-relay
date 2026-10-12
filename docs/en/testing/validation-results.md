@@ -661,7 +661,7 @@ Final documentation checks: `python3 -B engineering-library/tools/check_docs.py 
 
 ## Milestone 2.4 — 2026-10-12
 
-Started from clean `edb1f90`; the previous milestone was committed. The requested 2.3 handoff is absent from this checkout. Dangling links to it were corrected to existing milestone/validation evidence, retaining historical validation prose. [Current use-case scope](../architecture/milestone-2-4.md) and [handoff (pt-BR)](../../../Reports/MILESTONE_2_4_HANDOFF.md) describe implemented behavior and evidence limits.
+Started from clean `edb1f90`; the previous milestone was committed. The requested 2.3 handoff is absent from this checkout. Dangling links to it were corrected to existing milestone/validation evidence, retaining historical validation prose. [Current use-case scope](../architecture/milestone-2-4.md) and 2.4 handoff (absent in the 2.5 checkout) describe implemented behavior and evidence limits.
 
 Existing app/PostgreSQL/RabbitMQ containers were inspected and reused without restart/rebuild/reset. Read-only development metadata shows successful migrations `20261007000000` and `20261007175358`, with no ownership_token column: ownership migration remains pending. No migration was applied and no event rows or credentials were printed. Infrastructure source, dependencies and schema were unchanged; opt-in infrastructure regressions were not rerun without a relevant change.
 
@@ -678,3 +678,32 @@ Existing app/PostgreSQL/RabbitMQ containers were inspected and reused without re
 | `git diff --check` in both repositories | Passed |
 
 Five fake tests iterate all five publication categories, all transition outcomes/error categories and all acquisition failure categories. They prove complete original-envelope equality, single acquisition/publication calls, correct owner key, confirmation-before-completion, absence of forbidden cleanup/retry, preserved original/source and release errors, sanitized Debug and Send/static dispatch. Explicit Notify synchronization tests waiting for publisher confirmation and cancellation during acquisition/publication/completion/release. They do not establish actual PostgreSQL rollback, RabbitMQ nonacceptance, commit cancellation behavior or end-to-end crash recovery. No application test failed; incomplete documentation links were resolved during drafting. No commit/push. Next: 2.5 worker composition and operation; 2.6 end-to-end failure experiments.
+
+## Milestone 2.5 — 2026-10-12
+
+Executed in the existing Docker environment from clean Rust `7be956c` / Library `769bb66`. The requested 2.4 handoff was absent; actual API/tests/history were inspected. No shared migration/reset/credential changes. Only app image rebuilt and app container recreated with `docker compose build app` / `docker compose up -d --no-deps app`; PostgreSQL/RabbitMQ remained running.
+
+| Executed check | Result |
+| --- | --- |
+| cargo fmt --check | Passed |
+| cargo clippy --locked --all-targets --all-features -- -D warnings | Passed |
+| cargo test --locked | 47 passed, 34 opt-in ignored, no failures |
+| cargo build --locked --bins | Passed, both compiled programs |
+| RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps | Passed |
+| postgres_repository --ignored --test-threads=4 | 15 passed |
+| postgres_ownership --ignored --test-threads=4 | 12 passed |
+| delivery_ownership_schema --ignored | 1 passed |
+| rabbitmq_publisher --ignored | 2 passed |
+| library closed_owned_connection_is_unavailable --ignored | 1 passed |
+| worker_smoke --ignored --test-threads=1 | 3 passed: binary delivery/SIGTERM, isolated Supervisor controls, sanitized missing-schema setup |
+| python3 scripts/check-supervisor.py inside app | HTTP named/interactive controls, unexpected-exit restart, manager/private socket and relay STOPPED passed |
+
+Commands use `docker compose exec -T app` and Cargo `--locked`; broker/library ignored cases explicitly selected. Admission usability and missing-schema tests were validated with all standard checks. The final setup query checks every column used by ownership operations; its composition/schema smoke, strict Clippy, formatting, build and rustdoc were rerun. Infrastructure regression results above are this session's executions, not historical claims. Formatting/temp-shutdown-borrow and unused-import test corrections were resolved before final checks.
+
+Read-only `sqlx migrate info` before and after app recreation: two original migrations installed, `20261009000000` still pending. Supervisor reports http RUNNING / relay STOPPED. Actual shared relay startup was not attempted; the negative schema check and real named/collective relay controls used isolated test-owned state. `all` now includes both programs, so the shared HTTP script intentionally avoids `start all`.
+
+Nine controlled worker/config tests use paused Tokio time and notifications. They cover every outcome decision and independent release combinations, fresh tokens, paced idle/failure, replacement only where warranted, no acquisition with missing/known unusable publisher, interrupted waits, preexisting shutdown, in-flight drain and bounded cleanup. The fake stalled close consumes the same absolute overall deadline; it proves policy, not every real SQLx shutdown schedule. Three opt-in compositions own generated databases/exact UUID broker names; the real binary preserves event ID/payload, confirms and acknowledges processed with one acquisition. Test child/daemon cleanup precedes exact queue/exchange deletion and test database removal. Supervisor test derives its temporary physical config from versioned source, preserves autostart false, uses an ephemeral HTTP binding and tests both aliases with stop/start/restart of relay/http/all. It is a local Linux container check, not a new Supervisor CI job.
+
+Configuration check: Compose validation and installed/source Supervisor equality plus executable launchers; shared read-only migration/status and HTTP probe. Documentation checker from sibling tools validates 216 documents, zero errors and 18 existing restricted-fixture warnings; [handoff](../../../Reports/MILESTONE_2_5_HANDOFF.md) links checked separately. git diff --check passes in both projects. Library changes are Markdown only; application/runtime tests or remote GitHub Actions execution were not claimed.
+
+No throughput/fairness/consumer-effect/end-to-end at-least-once claim follows. Happy path, fake cancellation and isolated named operation do not establish crash-window or two-worker recovery: those remain 2.6. [Current operation, settings and rollout](../architecture/milestone-2-5.md) describes budgets/limits. Shared migration/application startup is deliberately pending authorization; no UI, readiness framework, metrics or dashboard added.

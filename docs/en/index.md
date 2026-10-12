@@ -6,6 +6,8 @@ Reading path: purpose/setup → architecture/contracts → security/failures →
 
 ## architecture
 
+- [Milestone 2.5 — Worker](architecture/milestone-2-5.md)
+
 - [Milestone 2.4 — Delivery use case](architecture/milestone-2-4.md)
 
 Components, flows and implemented boundaries.

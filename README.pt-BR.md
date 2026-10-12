@@ -2,7 +2,7 @@
 
 # Reliable Event Relay
 
-Marco 2.4: [orquestração de uma tentativa de entrega](docs/pt-BR/architecture/milestone-2-4.md) implementada como caso de uso da biblioteca. Nenhum worker de polling está conectado ao runtime; próximo é 2.5, composição e operação do worker.
+[Marco 2.5 — Composição e operação do worker](docs/pt-BR/architecture/milestone-2-5.md): implementado como binário `relay` sequencial separado. Migração de posse compartilhada continua pendente; autostart do relay desabilitado. Próximo: 2.6, experimentos integrados de crash/falha/recuperação.
 
 Um serviço Rust que explora entrega confiável de eventos, tentativas, idempotência, contrapressão, isolamento de mensagens problemáticas e recuperação de falhas em sistemas distribuídos.
 
@@ -17,15 +17,17 @@ Leia propósito/setup, arquitetura e contratos, segurança/falhas, testes/evidê
 
 ## Estado atual e escopo
 
-**Implementado hoje:** configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial e contratos de persistência da aplicação e repositório PostgreSQL de observação e operações produtivas de posse, testes opt-in isolados de integração PostgreSQL, adapter publisher RabbitMQ confirmado, management local do broker e gestão Supervisor, tipos validados de estado/posse e contratos focados de mutação, migração de lease durável (sem aplicação automática), testes reais de concorrência/expiração de posse, verificações de CI e documentação bilíngue.
+**Implementado hoje:** worker relay sequencial com pacing/reconexão explícitos e shutdown limitado, configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial e contratos de persistência da aplicação e repositório PostgreSQL de observação e operações produtivas de posse, testes opt-in isolados de integração PostgreSQL, adapter publisher RabbitMQ confirmado, management local do broker e gestão Supervisor, tipos validados de estado/posse e contratos focados de mutação, migração de lease durável (sem aplicação automática), testes reais de concorrência/expiração de posse, verificações de CI e documentação bilíngue.
 
-**Planejado / exploração futura:** gravações de produtor e processamento por worker, worker polling (2.5), experimentos de crash/recuperação (2.6), orquestração de retries, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. O binário HTTP não executa worker outbox; o publisher é chamável separadamente. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture/overview.md).
+**Planejado / exploração futura:** gravações de produtor, experimentos de crash/recuperação (2.6), orquestração de retries, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. O binário HTTP não executa worker outbox; o publisher é chamável separadamente. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture/overview.md).
 
 [Marco 2.2](docs/pt-BR/architecture/milestone-2-2.md) implementa decisão de posse, modelos, contratos e schema. Eventos com lease permanecem pending; donos expirados não podem concluir/liberar. Tokens protegem transições no banco, mas não impedem publicação nem estabelecem entrega ponta a ponta.
 
-[Marco 2.3](docs/pt-BR/architecture/milestone-2-3.md) implementa operações PostgreSQL com transações curtas e relógio pós-lock. Migração de posse continua pendente no desenvolvimento. [Relatório de continuidade](Reports/MILESTONE_2_4_HANDOFF.md). Próximo: 2.5, composição e operação do worker; sem worker ou garantia ponta a ponta.
+[Marco 2.3](docs/pt-BR/architecture/milestone-2-3.md) implementa operações PostgreSQL com transações curtas e relógio pós-lock. Migração de posse continua pendente no desenvolvimento. [Relatório de continuidade](Reports/MILESTONE_2_5_HANDOFF.md). 2.5 agora compõe o worker; sem garantia ponta a ponta.
 
 ## Arquitetura
+
+A composição separada `relay` constrói pool/repositório PostgreSQL e lifecycle RabbitMQ; scheduling admite uma entrega por vez com pacing/reconexão explícitos e shutdown limitado. Veja [operação do worker](docs/pt-BR/architecture/milestone-2-5.md).
 
 Um `main.rs` pequeno carrega configuração, configura tracing, abre um socket e executa a aplicação. `application.rs` controla o ciclo de vida HTTP; `config.rs` interpreta configuração; `telemetry.rs` configura logs. `domain/event.rs` define o envelope canônico de eventos; o contrato publisher da aplicação é implementado pelo adapter RabbitMQ Lapin 4.12.0 da infraestrutura. SQLx 0.8.6 executa leituras e transações de posse PostgreSQL. Compose fornece PostgreSQL e RabbitMQ separados; o binário HTTP não se conecta a nenhum deles. O módulo persistence expõe snapshots pending limitados e erros classificados para futuros chamadores genéricos; `infrastructure/postgres` implementa OutboxReader e ports de aquisição/conclusão/liberação com PgPool injetado.
 
@@ -42,7 +44,7 @@ docker compose run --rm --no-deps app cargo build --locked
 python3 scripts/start-local.py
 ```
 
-Em outro terminal: `curl --fail http://localhost:8080/health`. Supervisor gerencia o binário `http`. Abra **http://localhost:15672/** e entre com `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` do `.env` ignorado. Veja [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md) para comandos coletivos/individuais/interativos, build/start e credenciais em volume existente. Mudanças exigem parar, compilar e iniciar; sem recarga automática.
+Em outro terminal: `curl --fail http://localhost:8080/health`. Supervisor gerencia `http` e `relay` opcional. Abra **http://localhost:15672/** e entre com `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` do `.env` ignorado. Veja [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md) para comandos coletivos/individuais/interativos, build/start e credenciais em volume existente. Mudanças exigem parar, compilar e iniciar; sem recarga automática.
 
 ```bash
 docker compose exec app bash
@@ -69,7 +71,7 @@ docker compose exec app cargo test --locked
 
 ## PostgreSQL local
 
-Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver usa POSTGRES_DB/USER/PASSWORD da configuração local, correspondendo às credenciais persistidas. Mudar variáveis de inicialização não atualiza cluster existente. `.dockerized-postgres/` persiste após Compose down. SQLx CLI 0.8.6 fornece migrações explícitas criando namespace relay e relay.outbox_events; gravação pela aplicação e entrega por worker outbox permanecem futuras. Veja [PostgreSQL e reset destrutivo](docs/pt-BR/database/postgresql.md) e [comandos de migração](docs/pt-BR/database/migrations.md).
+Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver usa POSTGRES_DB/USER/PASSWORD da configuração local, correspondendo às credenciais persistidas. Mudar variáveis de inicialização não atualiza cluster existente. `.dockerized-postgres/` persiste após Compose down. SQLx CLI 0.8.6 fornece migrações explícitas criando namespace relay e relay.outbox_events; gravação pela aplicação permanece futura; entrega relay exige a migração de posse. Veja [PostgreSQL e reset destrutivo](docs/pt-BR/database/postgresql.md) e [comandos de migração](docs/pt-BR/database/migrations.md).
 
 ## RabbitMQ e Supervisor
 
@@ -77,13 +79,18 @@ Clientes do host usam `127.0.0.1:5433`; containers usam `postgres:5432`. DBeaver
 docker compose exec app bash
 supervisorctl status
 supervisorctl stop all
-supervisorctl start all
+# Após rollout de schema autorizado:
 supervisorctl stop http
 supervisorctl start http
 supervisorctl restart http
+# Após rollout de schema autorizado:
+# supervisorctl start all
+supervisorctl start relay
+supervisorctl stop relay
+supervisorctl restart relay
 ```
 
-Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem argumentos para console interativo. `all` controla só programas do app, atualmente `http`. Login e inicialização estão no [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md).
+Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem argumentos para console interativo. `all` controla só programas do app, `http` e `relay` (start all inicia relay; confira o pré-requisito de schema). Login e inicialização estão no [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md).
 
 ## Documentação
 
@@ -108,7 +115,7 @@ Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem ar
 
 ## Limites e filosofia
 
-`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Não há autenticação na aplicação HTTP, gravações do produtor, processamento relay, medição de desempenho ou imagem de produção. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
+`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Não há autenticação na aplicação HTTP, gravações do produtor, medição de desempenho ou imagem de produção. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
 
 Licença MIT; consulte [LICENSE](LICENSE).
 

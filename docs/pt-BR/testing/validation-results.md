@@ -661,7 +661,7 @@ Checks documentais finais: `python3 -B engineering-library/tools/check_docs.py -
 
 ## Marco 2.4 — 2026-10-12
 
-Início em `edb1f90` limpo; marco anterior já commitado. O handoff 2.3 solicitado está ausente deste checkout. Links quebrados foram corrigidos para registros existentes de marco/validação, preservando o texto histórico de evidência. [Escopo atual](../architecture/milestone-2-4.md) e [handoff](../../../Reports/MILESTONE_2_4_HANDOFF.md) descrevem implementação e limites.
+Início em `edb1f90` limpo; marco anterior já commitado. O handoff 2.3 solicitado está ausente deste checkout. Links quebrados foram corrigidos para registros existentes de marco/validação, preservando o texto histórico de evidência. [Escopo atual](../architecture/milestone-2-4.md) e handoff 2.4 (ausente no checkout 2.5) descrevem implementação e limites.
 
 Containers app/PostgreSQL/RabbitMQ existentes foram inspecionados e reutilizados sem restart/rebuild/reset. Metadados somente de leitura mostram migrações `20261007000000` e `20261007175358` aplicadas com sucesso, sem coluna ownership_token: migração de posse permanece pendente. Nenhuma migração aplicada; eventos e credenciais não foram impressos. Infraestrutura, dependências e schema não mudaram; regressões opt-in reais não foram repetidas sem mudança pertinente.
 
@@ -678,3 +678,32 @@ Containers app/PostgreSQL/RabbitMQ existentes foram inspecionados e reutilizados
 | `git diff --check` nos dois projetos | Aprovado |
 
 Cinco testes com fakes percorrem cinco categorias de publicação, todos os resultados/categorias de erro de transição e falhas de aquisição. Demonstram igualdade completa do envelope original, aquisição/publicação únicas, chave correta, confirmação antes de completion, ausência de cleanup/retry proibidos, preservação de erro/fonte e falhas de release, Debug sanitizado e Send/despacho estático. Notify sincroniza espera pela confirmação e cancelamento durante aquisição/publicação/completion/release. Não comprovam rollback PostgreSQL real, não aceitação RabbitMQ, cancelamento durante commit ou crash/recuperação ponta a ponta. Nenhum teste de aplicação falhou; links documentais incompletos foram resolvidos na redação. Sem commit/push. Próximo: 2.5 composição e operação do worker; 2.6 experimentos ponta a ponta.
+
+## Milestone 2.5 — 2026-10-12
+
+Executado no ambiente Docker existente, a partir de Rust limpo `7be956c` / Library `769bb66`. O handoff 2.4 solicitado estava ausente; API/testes/histórico foram inspecionados. Sem migração compartilhada/reset/mudança de credenciais. Somente imagem app reconstruída e container app recriado with `docker compose build app` / `docker compose up -d --no-deps app`; PostgreSQL/RabbitMQ permaneceram ativos.
+
+| Check executado | Resultado |
+| --- | --- |
+| cargo fmt --check | Passou |
+| cargo clippy --locked --all-targets --all-features -- -D warnings | Passou |
+| cargo test --locked | 47 passaram, 34 opt-in ignorados, sem falhas |
+| cargo build --locked --bins | Passou, both compiled programs |
+| RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps | Passou |
+| postgres_repository --ignored --test-threads=4 | 15 passaram |
+| postgres_ownership --ignored --test-threads=4 | 12 passaram |
+| delivery_ownership_schema --ignored | 1 passaram |
+| rabbitmq_publisher --ignored | 2 passaram |
+| library closed_owned_connection_is_unavailable --ignored | 1 passaram |
+| worker_smoke --ignored --test-threads=1 | 3 passaram: binary delivery/SIGTERM, isolated Supervisor controls, sanitized missing-schema setup |
+| python3 scripts/check-supervisor.py inside app | HTTP named/interactive controls, unexpected-exit restart, manager/private socket and relay STOPPED passaram |
+
+Comandos executados com `docker compose exec -T app` e Cargo `--locked`; casos ignored broker/lib selecionados explicitamente. Gate de usabilidade e teste de schema ausente foram validados com checks padrão completos. A consulta final verifica todas as colunas usadas nas operações de posse; smoke de composição/schema, Clippy estrito, formatação, build e rustdoc foram repetidos. Regressões de infraestrutura acima são desta sessão, não resultados históricos. Correções de formatação/lifetime temporário/import não usado foram resolvidas.
+
+`sqlx migrate info` somente leitura antes/depois da recriação app: duas migrações originais instaladas, `20261009000000` ainda pending. Supervisor: http RUNNING / relay STOPPED. Relay compartilhado não foi iniciado; teste negativo e controles individuais/coletivos reais usaram estado próprio isolado. `all` agora inclui ambos; script HTTP compartilhado evita start all.
+
+Nove testes controlados worker/config usam tempo Tokio pausado/notificações: decisões de todos outcomes/releases, tokens novos, pacing, substituição apenas quando indicada, ausência de aquisição sem publisher/com publisher inutilizável, interrupção, shutdown prévio, drain e cleanup limitado. Close fake bloqueado usa mesmo deadline global; não prova todas as situações SQLx reais. Três composições opt-in usam bancos gerados e nomes UUID broker exatos; binário real preserva ID/payload, confirma e reconhece processed com uma aquisição. Child/daemon encerrados antes de deletar queue/exchange e remover banco próprio. Teste Supervisor deriva configuração física versionada, mantém autostart false, HTTP efêmero e controla relay/http/all pelos dois aliases. Evidência Linux local em container, sem novo job Supervisor CI.
+
+Configuração: validação Compose, igualdade instalada/fonte Supervisor, launchers executáveis e inspeção read-only migração/status/probe HTTP. Validador documental do sibling tools verifica 216 documentos, zero erros e 18 avisos existentes de fixtures restritas; links do [handoff](../../../Reports/MILESTONE_2_5_HANDOFF.md) verificados separadamente. git diff --check passa nos dois projetos. Library alterou apenas Markdown, sem alegar testes de aplicação/runtime ou execução remota GitHub Actions.
+
+Sem alegações de throughput/fairness/efeitos do consumidor/at-least-once ponta a ponta. Happy path, cancelamento fake e controles isolados não provam crash-window/two-worker recovery, escopo 2.6. [Operação/configuração/rollout](../architecture/milestone-2-5.md) detalha budgets/limites. Migração e startup compartilhados aguardam autorização deliberadamente; sem UI/readiness framework/métricas/dashboard.

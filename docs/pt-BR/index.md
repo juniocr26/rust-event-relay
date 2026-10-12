@@ -6,6 +6,8 @@ Percurso: propósito/setup → arquitetura/contratos → segurança/falhas → t
 
 ## architecture
 
+- [Milestone 2.5 — Worker](architecture/milestone-2-5.md)
+
 - [Marco 2.4 — Caso de uso de entrega](architecture/milestone-2-4.md)
 
 Componentes, fluxos e fronteiras implementadas.

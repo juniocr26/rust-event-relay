@@ -2,6 +2,9 @@
 
 # Docker and configuration
 
+Current worker behavior, configuration, cancellation and authorized rollout: [Milestone 2.5](../architecture/milestone-2-5.md). Earlier sections retain their historical scope.
+
+
 The Dockerfile is a development toolchain image, not a production deployment. It pins stable Rust 1.95.0 on Debian Bookworm, includes Bash, rustfmt, Clippy, Python 3, Supervisor and SQLx CLI 0.8.6, and runs as `developer`. The version tag is pinned; the base image digest is not, so upstream image revisions may still change system packages. Compose uses an init process and a source bind mount. Foreground Supervisor manages the compiled `http` child and keeps the workspace available when it is stopped. See [RabbitMQ management and Supervisor](../architecture/milestone-2-1.md).
 
 ```bash

@@ -21,3 +21,4 @@ COPY --chmod=755 docker/supervisor/relay-http /usr/local/bin/relay-http
 USER developer
 ENTRYPOINT ["dev-entrypoint"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+COPY --chmod=755 docker/supervisor/relay-worker /usr/local/bin/relay-worker

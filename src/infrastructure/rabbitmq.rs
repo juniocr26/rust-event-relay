@@ -32,6 +32,7 @@ impl Default for Topology {
 }
 
 /// Validated connection and operation deadlines. Credentials are never formatted.
+#[derive(Clone)]
 pub struct RabbitMqConfig {
     uri: String,
     topology: Topology,
@@ -205,6 +206,13 @@ impl RabbitMqPublisher {
             gate: Mutex::new(()),
             retired: AtomicBool::new(false),
         })
+    }
+
+    /// Snapshot for composition admission; disconnection can still race the next send.
+    pub fn is_usable(&self) -> bool {
+        !self.retired.load(Ordering::Acquire)
+            && self.channel.status().connected()
+            && self.connection.status().connected()
     }
 
     /// Call after awaiting in-flight publications; consumes the adapter and bounds graceful close.

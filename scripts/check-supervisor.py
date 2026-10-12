@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Run inside app: real lifecycle checks for the managed HTTP child only."""
+"""Shared deployment HTTP regression; relay stays stopped pending schema rollout.
+Collective/named relay checks belong to the isolated worker_smoke test.
+"""
 import os
 import pathlib
 import stat
@@ -42,7 +44,7 @@ manager_pid = pathlib.Path("/tmp/relay-supervisor/supervisord.pid").read_text()
 ready()
 for command in ["supervisorctl", "supervisor"]:
     assert "http" in ctl(command, "status")
-    for target in ["all", "http"]:
+    for target in ["http"]:
         ctl(command, "stop", target)
         assert not health()
         # supervisord remains reachable while every managed child is stopped.
@@ -53,14 +55,17 @@ for command in ["supervisorctl", "supervisor"]:
     old = ready()
     ctl(command, "restart", "http")
     ready(old)
-    console = subprocess.run([command], input="status\nstop all\nstatus\nstart all\nstop http\nstart http\nrestart http\nstatus\nquit\n", capture_output=True, text=True, timeout=40)
+    console = subprocess.run([command], input="status\nstop http\nstatus\nstart http\nrestart http\nstatus\nquit\n", capture_output=True, text=True, timeout=40)
     assert console.returncode == 0
     assert "STOPPED" in console.stdout and "RUNNING" in console.stdout
     assert not any(marker in console.stdout for marker in ["ERROR", "unknown", "no such", "not recognized"])
     ready()
-    print(f"{command}: direct and interactive status, collective and named control passed")
+    print(f"{command}: direct and interactive HTTP status and named control passed")
 old = ready()
 os.kill(old, 9)
 ready(old)
 assert pathlib.Path("/tmp/relay-supervisor/supervisord.pid").read_text() == manager_pid
 print("Unexpected child exit restarted; HTTP recovered; supervisord PID and private socket preserved.")
+
+assert "STOPPED" in ctl("supervisorctl", "status", "relay")
+print("Relay remains intentionally stopped; collective start is tested only in isolation.")

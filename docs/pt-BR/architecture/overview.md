@@ -3,6 +3,9 @@
 
 # Arquitetura
 
+Worker atual, configuração, cancelamento e rollout autorizado: [Marco 2.5](milestone-2-5.md). Seções anteriores mantêm escopo histórico.
+
+
 ## Marco 2.4 — 2026-10-12
 
 O caso de uso de entrega executa aquisição reconhecida → publicação do envelope original → completion somente após aceitação confirmada. Falhas definitivas liberam uma vez; incerteza mantém lease. Resultados preservam falha principal e cleanup separadamente. HTTP continua independente; não há worker composto. Consulte [Marco 2.4](milestone-2-4.md) para resultados, cancelamento e limites de recuperação. Próximo: 2.5 composição/operação do worker; 2.6 experimentos ponta a ponta.

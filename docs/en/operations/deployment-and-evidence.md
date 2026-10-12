@@ -1,4 +1,7 @@
-# Deployment, observability and evidence gaps
+#
+Current worker behavior, configuration, cancellation and authorized rollout: [Milestone 2.5](../architecture/milestone-2-5.md). Earlier sections retain their historical scope.
+
+ Deployment, observability and evidence gaps
 
 [English](deployment-and-evidence.md) | [Português brasileiro](../../pt-BR/operations/deployment-and-evidence.md)
 

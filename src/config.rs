@@ -64,3 +64,57 @@ mod tests {
         assert!(Config::from_lookup(|key| (key == "APP_ENV").then(String::new)).is_err());
     }
 }
+
+/// Operational durations are milliseconds; lease conversion is checked.
+#[derive(Debug, Clone)]
+pub struct WorkerConfig {
+    pub lease: crate::domain::delivery::LeaseDuration,
+    pub idle: std::time::Duration,
+    pub failure: std::time::Duration,
+    pub reconnect: std::time::Duration,
+    pub pool_max: u32,
+    pub pool_acquire: std::time::Duration,
+    pub statement_ms: u64,
+    pub lock_ms: u64,
+    pub drain: std::time::Duration,
+    pub shutdown: std::time::Duration,
+}
+impl WorkerConfig {
+    pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> Result<Self, ConfigError> {
+        let value = |key: &str, default: u64, max: u64| -> Result<u64, ConfigError> {
+            let n = get(key)
+                .map_or(Ok(default), |s| s.parse::<u64>())
+                .map_err(|_| ConfigError(format!("{key} must be a positive integer")))?;
+            if n == 0 || n > max {
+                return Err(ConfigError(format!("{key} must be in 1..={max}")));
+            }
+            Ok(n)
+        };
+        let duration =
+            |key, default, max| value(key, default, max).map(std::time::Duration::from_millis);
+        let lease_ms = value("RELAY_LEASE_MS", 60000, 3600000)?;
+        let micros = lease_ms
+            .checked_mul(1000)
+            .and_then(|n| i64::try_from(n).ok())
+            .ok_or_else(|| ConfigError("RELAY_LEASE_MS conversion overflow".into()))?;
+        let config = Self {
+            lease: crate::domain::delivery::LeaseDuration::from_micros(micros)
+                .map_err(|_| ConfigError("invalid lease".into()))?,
+            idle: duration("RELAY_IDLE_MS", 1000, 60000)?,
+            failure: duration("RELAY_FAILURE_MS", 1000, 60000)?,
+            reconnect: duration("RELAY_RECONNECT_MS", 5000, 60000)?,
+            pool_max: u32::try_from(value("RELAY_POOL_MAX", 2, 16)?).expect("bounded pool limit"),
+            pool_acquire: duration("RELAY_POOL_ACQUIRE_MS", 5000, 60000)?,
+            statement_ms: value("RELAY_STATEMENT_MS", 5000, 60000)?,
+            lock_ms: value("RELAY_LOCK_MS", 3000, 60000)?,
+            drain: duration("RELAY_DRAIN_MS", 15000, 20000)?,
+            shutdown: duration("RELAY_SHUTDOWN_MS", 25000, 25000)?,
+        };
+        if config.drain >= config.shutdown {
+            return Err(ConfigError(
+                "RELAY_DRAIN_MS must be less than RELAY_SHUTDOWN_MS".into(),
+            ));
+        }
+        Ok(config)
+    }
+}

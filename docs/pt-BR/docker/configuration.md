@@ -2,6 +2,9 @@
 
 # Docker e configuração
 
+Worker atual, configuração, cancelamento e rollout autorizado: [Marco 2.5](../architecture/milestone-2-5.md). Seções anteriores mantêm escopo histórico.
+
+
 O Dockerfile é uma imagem de ferramentas de desenvolvimento, não de implantação em produção. Fixa Rust estável 1.95.0 sobre Debian Bookworm, inclui Bash, rustfmt, Clippy, Python 3, Supervisor e SQLx CLI 0.8.6 e executa como `developer`. A tag de versão é fixa; o digest da imagem base não é, portanto revisões upstream ainda podem mudar pacotes de sistema. Compose usa um processo init e montagem do código do host. Supervisor em primeiro plano gerencia o filho compilado `http` e mantém workspace disponível enquanto ele está parado. Veja [RabbitMQ management e Supervisor](../architecture/milestone-2-1.md).
 
 ```bash

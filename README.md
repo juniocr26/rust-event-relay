@@ -2,7 +2,7 @@
 
 # Reliable Event Relay
 
-Milestone 2.4: [one-attempt delivery orchestration](docs/en/architecture/milestone-2-4.md) is implemented as a callable library use case. No polling worker is wired to the runtime; next is 2.5 worker composition and operation.
+[Milestone 2.5 — Worker composition and operation](docs/en/architecture/milestone-2-5.md): implemented as a separate sequential `relay` binary. Shared ownership migration remains pending; relay autostart is disabled. Next: 2.6 integrated crash/failure/recovery experiments.
 
 A Rust service exploring reliable event delivery, retries, idempotency, backpressure, dead-letter handling, and failure recovery in distributed systems.
 
@@ -17,15 +17,17 @@ Read purpose/setup first, then architecture and contracts, security and failures
 
 ## Current status and scope
 
-**Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a PostgreSQL observation repository and production ownership operations, isolated opt-in PostgreSQL repository integration tests, a confirmed RabbitMQ publisher adapter, local broker management and Supervisor process control, validated delivery-state/ownership types and focused mutation contracts, a durable lease migration (not applied automatically), real ownership concurrency/expiration tests, CI checks and bilingual documentation.
+**Implemented today:** a sequential relay worker with explicit pacing/reconnection and bounded shutdown, environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a PostgreSQL observation repository and production ownership operations, isolated opt-in PostgreSQL repository integration tests, a confirmed RabbitMQ publisher adapter, local broker management and Supervisor process control, validated delivery-state/ownership types and focused mutation contracts, a durable lease migration (not applied automatically), real ownership concurrency/expiration tests, CI checks and bilingual documentation.
 
-**Planned / future exploration:** producer outbox writes and worker processing, polling worker (2.5), crash/recovery experiments (2.6), retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
+**Planned / future exploration:** producer outbox writes, crash/recovery experiments (2.6), retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
 
 [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements the ownership decision, models, contracts and schema only. Leased events remain pending; expired owners cannot complete/release. Tokens protect database transitions but do not fence publication or establish end-to-end delivery.
 
-[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. Development ownership migration remains pending. [Continuity report (pt-BR)](Reports/MILESTONE_2_4_HANDOFF.md). Next: 2.5 worker composition and operation; no worker or end-to-end guarantee.
+[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. Development ownership migration remains pending. [Continuity report (pt-BR)](Reports/MILESTONE_2_5_HANDOFF.md). 2.5 now composes the worker; end-to-end guarantees remain unestablished.
 
 ## Architecture
+
+The separate `relay` composition constructs the database pool/repository and RabbitMQ lifecycle; application scheduling admits one delivery at a time with explicit pacing/reconnection and bounded shutdown. See [worker operation](docs/en/architecture/milestone-2-5.md).
 
 A thin `main.rs` loads configuration, configures tracing, binds a socket and runs the application. `application.rs` owns HTTP lifecycle; `config.rs` owns parsing; `telemetry.rs` owns logging. `domain/event.rs` defines the canonical event envelope; the application publisher contract is implemented by the Lapin 4.12.0 RabbitMQ infrastructure adapter. SQLx 0.8.6 backs PostgreSQL reads and ownership transactions. Compose provides PostgreSQL and RabbitMQ separately; the HTTP binary connects to neither service. The persistence module exposes bounded pending snapshots and classified errors for future generic callers; `infrastructure/postgres` implements OutboxReader and the acquisition/completion/release ports with an injected PgPool.
 
@@ -42,7 +44,7 @@ docker compose run --rm --no-deps app cargo build --locked
 python3 scripts/start-local.py
 ```
 
-In another terminal: `curl --fail http://localhost:8080/health`. Supervisor manages the `http` binary. Open **http://localhost:15672/** and log in with `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` from ignored `.env`. See [Milestone 2.1](docs/en/architecture/milestone-2-1.md) for exact collective/named/interactive commands, build/start workflow and existing-volume credential handling. Source changes require stop, build and start; there is no automatic reload.
+In another terminal: `curl --fail http://localhost:8080/health`. Supervisor manages `http` and optional `relay`. Open **http://localhost:15672/** and log in with `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` from ignored `.env`. See [Milestone 2.1](docs/en/architecture/milestone-2-1.md) for exact collective/named/interactive commands, build/start workflow and existing-volume credential handling. Source changes require stop, build and start; there is no automatic reload.
 
 ```bash
 docker compose exec app bash
@@ -69,7 +71,7 @@ docker compose exec app cargo test --locked
 
 ## Local PostgreSQL
 
-Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses POSTGRES_DB/USER/PASSWORD from your local configuration, matching persisted cluster credentials. Changing initialization variables does not update an existing cluster. `.dockerized-postgres/` persists through Compose down. SQLx CLI 0.8.6 provides explicit migrations creating the relay namespace and relay.outbox_events; producer writes and outbox worker delivery remain future work. See [PostgreSQL and destructive reset](docs/en/database/postgresql.md) and [migration commands](docs/en/database/migrations.md).
+Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses POSTGRES_DB/USER/PASSWORD from your local configuration, matching persisted cluster credentials. Changing initialization variables does not update an existing cluster. `.dockerized-postgres/` persists through Compose down. SQLx CLI 0.8.6 provides explicit migrations creating the relay namespace and relay.outbox_events; producer writes remain future work; relay delivery requires the ownership migration. See [PostgreSQL and destructive reset](docs/en/database/postgresql.md) and [migration commands](docs/en/database/migrations.md).
 
 ## RabbitMQ and Supervisor
 
@@ -77,13 +79,18 @@ Host clients use `127.0.0.1:5433`; containers use `postgres:5432`. DBeaver uses 
 docker compose exec app bash
 supervisorctl status
 supervisorctl stop all
-supervisorctl start all
+# After authorized schema rollout:
 supervisorctl stop http
 supervisorctl start http
 supervisorctl restart http
+# After authorized schema rollout:
+# supervisorctl start all
+supervisorctl start relay
+supervisorctl stop relay
+supervisorctl restart relay
 ```
 
-The same arguments work with `supervisor`; run either command without arguments for its interactive console. `all` controls app programs only, currently `http`. Browser login and initialization behavior are documented in [Milestone 2.1](docs/en/architecture/milestone-2-1.md).
+The same arguments work with `supervisor`; run either command without arguments for its interactive console. `all` controls app programs only, `http` and `relay` (start all also starts relay; review schema prerequisite first). Browser login and initialization behavior are documented in [Milestone 2.1](docs/en/architecture/milestone-2-1.md).
 
 ## Documentation
 
@@ -108,7 +115,7 @@ The same arguments work with `supervisor`; run either command without arguments 
 
 ## Limits and philosophy
 
-`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. The binary has graceful HTTP shutdown; Supervisor bounds child shutdown to 30 seconds. There is no HTTP application authentication, producer writes, relay processing, performance measurement or production deployment image. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
+`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. The binary has graceful HTTP shutdown; Supervisor bounds child shutdown to 30 seconds. There is no HTTP application authentication, producer writes, performance measurement or production deployment image. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
 
 MIT licensed; see [LICENSE](LICENSE).
 

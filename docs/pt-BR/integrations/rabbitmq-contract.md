@@ -1,4 +1,7 @@
-# Integração verificada do publisher
+#
+Worker atual, configuração, cancelamento e rollout autorizado: [Marco 2.5](../architecture/milestone-2-5.md). Seções anteriores mantêm escopo histórico.
+
+ Integração verificada do publisher
 
 ## Marco 2.4 — 2026-10-12
 

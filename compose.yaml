@@ -6,10 +6,20 @@ services:
         LOCAL_UID: ${LOCAL_UID:-1000}
         LOCAL_GID: ${LOCAL_GID:-1000}
     init: true
-    # Supervisor allows HTTP 30s to drain; Docker must allow the manager to finish.
-    stop_grace_period: 35s
+    # Each child has 30s; allow sequential Supervisor group shutdown plus margin.
+    stop_grace_period: 65s
     working_dir: /app
     environment:
+      RELAY_LEASE_MS: ${RELAY_LEASE_MS:-60000}
+      RELAY_IDLE_MS: ${RELAY_IDLE_MS:-1000}
+      RELAY_FAILURE_MS: ${RELAY_FAILURE_MS:-1000}
+      RELAY_RECONNECT_MS: ${RELAY_RECONNECT_MS:-5000}
+      RELAY_POOL_MAX: ${RELAY_POOL_MAX:-2}
+      RELAY_POOL_ACQUIRE_MS: ${RELAY_POOL_ACQUIRE_MS:-5000}
+      RELAY_STATEMENT_MS: ${RELAY_STATEMENT_MS:-5000}
+      RELAY_LOCK_MS: ${RELAY_LOCK_MS:-3000}
+      RELAY_DRAIN_MS: ${RELAY_DRAIN_MS:-15000}
+      RELAY_SHUTDOWN_MS: ${RELAY_SHUTDOWN_MS:-25000}
       RABBITMQ_CONNECT_TIMEOUT_MS: ${RABBITMQ_CONNECT_TIMEOUT_MS:-10000}
       RABBITMQ_PUBLISH_TIMEOUT_MS: ${RABBITMQ_PUBLISH_TIMEOUT_MS:-10000}
       RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-relay.events}

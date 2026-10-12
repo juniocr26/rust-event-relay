@@ -3,6 +3,9 @@
 
 # Architecture
 
+Current worker behavior, configuration, cancellation and authorized rollout: [Milestone 2.5](milestone-2-5.md). Earlier sections retain their historical scope.
+
+
 ## Milestone 2.4 — 2026-10-12
 
 The callable delivery use case now performs one acknowledged acquisition → original envelope publication → completion only after confirmed acceptance. Definitive publication failures release once; uncertainty retains the lease. Results preserve primary and cleanup failures separately. HTTP remains independent; no worker is composed. See [Milestone 2.4](milestone-2-4.md) for outcomes, cancellation and recovery limitations. Next: 2.5 worker composition/operation; 2.6 end-to-end failure experiments.

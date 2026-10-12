@@ -1,4 +1,7 @@
-# rust-event-relay: Checklist de conclusão do repositório
+#
+Worker atual, configuração, cancelamento e rollout autorizado: [Marco 2.5](../architecture/milestone-2-5.md). Seções anteriores mantêm escopo histórico.
+
+ rust-event-relay: Checklist de conclusão do repositório
 
 ## Marco 2.4 — 2026-10-12
 
