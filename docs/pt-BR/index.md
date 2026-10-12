@@ -88,3 +88,6 @@ Autenticação, autorização, dados e recursos.
 - [Autoridade, diagnóstico e transporte](security/diagnostic-and-authority-boundaries.md)
 
 Aplicabilidade e omissões estão justificadas no [checklist](operations/completion-checklist.md). Não há categorias vazias.
+
+- [Milestone 3.1 — durable failure policy and roadmap](architecture/milestone-3-1.md)
+- [ADR 008 — durable failure policy](adr/008-durable-failure-policy.md)

@@ -173,3 +173,8 @@ Veja [consulta, restauração, limites e erros](../database/postgres-repository.
 ## Marco 2.6 — Escopo atual
 
 [Experimentos integrados](../architecture/milestone-2-6.md) e [revisão do Marco 2](../operations/milestone-2-review.md) atualizam a aceitação sob premissas explícitas. Rollout compartilhado continua pendente; registros anteriores mantêm seu contexto histórico.
+
+
+## Política do Marco 3.1
+
+Marco 3.1 define matriz de falhas, contratos de agenda/orçamento/isolamento/replay e próximos marcos. Somente cálculos puros foram implementados; persistência futura e cenários frontend continuam planejados. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).

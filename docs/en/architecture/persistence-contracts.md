@@ -123,3 +123,8 @@ See [query, restoration, bounds and errors](../database/postgres-repository.md),
 Milestone 1 is closed. [Failure/transaction semantics](failure-and-transactions.md) records producer commit uncertainty, invalid-row blocking, cancellation limits and future publish/ack gaps without adding contracts.
 
 Milestone 2.2 additionally defines `CommitUncertain` for future mutation commit outcomes; the reader still maps only its original three categories. Ownership and attempt semantics are selected in ADR 007, while PostgreSQL mutation adapters and real owner concurrency remain deferred.
+
+
+## Milestone 3.1 policy
+
+Milestone 3.1 defines the failure matrix, durable retry/budget/isolation/replay contracts and remaining roadmap. Only pure policy calculations are implemented; future persistence and frontend scenarios remain planned. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).

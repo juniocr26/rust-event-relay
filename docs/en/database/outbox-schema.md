@@ -91,3 +91,8 @@ New immutable-history pair:
 Up creates the table, checks and one polling index in the existing relay namespace. Down drops only the table with RESTRICT; its own indexes/constraints disappear with it. It preserves relay and earlier SQLx history and refuses dependent external objects. SQLx runs PostgreSQL migrations transactionally by default. Rollback permanently loses stored events once data exists: inspect/back up first; forward correction may be safer. It is not a database reset.
 
 See [schema validation and commands](../testing/strategy.md#outbox-schema-validation--milestone-14), [actual results](../testing/validation-results.md), [migration ownership](migrations.md) and [ADR 004](../adr/004-use-postgresql-transactional-outbox-schema.md). Routing/destination columns, retry execution, DLQ table and worker remain absent. The read repository and RabbitMQ publisher now exist separately; ownership fields are added by the 2.2 migration.
+
+
+## Milestone 3 roadmap
+
+Milestone 3.1 selects the next schema and roadmap; all 3.2 migration/cycle/revision/scheduling changes remain planned. Applied migrations are unchanged. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).

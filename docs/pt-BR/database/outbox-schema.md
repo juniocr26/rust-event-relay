@@ -91,3 +91,8 @@ Novo par com histórico imutável:
 Up cria tabela, CHECKs e um índice de polling no namespace relay existente. Down exclui apenas tabela com RESTRICT; índices/constraints próprios são removidos junto. Preserva relay/histórico anterior e recusa dependências externas. SQLx executa migrações PostgreSQL transacionalmente por padrão. Após dados reais, rollback perde eventos permanentemente: inspecione/faça backup; correção para frente pode ser mais segura. Não é reset do banco.
 
 Veja [validação e comandos](../testing/strategy.md#validação-do-schema-outbox--marco-14), [resultados reais](../testing/validation-results.md), [responsabilidade das migrações](migrations.md) e [ADR 004](../adr/004-use-postgresql-transactional-outbox-schema.md). Colunas de destino/roteamento, execução de retries, tabela DLQ e worker continuam ausentes. O repositório de leitura e o publicador RabbitMQ já existem separadamente; a migração 2.2 acrescenta os campos de ownership.
+
+
+## Roadmap do Marco 3
+
+Marco 3.1 define próximo schema e roadmap; migration/ciclo/revisão/agenda de 3.2 permanecem planejados. Migrations aplicadas não foram alteradas. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).

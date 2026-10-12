@@ -70,3 +70,8 @@ Harness fecha pools antes de remover exatamente seu banco gerado, confere ausên
 Testes atuais comprovam invariantes do envelope, armazenamento representável, restauração selecionada, corte inclusivo/limites, filtros, observações repetidas inalteradas, ausência de mutação, observação por dois leitores, erros/fontes e limpeza isolada. Fixture de schema versionada adiciona 25 assertions com rollback. Descrições de snapshot/locks/durabilidade vêm da documentação oficial versão 18; SQLx é referenciado especificamente em 0.8.6. Suíte não enumera toda sequência concorrente nem injeta cada falha da matriz.
 
 Tabela durável e API de observação não fornecem garantia de entrega funcional. Publicação antes da confirmação no banco pode duplicar em retry; confirmação antes de publicar pode perder entrega. Idempotência do consumidor precisa coordenar deduplicação com efeitos de negócio. ADR 007 define lease/token e tentativas; concorrência produtiva, retry/backoff, dead-letter/quarentena/replay, limites de bytes/contagem/concorrência, retenção, duplicatas do produtor e ordem por agregado seguem abertos. Documento não escolhe nem implementa essas decisões, e entrega ponta a ponta não existe. Marcos 2.1/2.2 implementam separadamente publisher e modelos/contratos/schema de ownership. ADRs 001-005 continuam aplicáveis; fechamento documental não exige novo ADR.
+
+
+## Política do Marco 3.1
+
+Marco 3.1 define matriz de falhas, contratos de agenda/orçamento/isolamento/replay e próximos marcos. Somente cálculos puros foram implementados; persistência futura e cenários frontend continuam planejados. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).

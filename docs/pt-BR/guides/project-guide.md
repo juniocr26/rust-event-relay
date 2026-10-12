@@ -79,3 +79,8 @@ Marco 1 fechado; [Marco 2.1](../architecture/milestone-2-1.md) agora implementa 
 Controllers delegam a casos de uso; casos de uso orquestram aplicação/negócio; repositórios controlam consultas e contratos focados; API/mensageria externa fica em adapters; services têm comportamento de negócio reutilizável; helpers têm utilidades genéricas; modelos têm dados, invariantes e conversões próprias. Infraestrutura depende para dentro. Aplicação proporcional: resposta fixa de health não exige camadas vazias de caso de uso/service. Sem classes de encaminhamento nem CRUD genérico.
 
 Para regenerar PDF, instale ReportLab em ambiente Python separado e execute `python scripts/generate_handoff.py`. Fontes são Arial ou DejaVu do sistema (ou `HANDOFF_FONT_DIR`); gerador lê Markdown e grava PDF na raiz. Renderize/inspecione todas as páginas e confira extração textual antes de aceitar nova versão. Dependências Rust não mudam.
+
+
+## Roadmap do Marco 3
+
+Marco 3.1 define próximo schema e roadmap; migration/ciclo/revisão/agenda de 3.2 permanecem planejados. Migrations aplicadas não foram alteradas. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).

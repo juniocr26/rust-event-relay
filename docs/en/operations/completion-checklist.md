@@ -57,3 +57,8 @@ Production ownership SQL/concurrency, worker orchestration, producer/consumer ef
 ## Milestone 2.6 — Current scope
 
 [Integrated experiments](../architecture/milestone-2-6.md) and [Milestone 2 review](../operations/milestone-2-review.md) update acceptance under explicit assumptions. Shared rollout remains pending; earlier records retain their historical context.
+
+
+## Milestone 3.1 policy
+
+Milestone 3.1 defines the failure matrix, durable retry/budget/isolation/replay contracts and remaining roadmap. Only pure policy calculations are implemented; future persistence and frontend scenarios remain planned. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).

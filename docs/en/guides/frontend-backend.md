@@ -50,3 +50,8 @@ Delivery semantics remain the accepted at-least-once foundation under explicit a
 All backend baseline checks, isolated PostgreSQL suites, publisher/connection tests, all three worker_smoke tests (including isolated collective Supervisor controls) and 11 integrated-recovery tests passed. npm ci/type-check/build and development HTTP smoke passed. PostgreSQL and RabbitMQ container IDs remained unchanged. Shared ownership migration remains absent and relay remains stopped. Documentation validation passed with zero errors; 18 warnings concern restricted image fixtures in another project.
 
 Current root .env credentials differ from existing running RabbitMQ initialization credentials. Default management validation returned 401 and initial publisher tests failed authentication. Existing broker credentials authenticated successfully; `python3 scripts/check-rabbitmq.py --running-credentials` verifies them privately without modifying .env or broker users. Broker suites passed with those existing credentials injected only in memory. The recreated app still has root .env values: align configuration through a separate authorized operation before shared rollout. Browser login was not tested.
+
+
+## Milestone 3.1 policy
+
+Milestone 3.1 defines the failure matrix, durable retry/budget/isolation/replay contracts and remaining roadmap. Only pure policy calculations are implemented; future persistence and frontend scenarios remain planned. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).

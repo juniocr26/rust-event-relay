@@ -101,3 +101,8 @@ A migração mais recente nas fontes é add_delivery_ownership; seu down remove 
 `src/infrastructure/postgres/` implementa `OutboxReader` com `PgPool` injetado. Infraestrutura depende dos contratos de persistência e domínio; SQL, SQLx, linhas privadas e classificação de erros ficam na infraestrutura. Modelos validam/convertem dados sem consultas. ADR 005 permanece suficiente: sem interface duplicada, camadas vazias, nova migração ou ADR. Futures Send nativas e dispatch estático permanecem. Bootstrap HTTP continua independente do banco.
 
 Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](../testing/strategy.md) e [validação executada](../testing/validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marcos 1.7 e 1.8 concluídos: integração e [semântica de falhas/transações](../architecture/failure-and-transactions.md). Marco 1 fechado; Marcos 2.1/2.2 adicionam publisher e contratos/schema de ownership; mutações produtivas e worker continuam adiados.
+
+
+## Roadmap do Marco 3
+
+Marco 3.1 define próximo schema e roadmap; migration/ciclo/revisão/agenda de 3.2 permanecem planejados. Migrations aplicadas não foram alteradas. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).

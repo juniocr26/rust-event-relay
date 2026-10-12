@@ -123,3 +123,8 @@ Veja [consulta, restauração, limites e erros](../database/postgres-repository.
 Marco 1 fechado. [Semântica de falhas/transações](failure-and-transactions.md) registra COMMIT incerto do produtor, bloqueio por dados inválidos, limites de cancelamento e janelas futuras publicação/confirmação, sem novos contratos.
 
 Marco 2.2 também define `CommitUncertain` para commits futuros de mutação; reader mantém suas três categorias originais. ADR 007 seleciona ownership/tentativas; adapters PostgreSQL de mutação e concorrência real de donos continuam adiados.
+
+
+## Política do Marco 3.1
+
+Marco 3.1 define matriz de falhas, contratos de agenda/orçamento/isolamento/replay e próximos marcos. Somente cálculos puros foram implementados; persistência futura e cenários frontend continuam planejados. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).

@@ -735,3 +735,16 @@ Expiração real, estados duráveis e identidades originais sustentam recuperaç
 Ambiente final somente leitura: serviços originais continuamente ativos; http RUNNING/relay STOPPED; duas migrações originais instaladas, ownership 20261009000000 pendente. Zero bancos fixture; nenhuma queue/exchange fixture, worker/helper de teste ou diretório relay_recovery_ remanescente. Sem migração compartilhada, restart/recriação, purge ou término de sessão alheia. Cleanup exato também passou após assertion intencional. Rollout permanece sem autorização específica.
 
 Validação documental final: checker read-only da Library, a partir do workspace pai, conferiu 220 documentos, zero erros e 18 avisos existentes de fixtures restritas. Links relativos/âncoras do handoff conferidos separadamente porque Reports não entra no catálogo. git diff --check passou nos dois projetos. Library mudou somente Markdown, sem aplicação/dependências/runtime; sem alteração Viva Bem, commit ou push.
+
+
+## Marco 3.1 — 2026-10-12
+
+Commit inicial Rust: `15067056f379dd98aeb3bd5c6af09b6700504281`; engineering-library: `7caf977d5f3294c05efa1b29f21edff1b8107ca8`. Árvores limpas; nenhum AGENTS.md aplicável de projeto/ancestral encontrado. Skills disponíveis consideradas; nenhuma skill de artefato/plugin foi necessária para código puro Rust e Markdown.
+
+Executados no container app existente: cargo fmt --all (depois --check), cargo clippy --locked --all-targets -- -D warnings, cargo test --locked, cargo build --locked e RUSTDOCFLAGS=-Dwarnings cargo doc --locked --no-deps. Verificações finais aprovadas: 50 testes passaram, 45 ignorados, nenhuma falha; três testes novos cobrem orçamento/ciclo/capacidade, equal jitter limitado, entradas inválidas, precisão e overflow temporal. Tentativas iniciais de Clippy recusaram cálculo manual de saldo limitado a zero; expressão final limita somente saldo derivado, nunca contadores históricos.
+
+Validador documental executado no workspace abrangendo ambos: zero erros, 18 avisos de links restritos de fixtures Go existentes; nenhum nos repositórios alterados. git diff --check aprovado nos dois. Isso não prova SQL de agenda, concorrência, isolamento ou replay; nada disso foi integrado. Categorias existentes de aquisição/use case/worker revisadas contra a matriz nova.
+
+Consulta somente leitura docker compose ps confirmou app/frontend ativos e PostgreSQL/RabbitMQ saudáveis. Sem consulta de status/migration compartilhada, inspeção/alteração de credenciais, restart, início do relay compartilhado ou reset. Testes opt-in de infraestrutura/recuperação não foram reexecutados pois somente cálculos puros independentes e docs mudaram. Evidência do Marco 2 permanece histórica; CI remota não executada. Sem staging, commit ou push.
+
+[Política e próximos marcos](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).

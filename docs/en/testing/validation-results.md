@@ -735,3 +735,16 @@ Real expiration, durable states and original broker identities support the teste
 Final read-only environment checks: original services continuously running; http RUNNING, relay STOPPED; two original migrations installed, ownership migration 20261009000000 pending. Zero fixture databases, no fixture queues/exchanges, no test worker/helper process or relay_recovery_ directory remained. No shared migration, service restart/recreation, queue purge or unrelated session termination. Exact cleanup also passed after intentional assertion failure. Shared rollout remains separately unauthorized.
 
 Final documentation validation: read-only Library validator from parent workspace checked 220 documents, zero errors, 18 existing restricted-fixture warnings. Handoff relative file/anchor links checked separately because Reports is outside the catalog scan. git diff --check passed in both repositories. Library changes are Markdown only; no Library application/dependency/runtime edits, no Viva Bem edits, no commit/push.
+
+
+## Milestone 3.1 — 2026-10-12
+
+Starting Rust commit: `15067056f379dd98aeb3bd5c6af09b6700504281`; engineering-library: `7caf977d5f3294c05efa1b29f21edff1b8107ca8`. Both trees were clean; no applicable project/ancestor AGENTS.md found. Available skills were considered; no artifact/plugin skill was needed for focused Rust policy and Markdown work.
+
+Executed in the existing app container: cargo fmt --all (then --check), cargo clippy --locked --all-targets -- -D warnings, cargo test --locked, cargo build --locked and RUSTDOCFLAGS=-Dwarnings cargo doc --locked --no-deps. Final checks passed: 50 tests passed, 45 ignored, no failures; three new pure policy tests cover acquisition/cycle/storage boundaries, capped equal jitter, invalid inputs, precision and timestamp overflow. Initial Clippy attempts rejected manual zero-clamping of derived allowance; the final expression clamps only the derived remaining allowance, never lifetime counters.
+
+Documentation validator was run across both repositories/workspace: zero errors, 18 restricted-target warnings in existing Go image fixture links, none in either changed repository. git diff --check passed in both repositories. These checks do not prove SQL scheduling, contention, isolation or replay; none is wired. Existing acquisition/use-case/worker categories were reviewed against the new matrix.
+
+Read-only docker compose ps confirmed existing app/frontend up and PostgreSQL/RabbitMQ healthy. No shared migration/status query, credential inspection/change, service restart, shared relay start or data reset occurred. Opt-in infrastructure/recovery tests were not rerun because only independent pure policy code and documentation changed. Historical Milestone 2 evidence remains historical; CI was not remotely executed. No staging, commit or push.
+
+[Policy and remaining slices](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).

@@ -88,3 +88,6 @@ Authentication, authorization, data and resource boundaries.
 - [Authority, diagnostics and transport](security/diagnostic-and-authority-boundaries.md)
 
 Category applicability and omissions are justified in the [completion checklist](operations/completion-checklist.md). No empty category is created.
+
+- [Milestone 3.1 — durable failure policy and roadmap](architecture/milestone-3-1.md)
+- [ADR 008 — durable failure policy](adr/008-durable-failure-policy.md)

@@ -77,3 +77,8 @@ Milestone 1 is closed; [Milestone 2.1](../architecture/milestone-2-1.md) now imp
 Controllers should delegate to use cases; use cases orchestrate application/business work; repositories own queries and focused contracts; external API/messaging goes in adapters; services hold reusable business behavior; helpers hold generic utilities; models hold data, invariants and model conversions. Infrastructure depends inward. These boundaries are applied proportionally: the fixed HTTP health response needs no unused use-case/service layers. No forwarding classes or generic CRUD layer were added.
 
 To regenerate the PDF, install ReportLab in a separate Python environment and run `python scripts/generate_handoff.py`. Fonts are selected from system Arial or DejaVu (or `HANDOFF_FONT_DIR`); generation reads the Markdown source and writes the root PDF. Render and inspect every page and verify text extraction before accepting a regenerated artifact. Rust dependencies are unaffected.
+
+
+## Milestone 3 roadmap
+
+Milestone 3.1 selects the next schema and roadmap; all 3.2 migration/cycle/revision/scheduling changes remain planned. Applied migrations are unchanged. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).
