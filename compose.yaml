@@ -2,13 +2,14 @@ services:
   app:
     build:
       context: .
+      dockerfile: docker/Dockerfile
       args:
         LOCAL_UID: ${LOCAL_UID:-1000}
         LOCAL_GID: ${LOCAL_GID:-1000}
     init: true
     # Each child has 30s; allow sequential Supervisor group shutdown plus margin.
     stop_grace_period: 65s
-    working_dir: /app
+    working_dir: /app/backend
     environment:
       RELAY_LEASE_MS: ${RELAY_LEASE_MS:-60000}
       RELAY_IDLE_MS: ${RELAY_IDLE_MS:-1000}
@@ -46,6 +47,18 @@ services:
       - .:/app
     ports:
       - "127.0.0.1:${HOST_HTTP_PORT:-8080}:8080"
+  frontend:
+    image: node:22-bookworm-slim
+    init: true
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    working_dir: /app/frontend
+    environment:
+      npm_config_cache: /tmp/npm-cache
+    command: ["sh", "-c", "npm ci && npm run dev -- --host 0.0.0.0 --port 5173 --strictPort"]
+    volumes:
+      - ./frontend:/app/frontend
+    ports:
+      - "127.0.0.1:${HOST_FRONTEND_PORT:-5173}:5173"
   postgres:
     image: postgres:18.6-bookworm
     environment:
@@ -75,7 +88,7 @@ services:
       - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
-      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./docker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
       interval: 5s

@@ -6,7 +6,7 @@ Implemented 2026-10-12 from clean `edb1f90`. [ADR 007](../adr/007-durable-delive
 
 ## Public API and sequencing
 
-[application/delivery.rs](../../../src/application/delivery.rs) exposes `deliver_once(&repository, &publisher, AcquireRequest)`. The generic repository implements the three ownership ports; the publisher implements `EventPublisher + Sync`. Native futures remain Send with static dispatch. SQLx, Lapin, driver types, SQL and transactions remain in infrastructure. No forwarding service or workflow framework is added.
+[application/delivery.rs](../../../backend/src/application/delivery.rs) exposes `deliver_once(&repository, &publisher, AcquireRequest)`. The generic repository implements the three ownership ports; the publisher implements `EventPublisher + Sync`. Native futures remain Send with static dispatch. SQLx, Lapin, driver types, SQL and transactions remain in infrastructure. No forwarding service or workflow framework is added.
 
 Each invocation calls acquisition once. `None` returns `NoEvent` with no later calls; this does not establish an empty backlog. An acquisition error returns `AcquisitionFailed` with the original error, request token and duration, but no invented claim. `CommitUncertain` may conceal a committed lease: do not publish or repeat the old token. Inspect durable state operationally or allow lease expiration and recover with a fresh request. There is no reconciliation query in this API.
 
@@ -47,7 +47,7 @@ The transition result is the existing `Result<TransitionOutcome, PersistenceErro
 | Rejected | Definitive negative broker confirmation | Never | Once |
 | Uncertain | Sending began; acceptance may have occurred | Never | Retain lease |
 
-This is a project policy based on the [publisher implementation](../../../src/infrastructure/rabbitmq.rs), not a universal treatment of transport errors. Publication error classification and diagnostic source are preserved even if release fails. `ReleaseOutcome::Attempted` independently exposes Applied, OwnershipLost, ordinary error or CommitUncertain. It never retries. The port preserves attempt_count, available_at and last_error, with no new diagnostic parameters or backoff. Immediate release can make a due event immediately eligible, including repeatedly failing events; scheduling and poison-event policy are future work.
+This is a project policy based on the [publisher implementation](../../../backend/src/infrastructure/rabbitmq.rs), not a universal treatment of transport errors. Publication error classification and diagnostic source are preserved even if release fails. `ReleaseOutcome::Attempted` independently exposes Applied, OwnershipLost, ordinary error or CommitUncertain. It never retries. The port preserves attempt_count, available_at and last_error, with no new diagnostic parameters or backoff. Immediate release can make a due event immediately eligible, including repeatedly failing events; scheduling and poison-event policy are future work.
 
 `ReleaseOutcome::LeaseRetained` accompanies Uncertain. Retention delays recovery; it does not reconcile acceptance or prevent duplicates. The original `PublishErrorKind::Uncertain` also tells composition that the RabbitMQ adapter retires its channel. This use case does not reconnect or replace publishers; cancellation after send can retire that channel without an observable typed outcome.
 
@@ -68,6 +68,6 @@ Dropping a future can suppress its outcome. It does not establish rollback, nona
 
 ## Evidence and next scope
 
-[Use-case tests](../../../tests/delivery_use_case.rs) cover all publication categories and transition results, exact envelope equality, original error/source preservation, event/token context, single-call sequencing, confirmation gating, cancellation at four awaited boundaries and Send/static-dispatch behavior. The expired fixture intentionally shows that the application does not substitute its clock for database authority. See [dated validation](../testing/validation-results.md#milestone-24--2026-10-12) and 2.4 handoff (absent in the 2.5 checkout).
+[Use-case tests](../../../backend/tests/delivery_use_case.rs) cover all publication categories and transition results, exact envelope equality, original error/source preservation, event/token context, single-call sequencing, confirmation gating, cancellation at four awaited boundaries and Send/static-dispatch behavior. The expired fixture intentionally shows that the application does not substitute its clock for database authority. See [dated validation](../testing/validation-results.md#milestone-24--2026-10-12) and 2.4 handoff (absent in the 2.5 checkout).
 
 Infrastructure code and schema are unchanged, so unrelated opt-in real PostgreSQL/RabbitMQ regressions were not rerun. There is no polling worker, Supervisor registration, reconnection, retry/backoff/jitter, quarantine/DLQ, producer endpoint or consumer idempotency. No performance, end-to-end at-least-once or exactly-once claim is made. **2.5** composes and operates the polling worker, publisher lifecycle/reconnection and Supervisor integration. **2.6** performs end-to-end crash/recovery failure experiments.

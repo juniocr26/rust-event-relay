@@ -31,7 +31,7 @@ Outros leitores podem observar o mesmo evento. Metadados podem ficar obsoletos i
 
 ## Matriz de falhas
 
-Evidência: **I** = integração atual com PostgreSQL real; **U** = teste unitário/contrato sem banco; **S** = semântica oficial ou código inspecionado; **F** = análise futura, sem entrega executada. Nomes em [postgres_repository.rs](../../../tests/postgres_repository.rs) e [postgres/mod.rs](../../../src/infrastructure/postgres/mod.rs).
+Evidência: **I** = integração atual com PostgreSQL real; **U** = teste unitário/contrato sem banco; **S** = semântica oficial ou código inspecionado; **F** = análise futura, sem entrega executada. Nomes em [postgres_repository.rs](../../../backend/tests/postgres_repository.rs) e [postgres/mod.rs](../../../backend/src/infrastructure/postgres/mod.rs).
 
 | Ponto de falha / crash | Resultado observável | Implicação durável | Comportamento atual | Responsável pela recuperação | Evidência | Trabalho adiado |
 | --- | --- | --- | --- | --- | --- | --- |

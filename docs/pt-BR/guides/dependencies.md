@@ -1,3 +1,5 @@
+Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/backend`. Consulte [frontend/backend](frontend-backend.md).
+
 [English](../../en/guides/dependencies.md) | [README](../../../README.pt-BR.md)
 
 # Dependências de desenvolvimento e recuperação

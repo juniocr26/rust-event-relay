@@ -1,3 +1,5 @@
+Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](../guides/frontend-backend.md).
+
 [Português brasileiro](../../pt-BR/database/postgresql.md) | [README](../../../README.md)
 
 # PostgreSQL decision and local infrastructure
@@ -86,7 +88,7 @@ Use 127.0.0.1 to match intentional IPv4 loopback publication and avoid localhost
 
 ## Schema ownership
 
-[migrations/](../../../migrations) contains canonical source-controlled SQL history, managed by SQLx CLI 0.8.6 inside Docker. DBeaver is for inspection, querying and debugging; intended schema changes belong in migrations. Physical `.dockerized-postgres/18/docker/` data is ignored local state and survives up, down, build and container recreation. Migration rollback does not delete that directory. Milestone 1.3 creates only an empty relay namespace; Milestone 1.4 adds the outbox schema; Milestone 1.6 adds application reads; writes remain future work.
+[migrations/](../../../backend/migrations) contains canonical source-controlled SQL history, managed by SQLx CLI 0.8.6 inside Docker. DBeaver is for inspection, querying and debugging; intended schema changes belong in migrations. Physical `.dockerized-postgres/18/docker/` data is ignored local state and survives up, down, build and container recreation. Migration rollback does not delete that directory. Milestone 1.3 creates only an empty relay namespace; Milestone 1.4 adds the outbox schema; Milestone 1.6 adds application reads; writes remain future work.
 
 ## Authentication remediation on the real local cluster
 

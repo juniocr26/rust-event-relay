@@ -1,3 +1,5 @@
+Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](frontend-backend.md).
+
 [Português brasileiro](../../pt-BR/guides/dependencies.md) | [README](../../../README.md)
 
 # Development dependencies and recovery

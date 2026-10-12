@@ -6,7 +6,7 @@ Implementado em 2026-10-12 a partir de `bbc2c1f` limpo. [ADR 007](../adr/007-dur
 
 ## Escopo e contratos implementados
 
-`PostgresOutboxRepository` implementa `OutboxAcquirer`, `OutboxCompleter` e `OutboxReleaser`, além da observação preservada. SQL/transações/classificação ficam em [postgres/ownership.rs](../../../src/infrastructure/postgres/ownership.rs); decoding verificado do envelope é compartilhado com o reader em [postgres/mod.rs](../../../src/infrastructure/postgres/mod.rs). Domínio/persistência independem de SQLx/Lapin; futures Send nativas e despacho estático continuam. Nenhuma dependência ou migração SQL mudou. Ciclo de vida do pool e prazos produtivos pertencem ao chamador.
+`PostgresOutboxRepository` implementa `OutboxAcquirer`, `OutboxCompleter` e `OutboxReleaser`, além da observação preservada. SQL/transações/classificação ficam em [postgres/ownership.rs](../../../backend/src/infrastructure/postgres/ownership.rs); decoding verificado do envelope é compartilhado com o reader em [postgres/mod.rs](../../../backend/src/infrastructure/postgres/mod.rs). Domínio/persistência independem de SQLx/Lapin; futures Send nativas e despacho estático continuam. Nenhuma dependência ou migração SQL mudou. Ciclo de vida do pool e prazos produtivos pertencem ao chamador.
 
 O contrato real de 2.2 adquire **no máximo um** evento, com pedido consumido contendo token novo e duração positiva em microssegundos inteiros. Não recebe cutoff ou limite de lote. `EligibleRead`/`BatchSize` pertencem à observação; nenhuma API de lote foi acrescentada para atender contrato presumido. Release recebe apenas `OwnedEventKey`, preservando disponibilidade e last_error, sem diagnóstico recebido ou cálculo de backoff. São decisões existentes, não campos adicionais parcialmente implementados.
 
@@ -40,7 +40,7 @@ Descartar future antes de COMMIT não estabelece rollback imediato. Durante COMM
 
 ## Evidência e trabalho restante
 
-[postgres_ownership.rs](../../../tests/postgres_ownership.rs) tem 12 casos PostgreSQL reais isolados: elegibilidade/limite de uma linha, token/tempo/contador, exclusão de lease ativo e observação preservada; transições válidas/repetidas/token incorreto/ausência/terminal; expiração/recuperação/tokens antigos; aquisição concorrente disjunta; SKIP LOCKED; dado inválido/overflow sem mutação; contador máximo; rejeição antes de acquired_at; retorno expirado; rejeições imediata/diferida; cancelamento durante lock wait.
+[postgres_ownership.rs](../../../backend/tests/postgres_ownership.rs) tem 12 casos PostgreSQL reais isolados: elegibilidade/limite de uma linha, token/tempo/contador, exclusão de lease ativo e observação preservada; transições válidas/repetidas/token incorreto/ausência/terminal; expiração/recuperação/tokens antigos; aquisição concorrente disjunta; SKIP LOCKED; dado inválido/overflow sem mutação; contador máximo; rejeição antes de acquired_at; retorno expirado; rejeições imediata/diferida; cancelamento durante lock wait.
 
 Teste de espera observa estado Lock em pg_stat_activity, verifica início transacional anterior à expiração, aguarda relógio do banco alcançar expiração e só então libera lock. Exercita completion e release; snapshots de atividade são atualizados explicitamente, com polling limitado para coordenar, sem presumir expiração por sleep fixo. Igualdade exata da expiração é demonstrada pelos testes determinísticos existentes do modelo; integração demonstra expiração ao redor de esperas reais, sem igualdade controlada. Relógio do banco real não foi alterado.
 

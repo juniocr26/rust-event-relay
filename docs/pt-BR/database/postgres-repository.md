@@ -1,3 +1,5 @@
+Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/backend`. Consulte [frontend/backend](../guides/frontend-backend.md).
+
 [English](../../en/database/postgres-repository.md) | [README](../../../README.pt-BR.md)
 
 
@@ -35,4 +37,4 @@ Decoder privado interpreta microssegundos binários desde época PostgreSQL de 2
 
 Fallback conservador é OperationFailed. Nenhuma categoria promete sucesso de retry; política pertence ao chamador. Fontes SQLx/domínio/conversão permanecem tipadas. Display/Debug públicos mostram classificação estática; repositório não emite logs. Nunca registrar pools/opções, credenciais, payloads ou cadeias de fontes brutas; diagnóstico exige redação de dados sensíveis.
 
-Testes unitários dispensam PostgreSQL. A [suíte de integração do Marco 1.7](../../../tests/postgres_repository.rs) exercita OutboxReader público contra PostgreSQL real em bancos independentes e isolados. Cobre elegibilidade/limites/desempates do adapter, todos os campos restaurados, JSON exato armazenado, observação por dois leitores sem mutação, dados selecionados inválidos e recuperação, pool fechado e tabela ausente. Display/Debug seguem sanitizados e fontes tipadas permanecem disponíveis. Veja [configuração, limpeza e limitações](../testing/strategy.md). Marco 1.8 [documenta falhas/transações](../architecture/failure-and-transactions.md); injeção de crash/recuperação permanece validação futura; escritas de produtores, claims, leases e entrega permanecem não implementados.
+Testes unitários dispensam PostgreSQL. A [suíte de integração do Marco 1.7](../../../backend/tests/postgres_repository.rs) exercita OutboxReader público contra PostgreSQL real em bancos independentes e isolados. Cobre elegibilidade/limites/desempates do adapter, todos os campos restaurados, JSON exato armazenado, observação por dois leitores sem mutação, dados selecionados inválidos e recuperação, pool fechado e tabela ausente. Display/Debug seguem sanitizados e fontes tipadas permanecem disponíveis. Veja [configuração, limpeza e limitações](../testing/strategy.md). Marco 1.8 [documenta falhas/transações](../architecture/failure-and-transactions.md); injeção de crash/recuperação permanece validação futura; escritas de produtores, claims, leases e entrega permanecem não implementados.

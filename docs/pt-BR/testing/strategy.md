@@ -1,3 +1,5 @@
+Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/backend`. Consulte [frontend/backend](../guides/frontend-backend.md).
+
 [English](../../en/testing/strategy.md) | [README](../../../README.pt-BR.md)
 
 
@@ -156,7 +158,7 @@ Configuração Compose bruta, dumps de ambiente e ajuda SQLx podem revelar segre
 
 ## Validação do schema outbox — Marco 1.4
 
-São fixtures de schema, não testes de integração de repositório Rust. O [fixture SQL versionado](../../../tests/sql/outbox_schema.sql) usa transação e ROLLBACK final: ON_ERROR_STOP=1 também encerra sessão com falha e desfaz transação, preservando linhas preexistentes. Usa UUIDs sintéticos reservados; colisão falha com segurança, portanto use banco local apropriado. Nenhum seed é adicionado.
+São fixtures de schema, não testes de integração de repositório Rust. O [fixture SQL versionado](../../../backend/tests/sql/outbox_schema.sql) usa transação e ROLLBACK final: ON_ERROR_STOP=1 também encerra sessão com falha e desfaz transação, preservando linhas preexistentes. Usa UUIDs sintéticos reservados; colisão falha com segurança, portanto use banco local apropriado. Nenhum seed é adicionado.
 
 Verifica 25 casos: envelope/defaults válidos, identidade duplicada, 11 campos NOT NULL, strings obrigatórias vazias, versões 0/-1/acima de u32, tentativas negativas, status inválido, coerência do timestamp de conclusão, máximo u32/UUIDs opcionais/JSON null/offsets e representação de retry pending/falha terminal. Tipo do payload é inspecionado como JSONB. Sem broker, loop de retry ou claim de worker.
 
@@ -172,7 +174,7 @@ Use catálogos para colunas/tipos/nullability/defaults, pg_constraint para PK/CH
 
 **Rollback destrutivo:** somente após confirmar ausência de dados importantes e última migração create_outbox_events, execute migrate revert, inspecione ausência da tabela e preservação relay/histórico, depois migrate run e info. Não deixe schema revertido. Após dados reais, rollback perde todas as linhas; sem garantia de recuperação em produção. Execute quatro verificações Cargo Docker documentadas acima. A tabela final teve zero linhas após fixtures e reaplicação.
 
-A [inspeção de catálogo somente leitura](../../../tests/sql/inspect_outbox_schema.sql) verifica colunas, constraints, índices, histórico e contagem:
+A [inspeção de catálogo somente leitura](../../../backend/tests/sql/inspect_outbox_schema.sql) verifica colunas, constraints, índices, histórico e contagem:
 
 ```bash
 docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql
@@ -180,7 +182,7 @@ docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES
 
 ## Testes de contratos de persistência — Marco 1.5
 
-[tests/persistence_contract.rs](../../../tests/persistence_contract.rs) contém cinco testes Rust sem banco:
+[tests/persistence_contract.rs](../../../backend/tests/persistence_contract.rs) contém cinco testes Rust sem banco:
 
 - Limites positivos, rejeição de zero e ausência de máximo arbitrário; corte UTC explícito preservado.
 - Identidade/tempo/payload/UUIDs do envelope intactos, com tentativa/disponibilidade fora dos nove campos serializados.

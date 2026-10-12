@@ -35,6 +35,8 @@ Decisões e consequências; IDs/histórico preservados.
 
 ## guides
 
+- [Frontend/backend preparation](guides/frontend-backend.md)
+
 Setup, pré-requisitos e procedimentos de leitura.
 
 - [Dependências de desenvolvimento e recuperação](guides/dependencies.md)

@@ -1,3 +1,5 @@
+Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](frontend-backend.md).
+
 [Português brasileiro](../../pt-BR/guides/project-guide.md) | [README](../../../README.md)
 
 
@@ -10,30 +12,18 @@
 
 ```text
 .
+├── backend/ (Cargo.toml, Cargo.lock, src/, tests/, migrations/)
+├── frontend/ (Vue shell, package.json, package-lock.json, src/)
+├── docker/ (Dockerfile, entrypoint.sh, sqlx.py, rabbitmq.conf)
+│   └── supervisor/ (normal.conf, supervisor, relay-http, relay-worker)
+├── docs/ (en/, pt-BR/)
+├── Reports/
+├── scripts/
 ├── .github/workflows/ci.yaml
-├── src/
-│   ├── main.rs
-│   ├── lib.rs
-│   ├── config.rs
-│   ├── application.rs and application/publisher.rs
-│   ├── telemetry.rs
-│   ├── domain/event.rs and domain/delivery.rs
-│   ├── infrastructure/postgres/mod.rs and infrastructure/rabbitmq.rs
-│   └── persistence/ (mod.rs, model.rs, error.rs, ownership.rs)
-├── tests/ (lifecycle.rs, event_envelope.rs, persistence_contract.rs, postgres_repository.rs, rabbitmq_publisher.rs, delivery_ownership.rs, delivery_ownership_schema.rs, support/, sql/)
-├── docs/
-│   ├── en/ (architecture, dependencies, Docker, guide, testing, validation, adr/)
-│   └── pt-BR/ (equivalent documents)
-├── docker/entrypoint.sh
-├── .cargo-cache/ (generated, ignored)
-├── target/ (generated, ignored)
-├── .dockerized-postgres/ (generated, ignored)
-├── Cargo.toml
-├── Cargo.lock
+├── .cargo-cache/ (ignored)
+├── target/ (ignored)
+├── .dockerized-postgres/ (ignored)
 ├── .env.example
-├── .gitignore
-├── .dockerignore
-├── Dockerfile
 ├── compose.yaml
 ├── README.md
 ├── README.pt-BR.md

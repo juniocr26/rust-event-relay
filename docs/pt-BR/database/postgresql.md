@@ -1,3 +1,5 @@
+Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/backend`. Consulte [frontend/backend](../guides/frontend-backend.md).
+
 [English](../../en/database/postgresql.md) | [README](../../../README.pt-BR.md)
 
 # Decisão PostgreSQL e infraestrutura local
@@ -86,7 +88,7 @@ Use 127.0.0.1 para corresponder à publicação IPv4 deliberada e evitar ambigui
 
 ## Responsabilidade pelo schema
 
-[migrations/](../../../migrations) contém o histórico SQL canônico versionado, gerenciado pelo SQLx CLI 0.8.6 no Docker. DBeaver serve para inspeção, consultas e depuração; mudanças pretendidas pertencem a migrações. Dados físicos `.dockerized-postgres/18/docker/` são estado local ignorado e sobrevivem a up, down, build e recriação. Rollback não exclui esse diretório. Marco 1.3 cria apenas namespace relay vazio; Marco 1.4 adiciona schema outbox; Marco 1.6 adiciona leitura pela aplicação; gravações permanecem futuras.
+[migrations/](../../../backend/migrations) contém o histórico SQL canônico versionado, gerenciado pelo SQLx CLI 0.8.6 no Docker. DBeaver serve para inspeção, consultas e depuração; mudanças pretendidas pertencem a migrações. Dados físicos `.dockerized-postgres/18/docker/` são estado local ignorado e sobrevivem a up, down, build e recriação. Rollback não exclui esse diretório. Marco 1.3 cria apenas namespace relay vazio; Marco 1.4 adiciona schema outbox; Marco 1.6 adiciona leitura pela aplicação; gravações permanecem futuras.
 
 ## Correção de autenticação no cluster local real
 

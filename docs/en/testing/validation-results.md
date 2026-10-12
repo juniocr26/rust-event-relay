@@ -711,7 +711,7 @@ No throughput/fairness/consumer-effect/end-to-end at-least-once claim follows. H
 
 ## Milestone 2.6 — 2026-10-12
 
-Started clean at Rust `d6f529b` and Library `88f8e62`. Missing 2.5 handoff was not reconstructed; versioned code/docs/history provided the baseline. [Matrix and actual observations](../architecture/milestone-2-6.md), [acceptance review](../operations/milestone-2-review.md), [handoff](../../../Reports/MILESTONE_2_6_HANDOFF.md) and [sanitized final transcript](../../../Reports/MILESTONE_2_6_EXPERIMENTS.txt) record the evidence.
+Started clean at Rust `d6f529b` and Library `88f8e62`. Missing 2.5 handoff was not reconstructed; versioned code/docs/history provided the baseline. [Matrix and actual observations](../architecture/milestone-2-6.md), [acceptance review](../operations/milestone-2-review.md), handoff (historical handoff unavailable in this checkout) and sanitized final transcript (historical artifact unavailable in this checkout) record the evidence.
 
 | Executed command in existing app (`docker compose exec -T app`) | Actual result |
 | --- | --- |

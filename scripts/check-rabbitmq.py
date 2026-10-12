@@ -1,19 +1,33 @@
 #!/usr/bin/env python3
 """Read-only host management validation. Never prints credentials or API response bodies."""
+import argparse
 import base64
 import json
 import subprocess
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import quote
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--running-credentials", action="store_true", help="Use existing broker container initialization credentials without modifying .env")
+args = parser.parse_args()
 
 try:
     config = json.loads(subprocess.check_output(["docker", "compose", "config", "--format", "json"]))
     env = config["services"]["rabbitmq"]["environment"]
+    if args.running_credentials:
+        container = subprocess.check_output(["docker", "compose", "ps", "-q", "rabbitmq"], text=True).strip()
+        running = dict(item.split("=", 1) for item in json.loads(subprocess.check_output([
+            "docker", "inspect", "--format", "{{json .Config.Env}}", container
+        ])))
+        env = {key: running[key] for key in ["RABBITMQ_DEFAULT_USER", "RABBITMQ_DEFAULT_PASS", "RABBITMQ_DEFAULT_VHOST"]}
+        print("Using existing running broker initialization credentials; .env remains unchanged.")
     publication = subprocess.check_output(["docker", "compose", "port", "rabbitmq", "15672"], text=True).strip()
     if not publication.startswith("127.0.0.1:"):
         sys.exit("Management must be published on host loopback.")
     port = publication.split(":")[1]
+    assert port == "15672", "Expected management port 15672"
     base = f"http://localhost:{port}"
     with urllib.request.urlopen(base + "/", timeout=5) as response:
         assert response.status == 200 and b"RabbitMQ" in response.read()
@@ -35,6 +49,10 @@ try:
     ]))
     own = next(p for p in permissions if p["vhost"] == env["RABBITMQ_DEFAULT_VHOST"])
     assert all(own[key] == "^relay[.].*" for key in ["configure", "write", "read"])
+    vhost = quote(env["RABBITMQ_DEFAULT_VHOST"], safe="")
+    for resource in ["exchanges", "queues", "bindings"]:
+        assert isinstance(api(f"/api/{resource}/{vhost}"), list)
+    print("Authenticated topology listings verified; absent application topology is allowed before publisher connection.")
     print("Authenticated management identity, tag and scoped project-vhost permissions verified.")
     print("HTTP/API checks passed. Browser form login was not performed by this script.")
 except (AssertionError, KeyError, StopIteration, ValueError):

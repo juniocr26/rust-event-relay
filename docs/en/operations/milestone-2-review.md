@@ -8,8 +8,8 @@
 
 | Requirement | Implementation | Evidence and limit |
 | --- | --- | --- |
-| Durable ownership | [ADR 007](../adr/007-durable-delivery-ownership.md), PostgreSQL acquisition commit/token/count/lease | [Ownership regressions](../../../tests/postgres_ownership.rs), [2.6 A/B](../architecture/milestone-2-6.md); committed pending state survives exact process SIGKILL. No power-loss proof. |
-| Confirm before complete | [deliver_once](../../../src/application/delivery.rs), mandatory routing + confirms in publisher | Boundary B pauses after contract success/before completion; uncertain send never completes; completion trigger is reached after confirmation. Broker acceptance is not consumer business success. |
+| Durable ownership | [ADR 007](../adr/007-durable-delivery-ownership.md), PostgreSQL acquisition commit/token/count/lease | [Ownership regressions](../../../backend/tests/postgres_ownership.rs), [2.6 A/B](../architecture/milestone-2-6.md); committed pending state survives exact process SIGKILL. No power-loss proof. |
+| Confirm before complete | [deliver_once](../../../backend/src/application/delivery.rs), mandatory routing + confirms in publisher | Boundary B pauses after contract success/before completion; uncertain send never completes; completion trigger is reached after confirmation. Broker acceptance is not consumer business success. |
 | Stable identity | Original EventEnvelope, AMQP message_id | Baseline and every duplicate observation preserve inserted IDs; no producer endpoint/transactional source write implemented. |
 | Incomplete recovery | Database-time eligibility after lease expiry; fresh AcquireRequest | A/B, SQL rejection/deadline, in-flight shutdown and uncertainty recover with count 2/new token; new experiments never edit expiry timestamps. Eventual availability/restart required. |
 | Concurrent protection | Short transaction, SKIP LOCKED, post-lock time and token predicates | Existing competing acquisition tests plus two real binaries with two live distinct durable tokens and completion barrier. No broker-count-only exclusivity inference or fairness claim. |
@@ -29,6 +29,6 @@ Graceful drain/cleanup budgets do not cover power loss, SIGKILL, kernel stalls o
 
 ## Operational status and Milestone 3 decisions
 
-Shared ownership migration `20261009000000` remains pending; http RUNNING, relay STOPPED, autostart=false. Isolated migrations/evidence do not authorize rollout; pending shared rollout does not invalidate isolated acceptance. No service recreation, shared queue purge or unrelated session termination was used. [Handoff](../../../Reports/MILESTONE_2_6_HANDOFF.md) records checks and continuity.
+Shared ownership migration `20261009000000` remains pending; http RUNNING, relay STOPPED, autostart=false. Isolated migrations/evidence do not authorize rollout; pending shared rollout does not invalidate isolated acceptance. No service recreation, shared queue purge or unrelated session termination was used. Handoff (historical handoff unavailable in this checkout) records checks and continuity.
 
 Before Milestone 3 decide: retryable versus permanent versus uncertain classification; durable scheduling/backoff/jitter and attempt semantics; poison-event isolation and quarantine/dead-letter representation; auditable replay preserving identity and authority; reconciliation after unknown acknowledgements; migration/operational acceptance and separate shared rollout authorization. Consumer business idempotency and producer endpoints need their own scope decisions. A graphical interface remains optional after core completion; none was added.

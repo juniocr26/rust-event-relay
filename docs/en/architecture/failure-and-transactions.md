@@ -31,7 +31,7 @@ Other readers can observe the same event. Returned metadata can become stale imm
 
 ## Failure matrix
 
-Evidence labels: **I** = current real-PostgreSQL integration; **U** = database-independent unit/contract test; **S** = official semantics or inspected code; **F** = future analysis, not executed delivery behavior. Test names are in [postgres_repository.rs](../../../tests/postgres_repository.rs) and [postgres/mod.rs](../../../src/infrastructure/postgres/mod.rs).
+Evidence labels: **I** = current real-PostgreSQL integration; **U** = database-independent unit/contract test; **S** = official semantics or inspected code; **F** = future analysis, not executed delivery behavior. Test names are in [postgres_repository.rs](../../../backend/tests/postgres_repository.rs) and [postgres/mod.rs](../../../backend/src/infrastructure/postgres/mod.rs).
 
 | Failure / crash point | Observable outcome | Durable implications | Current behavior | Recovery owner | Evidence | Deferred work |
 | --- | --- | --- | --- | --- | --- | --- |

@@ -711,7 +711,7 @@ Sem alegações de throughput/fairness/efeitos do consumidor/at-least-once ponta
 
 ## Marco 2.6 — 2026-10-12
 
-Partida limpa: Rust `d6f529b`, Library `88f8e62`. Handoff 2.5 ausente não foi reconstruído; código/documentação/histórico versionados forneceram a base. [Matriz e observações](../architecture/milestone-2-6.md), [aceitação](../operations/milestone-2-review.md), [handoff](../../../Reports/MILESTONE_2_6_HANDOFF.md) e [transcript final sanitizado](../../../Reports/MILESTONE_2_6_EXPERIMENTS.txt) registram evidência.
+Partida limpa: Rust `d6f529b`, Library `88f8e62`. Handoff 2.5 ausente não foi reconstruído; código/documentação/histórico versionados forneceram a base. [Matriz e observações](../architecture/milestone-2-6.md), [aceitação](../operations/milestone-2-review.md), handoff (historical handoff unavailable in this checkout) e transcript final sanitizado (historical artifact unavailable in this checkout) registram evidência.
 
 | Comando executado no app existente (`docker compose exec -T app`) | Resultado efetivo |
 | --- | --- |

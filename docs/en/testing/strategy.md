@@ -1,3 +1,5 @@
+Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](../guides/frontend-backend.md).
+
 [Português brasileiro](../../pt-BR/testing/strategy.md) | [README](../../../README.md)
 
 
@@ -156,7 +158,7 @@ Raw Compose config, environment dumps and SQLx help can reveal secrets; inspect 
 
 ## Outbox schema validation — Milestone 1.4
 
-These are database schema fixtures, not Rust repository integration tests. The source-controlled [SQL fixture](../../../tests/sql/outbox_schema.sql) uses a transaction and final ROLLBACK: ON_ERROR_STOP=1 also causes a failed connection/session to roll back, preserving preexisting rows. It uses reserved synthetic UUIDs; a collision fails safely, so use an appropriate local database. No seed data is introduced.
+These are database schema fixtures, not Rust repository integration tests. The source-controlled [SQL fixture](../../../backend/tests/sql/outbox_schema.sql) uses a transaction and final ROLLBACK: ON_ERROR_STOP=1 also causes a failed connection/session to roll back, preserving preexisting rows. It uses reserved synthetic UUIDs; a collision fails safely, so use an appropriate local database. No seed data is introduced.
 
 It asserts 25 cases: valid envelope/defaults, duplicate identity, all 11 NOT NULL fields, empty required strings, versions 0/-1/above u32, negative attempts, invalid status, completion timestamp consistency, full u32 maximum/optional UUIDs/JSON null/time offsets, and representable pending retry/terminal failure. Payload type is inspected as JSONB. No broker, retry loop or worker claim executes.
 
@@ -172,7 +174,7 @@ Use catalog queries for columns/types/nullability/defaults, pg_constraint for th
 
 **Destructive rollback:** only after confirming the outbox has no important data and the last migration is create_outbox_events, run migrate revert, inspect outbox absence and relay/history preservation, then migrate run and info. Do not leave the local schema reverted. Rollback loses all table rows after real data exists; it is not a production recovery guarantee. Run the four Docker Cargo checks documented above. This milestone's final developer table had zero rows after fixtures and after reapplication.
 
-The reusable [read-only catalog inspection](../../../tests/sql/inspect_outbox_schema.sql) checks all columns, constraints, indexes, history and row count:
+The reusable [read-only catalog inspection](../../../backend/tests/sql/inspect_outbox_schema.sql) checks all columns, constraints, indexes, history and row count:
 
 ```bash
 docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' < tests/sql/inspect_outbox_schema.sql
@@ -180,7 +182,7 @@ docker compose exec -T postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES
 
 ## Persistence contract tests — Milestone 1.5
 
-[tests/persistence_contract.rs](../../../tests/persistence_contract.rs) contains five database-independent Rust tests:
+[tests/persistence_contract.rs](../../../backend/tests/persistence_contract.rs) contains five database-independent Rust tests:
 
 - Positive batch limits, zero rejection and no arbitrary maximum; explicit UTC cutoff survives request construction.
 - Canonical envelope identity/time/payload/UUID metadata remains intact, while attempt/availability metadata stays outside the serialized nine-field event.

@@ -2,6 +2,9 @@
 
 # Reliable Event Relay
 
+[Frontend/backend preparation — current layout and commands](docs/en/guides/frontend-backend.md). Native Cargo commands run in `backend/`; frontend commands run in `frontend/`.
+
+
 [Milestone 2.6 — Integrated recovery](docs/en/architecture/milestone-2-6.md): real crash, uncertainty, concurrency and shutdown experiments completed. [Milestone 2 closed under explicit assumptions](docs/en/operations/milestone-2-review.md). Shared migration pending; relay STOPPED/autostart=false.
 
 A Rust service exploring reliable event delivery, retries, idempotency, backpressure, dead-letter handling, and failure recovery in distributed systems.
@@ -23,7 +26,7 @@ Read purpose/setup first, then architecture and contracts, security and failures
 
 [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements the ownership decision, models, contracts and schema only. Leased events remain pending; expired owners cannot complete/release. Tokens protect database transitions but do not fence publication or establish end-to-end delivery.
 
-[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. Development ownership migration remains pending. Continuity report (pt-BR) (2.5 report absent from this checkout); [current handoff](Reports/MILESTONE_2_6_HANDOFF.md). 2.6 validates an at-least-once foundation under explicit assumptions, without exactly-once consumer effects.
+[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. Development ownership migration remains pending. Continuity report (pt-BR) (2.5 report absent from this checkout); current handoff (historical handoff unavailable in this checkout). 2.6 validates an at-least-once foundation under explicit assumptions, without exactly-once consumer effects.
 
 ## Architecture
 
@@ -53,7 +56,7 @@ docker compose exec app cargo fmt --check
 docker compose exec app cargo clippy --locked --all-targets --all-features -- -D warnings
 ```
 
-Native equivalents: `cargo run --locked`, `cargo test --locked`, `cargo fmt --check`, and `cargo clippy --locked --all-targets --all-features -- -D warnings`.
+Native equivalents (from `backend/`): `cargo run --locked`, `cargo test --locked`, `cargo fmt --check`, and `cargo clippy --locked --all-targets --all-features -- -D warnings`.
 
 ## Configuration and recovery
 

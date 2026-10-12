@@ -1,5 +1,8 @@
 name: Rust checks
 on: [push, pull_request]
+defaults:
+  run:
+    working-directory: backend
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -12,6 +15,10 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets --all-features -- -D warnings
       - run: cargo test --locked
+      - run: cargo build --locked --bins
+      - run: cargo doc --locked --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
   postgres-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -116,3 +123,18 @@ jobs:
           rustup default 1.95.0
       - run: cargo test --locked --test worker_smoke compiled_worker_confirms -- --ignored
       - run: cargo test --locked --test integrated_recovery -- --ignored --test-threads=1
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run build

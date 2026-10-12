@@ -1,3 +1,5 @@
+Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](../guides/frontend-backend.md).
+
 [Português brasileiro](../../pt-BR/database/outbox-schema.md) | [README](../../../README.md)
 
 

@@ -26,7 +26,7 @@ Compose fixa `rabbitmq:4.3.6-management`, incluindo plugin management habilitado
 
 Readiness do broker usa `rabbitmq-diagnostics -q check_running`; app aguarda health de broker e PostgreSQL sem sleeps fixos. Isso não comprova readiness autenticada nem entrega. Diagnóstico e integração verificam autenticação separadamente; `/health` continua apenas liveness.
 
-`docker/rabbitmq/rabbitmq.conf` inicializa o usuário com tag **management** e regex configure/write/read `^relay[.].*` no `RABBITMQ_DEFAULT_VHOST` (padrão `relay`). Permite operações na topologia do projeto e recursos únicos `relay.it.*`, sem conceder acesso a outros vhosts. Management basta para navegador, `/api/whoami` e vhosts acessíveis; listar registros de permissões exige administrador. O diagnóstico verifica identidade autenticada e vhost visível via HTTP, e permissões pelo CLI local do nó. Não promove o usuário a administrador.
+`docker/rabbitmq.conf` inicializa o usuário com tag **management** e regex configure/write/read `^relay[.].*` no `RABBITMQ_DEFAULT_VHOST` (padrão `relay`). Permite operações na topologia do projeto e recursos únicos `relay.it.*`, sem conceder acesso a outros vhosts. Management basta para navegador, `/api/whoami` e vhosts acessíveis; listar registros de permissões exige administrador. O diagnóstico verifica identidade autenticada e vhost visível via HTTP, e permissões pelo CLI local do nó. Não promove o usuário a administrador.
 
 **Variáveis de inicialização não atualizam volume existente.** Editar `.env`, reconstruir ou recriar container não modifica usuários/senhas/tags/permissões/vhosts persistidos. Se autenticação falhar, inspecione primeiro usuário e vhost existentes. Use administrador autorizado e administração RabbitMQ de usuário/senha/tag/permissão (ou `rabbitmqctl help change_password`) para alterar a conta existente; sincronize `.env` e recrie o ambiente do app. Prefira entrada interativa de senha ou fluxo administrativo protegido, evitando histórico do shell/argumentos de processos. Nunca resete/apague dados do broker para aplicar credenciais. Volumes existentes não são reconciliados automaticamente.
 
@@ -59,7 +59,7 @@ Confirm prova aceitação do broker na topologia, sem comprovar processamento do
 
 ## Supervisor e fluxo de build
 
-Config física versionada: `docker/supervisor/supervisord.conf`, instalada em `/etc/supervisor/supervisord.conf`. Recompile/recrie app após modificar config ou aliases executáveis. `init: true` permanece; entrypoint developer sem root executa supervisord em primeiro plano. Montagens de fonte/cache e Cargo continuam graváveis. Diretório do socket pertence a developer com modo 0700; socket Unix tem modo 0600. `supervisorctl` descobre config padrão sem `-c` manual.
+Config física versionada: `docker/supervisor/normal.conf`, instalada em `/etc/supervisor/supervisord.conf`. Recompile/recrie app após modificar config ou aliases executáveis. `init: true` permanece; entrypoint developer sem root executa supervisord em primeiro plano. Montagens de fonte/cache e Cargo continuam graváveis. Diretório do socket pertence a developer com modo 0700; socket Unix tem modo 0600. `supervisorctl` descobre config padrão sem `-c` manual.
 
 Nome real e único programa: **http**. RabbitMQ e PostgreSQL são serviços Compose separados. Publisher é adapter chamável, sem daemon ocioso. `all` significa todos os programas desse Supervisor do app (atualmente `http`).
 

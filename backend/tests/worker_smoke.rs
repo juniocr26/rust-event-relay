@@ -50,9 +50,9 @@ async fn smoke(supervised: bool) {
         let temp=std::env::temp_dir().join(format!("relay_supervisor_{}",uuid::Uuid::now_v7().simple()));
         std::fs::create_dir(&temp).unwrap();
         let supervisor_config=temp.join("supervisord.conf");
-        let physical=include_str!("../docker/supervisor/supervisord.conf")
+        let physical=include_str!("../../docker/supervisor/normal.conf")
             .replace("/tmp/relay-supervisor",temp.to_str().unwrap())
-            .replace("command=/usr/local/bin/relay-worker",&format!("command={}/docker/supervisor/relay-worker",env!("CARGO_MANIFEST_DIR")));
+            .replace("command=/usr/local/bin/relay-worker",&format!("command={}/../docker/supervisor/relay-worker",env!("CARGO_MANIFEST_DIR")));
         std::fs::write(&supervisor_config,physical).unwrap();
         let mut command=tokio::process::Command::new(if supervised {"/usr/bin/supervisord"} else {env!("CARGO_BIN_EXE_relay")});
         if supervised { command.arg("-c").arg(&supervisor_config); }

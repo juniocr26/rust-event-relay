@@ -28,7 +28,7 @@ The outer harness retains exact child handles, proxy tasks and a temporary direc
 
 ## Executed observations — 2026-10-12
 
-The matrix above was written before implementation. Final execution is recorded in [sanitized transcript](../../../Reports/MILESTONE_2_6_EXPERIMENTS.txt), with each exact inserted ID, fixture database/broker identity, observed message IDs and final durable snapshots. The suite has **10 experiment tests plus one internal child entry**; the crash test runs two fixtures. A separate cleanup regression deliberately panics, then independently verifies the owned child is reaped and the exact database, topology and temporary directory are absent. Its expected panic diagnostics do not mean a failed suite.
+The matrix above was written before implementation. Final execution is recorded in sanitized transcript (historical artifact unavailable in this checkout), with each exact inserted ID, fixture database/broker identity, observed message IDs and final durable snapshots. The suite has **10 experiment tests plus one internal child entry**; the crash test runs two fixtures. A separate cleanup regression deliberately panics, then independently verifies the owned child is reaped and the exact database, topology and temporary directory are absent. Its expected panic diagnostics do not mean a failed suite.
 
 | Scenario | Observed database / broker facts |
 | --- | --- |
@@ -44,7 +44,7 @@ The matrix above was written before implementation. Final execution is recorded 
 | Database deadline | Isolated advisory lock blocks completion; dedicated pool lock_timeout 100 ms / statement_timeout 300 ms; ordinary OperationFailed within two seconds, confirmed first message, pending/count 1. Unlock and real expiry; restarted binary count 2 processed, duplicate original ID. |
 | In-flight shutdown | Unmodified binary confirmed first publication and waited in isolated completion trigger. TERM exceeds 200 ms drain and cancels operation; exits within four seconds under 2000 ms configured overall cleanup. Pending/count 1 persists. Unlock, actual eight-second acquisition lease expiry, restarted binary → processed/count 2 and duplicate original ID. |
 
-No production defect was confirmed and no production source/schema/configuration was changed. Fixes during implementation were confined to test imports, deterministic coordination, observer ordering and cleanup ownership. Existing fault implementations were extracted unchanged in behavior into [support/faults.rs](../../../tests/support/faults.rs); historical adapter regressions still use them. The baseline observer now verifies every cleared ownership field and stable AMQP message identity.
+No production defect was confirmed and no production source/schema/configuration was changed. Fixes during implementation were confined to test imports, deterministic coordination, observer ordering and cleanup ownership. Existing fault implementations were extracted unchanged in behavior into [support/faults.rs](../../../backend/tests/support/faults.rs); historical adapter regressions still use them. The baseline observer now verifies every cleared ownership field and stable AMQP message identity.
 
 ## Reproduction and duration
 

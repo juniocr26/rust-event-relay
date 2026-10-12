@@ -21,15 +21,15 @@ Revisão estática em 2026-10-10; sem execução runtime. Itens marcados indicam
 
 ## Evidência inspecionada
 
-- [src/application.rs](../../../src/application.rs)
-- [src/config.rs](../../../src/config.rs)
-- [src/telemetry.rs](../../../src/telemetry.rs)
-- [src/persistence/ownership.rs](../../../src/persistence/ownership.rs)
-- [src/infrastructure/postgres/mod.rs](../../../src/infrastructure/postgres/mod.rs)
-- [src/infrastructure/rabbitmq.rs](../../../src/infrastructure/rabbitmq.rs)
-- [migrations/20261009000000_add_delivery_ownership.up.sql](../../../migrations/20261009000000_add_delivery_ownership.up.sql)
+- [src/application.rs](../../../backend/src/application.rs)
+- [src/config.rs](../../../backend/src/config.rs)
+- [src/telemetry.rs](../../../backend/src/telemetry.rs)
+- [src/persistence/ownership.rs](../../../backend/src/persistence/ownership.rs)
+- [src/infrastructure/postgres/mod.rs](../../../backend/src/infrastructure/postgres/mod.rs)
+- [src/infrastructure/rabbitmq.rs](../../../backend/src/infrastructure/rabbitmq.rs)
+- [migrations/20261009000000_add_delivery_ownership.up.sql](../../../backend/migrations/20261009000000_add_delivery_ownership.up.sql)
 - [compose.yaml](../../../compose.yaml)
-- [tests/delivery_ownership.rs](../../../tests/delivery_ownership.rs)
+- [tests/delivery_ownership.rs](../../../backend/tests/delivery_ownership.rs)
 
 ## Cobertura de entrevista e contraparte na biblioteca
 

@@ -24,7 +24,7 @@ A matriz canônica em inglês foi escrita antes da implementação; esta página
 
 ## Resultados observados — 2026-10-12
 
-O [transcript sanitizado](../../../Reports/MILESTONE_2_6_EXPERIMENTS.txt) registra nomes exatos de bancos/topologias, cada ID inserido, IDs observados no broker e snapshots duráveis finais sem payload. Há dez testes de experimento e uma entrada interna de processo filho; A/B compartilham uma função com duas fixtures. O teste de cleanup gera um panic intencional e verifica recursos ausentes independentemente; seus diagnósticos esperados não significam falha da suíte.
+O transcript sanitizado (historical artifact unavailable in this checkout) registra nomes exatos de bancos/topologias, cada ID inserido, IDs observados no broker e snapshots duráveis finais sem payload. Há dez testes de experimento e uma entrada interna de processo filho; A/B compartilham uma função com duas fixtures. O teste de cleanup gera um panic intencional e verifica recursos ausentes independentemente; seus diagnósticos esperados não significam falha da suíte.
 
 | Caso | Observação efetiva |
 | --- | --- |
@@ -40,7 +40,7 @@ O [transcript sanitizado](../../../Reports/MILESTONE_2_6_EXPERIMENTS.txt) regist
 | Deadline SQL | lock_timeout 100 ms/statement_timeout 300 ms na conexão de completion; OperationFailed em menos de dois segundos; mensagem confirmada/pending/count 1. Unlock/expiração real/reinício → processed/count 2 e duplicata original. |
 | Shutdown em voo | Binário confirma e bloqueia no trigger. TERM cancela após drain de 200 ms, encerra dentro de quatro segundos sob cleanup configurado de 2000 ms. Pending/count 1; unlock, expiração real do lease de oito segundos e reinício → processed/count 2 e duplicata original. |
 
-Nenhum defeito produtivo foi confirmado; source/schema/configuração de produção não mudaram. Correções de implementação ficaram nos imports, coordenação, ordem do observador e cleanup do harness. Proxies existentes foram extraídos para [support/faults.rs](../../../tests/support/faults.rs), preservando comportamento e regressões históricas. O baseline passou a conferir todos os campos limpos e message_id.
+Nenhum defeito produtivo foi confirmado; source/schema/configuração de produção não mudaram. Correções de implementação ficaram nos imports, coordenação, ordem do observador e cleanup do harness. Proxies existentes foram extraídos para [support/faults.rs](../../../backend/tests/support/faults.rs), preservando comportamento e regressões históricas. O baseline passou a conferir todos os campos limpos e message_id.
 
 ## Reprodução, duração e cleanup
 

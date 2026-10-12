@@ -8,3 +8,12 @@
 .DS_Store
 *.swp
 /.dockerized-postgres/
+
+/backend/target/
+/backend/.env
+/backend/.env.*
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.env
+/frontend/.env.*
+!/frontend/.env.example

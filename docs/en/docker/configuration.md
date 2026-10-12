@@ -1,3 +1,5 @@
+[Current structure, Supervisor and frontend commands](../guides/frontend-backend.md) — 2026-10-12.
+
 [Português brasileiro](../../pt-BR/docker/configuration.md) | [README](../../../README.md)
 
 # Docker and configuration

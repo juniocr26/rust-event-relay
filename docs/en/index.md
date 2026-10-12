@@ -35,6 +35,8 @@ Recorded decisions and consequences; identifiers/history preserved.
 
 ## guides
 
+- [Frontend/backend preparation](guides/frontend-backend.md)
+
 Setup, prerequisites and reading procedures.
 
 - [Development dependencies and recovery](guides/dependencies.md)

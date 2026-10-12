@@ -8,8 +8,8 @@
 
 | Requisito | Implementação | Evidência e limite |
 | --- | --- | --- |
-| Posse durável | [ADR 007](../adr/007-durable-delivery-ownership.md); aquisição commitada/token/count/lease no PostgreSQL | [Regressões de posse](../../../tests/postgres_ownership.rs) e [A/B do 2.6](../architecture/milestone-2-6.md): pending commitado sobrevive SIGKILL do processo exato. Sem prova de power loss. |
-| Confirmar antes de concluir | [deliver_once](../../../src/application/delivery.rs); mandatory/confirm no publisher | B para depois do sucesso contratual e antes de completion; Uncertain não conclui; trigger de completion só é alcançado depois da confirmação. Aceitação broker não significa sucesso de negócio do consumidor. |
+| Posse durável | [ADR 007](../adr/007-durable-delivery-ownership.md); aquisição commitada/token/count/lease no PostgreSQL | [Regressões de posse](../../../backend/tests/postgres_ownership.rs) e [A/B do 2.6](../architecture/milestone-2-6.md): pending commitado sobrevive SIGKILL do processo exato. Sem prova de power loss. |
+| Confirmar antes de concluir | [deliver_once](../../../backend/src/application/delivery.rs); mandatory/confirm no publisher | B para depois do sucesso contratual e antes de completion; Uncertain não conclui; trigger de completion só é alcançado depois da confirmação. Aceitação broker não significa sucesso de negócio do consumidor. |
 | Identidade estável | EventEnvelope original/message_id AMQP | Baseline e todas as duplicatas observadas mantêm IDs inseridos; sem produtor/transação de negócio implementados. |
 | Recuperação incompleta | Elegibilidade pelo relógio SQL após expiração; AcquireRequest novo | A/B, rejeição/deadline SQL, shutdown e incerteza recuperam com count 2/token novo. Experimentos novos não editam expiry. Exige disponibilidade eventual e worker ativo/reiniciado. |
 | Proteção concorrente | Transações curtas/SKIP LOCKED/tempo pós-lock/predicados de token | Regressões concorrentes e dois binários reais com tokens distintos duráveis/leases vivos/barreira de completion. Contagem broker não é usada sozinha; sem fairness. |
@@ -29,6 +29,6 @@ Budgets de drain/cleanup não cobrem power loss, SIGKILL, kernel parado ou todo 
 
 ## Operação e decisões do Marco 3
 
-Migração compartilhada `20261009000000` pendente; http RUNNING, relay STOPPED/autostart=false. Evidência/migração isolada não autoriza rollout, e rollout pendente não invalida aceitação isolada. Sem recriação de serviços, purge compartilhado ou término de sessões alheias. [Handoff](../../../Reports/MILESTONE_2_6_HANDOFF.md) registra validações e continuidade.
+Migração compartilhada `20261009000000` pendente; http RUNNING, relay STOPPED/autostart=false. Evidência/migração isolada não autoriza rollout, e rollout pendente não invalida aceitação isolada. Sem recriação de serviços, purge compartilhado ou término de sessões alheias. Handoff (historical handoff unavailable in this checkout) registra validações e continuidade.
 
 Antes do Marco 3: definir falhas retryable/permanentes/incertas; scheduling/backoff/jitter duráveis e semântica de attempts; isolamento poison/representação quarantine-dead-letter; replay auditável preservando identidade/autoridade; reconciliação após ACK desconhecido; aceitação de migrações/operação e autorização separada do rollout compartilhado. Idempotência de negócio do consumidor e endpoints produtores precisam de escopo próprio. Interface gráfica opcional somente após concluir o núcleo; nenhuma foi adicionada.

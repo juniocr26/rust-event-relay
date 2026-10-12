@@ -6,7 +6,7 @@ Implementado em 2026-10-12 a partir do checkout limpo `edb1f90`. A [ADR 007](../
 
 ## API pública e sequência
 
-[application/delivery.rs](../../../src/application/delivery.rs) expõe `deliver_once(&repository, &publisher, AcquireRequest)`. O repositório genérico implementa os três ports de ownership; o publisher implementa `EventPublisher + Sync`. Futures nativas continuam Send e usam despacho estático. SQLx, Lapin, tipos de drivers, SQL e transações ficam na infraestrutura. Não há serviço de encaminhamento nem framework de workflows.
+[application/delivery.rs](../../../backend/src/application/delivery.rs) expõe `deliver_once(&repository, &publisher, AcquireRequest)`. O repositório genérico implementa os três ports de ownership; o publisher implementa `EventPublisher + Sync`. Futures nativas continuam Send e usam despacho estático. SQLx, Lapin, tipos de drivers, SQL e transações ficam na infraestrutura. Não há serviço de encaminhamento nem framework de workflows.
 
 Cada chamada adquire uma vez. `None` retorna `NoEvent` sem operações posteriores; isso não comprova backlog vazio. Erro retorna `AcquisitionFailed` com erro original, token e duração da requisição, sem inventar uma posse. `CommitUncertain` pode ocultar lease já persistido: não publicar nem repetir o token antigo. Inspecionar estado durável operacionalmente ou aguardar expiração e recuperar com nova requisição. A API não adiciona consulta de reconciliação.
 
@@ -47,7 +47,7 @@ A transição usa o contrato existente `Result<TransitionOutcome, PersistenceErr
 | Rejected | Confirmação negativa definitiva do broker | Nunca | Uma vez |
 | Uncertain | Envio iniciado; aceitação pode ter ocorrido | Nunca | Manter lease |
 
-É uma escolha deste projeto baseada no [publisher](../../../src/infrastructure/rabbitmq.rs), não uma regra universal para erros de transporte. Categoria e fonte da falha original permanecem mesmo se release falhar. `ReleaseOutcome::Attempted` expõe separadamente Applied, OwnershipLost, erro comum ou CommitUncertain. Não repete. O port preserva attempt_count, available_at e last_error, sem parâmetros diagnósticos novos ou backoff. Release imediato pode tornar evento vencido imediatamente elegível, inclusive falhas repetidas; agendamento e política de eventos problemáticos ficam para depois.
+É uma escolha deste projeto baseada no [publisher](../../../backend/src/infrastructure/rabbitmq.rs), não uma regra universal para erros de transporte. Categoria e fonte da falha original permanecem mesmo se release falhar. `ReleaseOutcome::Attempted` expõe separadamente Applied, OwnershipLost, erro comum ou CommitUncertain. Não repete. O port preserva attempt_count, available_at e last_error, sem parâmetros diagnósticos novos ou backoff. Release imediato pode tornar evento vencido imediatamente elegível, inclusive falhas repetidas; agendamento e política de eventos problemáticos ficam para depois.
 
 `ReleaseOutcome::LeaseRetained` acompanha Uncertain. Retenção apenas adia recuperação; não reconcilia aceitação nem impede duplicatas. A categoria original `PublishErrorKind::Uncertain` informa à composição que o adaptador RabbitMQ aposenta o canal. O caso de uso não reconecta nem substitui publisher; cancelamento após envio pode aposentar o canal sem resultado tipado observável.
 
@@ -68,6 +68,6 @@ Descartar future pode suprimir seu resultado. Não comprova rollback, não aceit
 
 ## Evidência e próximo escopo
 
-[Testes do caso de uso](../../../tests/delivery_use_case.rs) cobrem todas as categorias de publicação e resultados de transição, igualdade completa do envelope, preservação de erro/fonte, contexto ID/token, sequência de chamadas únicas, espera pela confirmação, cancelamento em quatro fronteiras aguardadas e Send/despacho estático. O fixture expirado demonstra que a aplicação não substitui autoridade do banco pelo seu relógio. Consulte [validação datada](../testing/validation-results.md#marco-24--2026-10-12) e handoff 2.4 (ausente no checkout 2.5).
+[Testes do caso de uso](../../../backend/tests/delivery_use_case.rs) cobrem todas as categorias de publicação e resultados de transição, igualdade completa do envelope, preservação de erro/fonte, contexto ID/token, sequência de chamadas únicas, espera pela confirmação, cancelamento em quatro fronteiras aguardadas e Send/despacho estático. O fixture expirado demonstra que a aplicação não substitui autoridade do banco pelo seu relógio. Consulte [validação datada](../testing/validation-results.md#marco-24--2026-10-12) e handoff 2.4 (ausente no checkout 2.5).
 
 Infraestrutura e schema não mudaram; suítes reais opt-in de PostgreSQL/RabbitMQ não foram repetidas sem motivo. Não há polling, registro de worker no Supervisor, reconexão, retry/backoff/jitter, quarentena/DLQ, endpoint produtor ou idempotência do consumidor. Não há alegação de desempenho, entrega ponta a ponta pelo menos uma vez ou exatamente uma vez. **2.5** compõe e opera worker de polling, lifecycle/reconexão do publisher e integração Supervisor. **2.6** executa experimentos ponta a ponta de falha, crash e recuperação.
