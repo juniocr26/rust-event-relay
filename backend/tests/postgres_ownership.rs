@@ -27,6 +27,11 @@ async fn setup(pool: &PgPool) {
         include_str!("../migrations/20261009000000_add_delivery_ownership.up.sql"),
     )
     .await;
+    sql(
+        pool,
+        include_str!("../migrations/20261012000000_add_durable_retry.up.sql"),
+    )
+    .await;
 }
 async fn seed(pool: &PgPool, id: u128) {
     checked(sqlx::query("INSERT INTO relay.outbox_events (id,event_type,aggregate_type,aggregate_id,schema_version,occurred_at,correlation_id,causation_id,payload,available_at,created_at,last_error) VALUES ($1,' event ',' aggregate ',' id ',4294967295,'1999-12-31 23:59:59.123456Z',$2,$3,'{\"integer\":18446744073709551617,\"decimal\":0.12345678901234567890123456789}','2000-01-01','2000-01-01','fixture diagnostic')")
@@ -57,6 +62,7 @@ fn immutable(mut row: Value) -> Value {
         "attempt_count",
         "status",
         "processed_at",
+        "state_revision",
     ] {
         row.as_object_mut().unwrap().remove(key);
     }
@@ -71,13 +77,14 @@ async fn acquisition_eligibility_single_row_counter_and_reader_observation() {
         let repo = PostgresOutboxRepository::new(pool.clone());
         assert!(repo.acquire(request()).await?.is_none());
         for id in 1..=5 { seed(&pool,id).await; }
-        sql(&pool,"UPDATE relay.outbox_events SET available_at='9999-01-01' WHERE id='00000000-0000-0000-0000-000000000002'; UPDATE relay.outbox_events SET status='processed',processed_at=clock_timestamp() WHERE id='00000000-0000-0000-0000-000000000003'; UPDATE relay.outbox_events SET status='dead_letter' WHERE id='00000000-0000-0000-0000-000000000004'; UPDATE relay.outbox_events SET attempt_count=2147483647 WHERE id='00000000-0000-0000-0000-000000000005'").await;
+        sql(&pool,"UPDATE relay.outbox_events SET available_at='9999-01-01' WHERE id='00000000-0000-0000-0000-000000000002'; UPDATE relay.outbox_events SET status='processed',processed_at=clock_timestamp() WHERE id='00000000-0000-0000-0000-000000000003'; UPDATE relay.outbox_events SET status='dead_letter',terminal_at=created_at,terminal_reason='legacy_dead_letter' WHERE id='00000000-0000-0000-0000-000000000004'; UPDATE relay.outbox_events SET attempt_count=2147483647 WHERE id='00000000-0000-0000-0000-000000000005'").await;
         let before = rows(&pool).await;
         let acquisition = request(); let token = acquisition.token();
         let owned = repo.acquire(acquisition).await?.unwrap();
         assert_eq!(owned.key().event_id(),Uuid::from_u128(1));
         assert_eq!(owned.lease().token(),token);
         assert_eq!(owned.snapshot().attempt_count(),1);
+        assert_eq!(owned.retry_state().revision(),1);
         assert_eq!(owned.lease().expires_at()-owned.lease().acquired_at(),chrono::Duration::seconds(30));
         let after = rows(&pool).await;
         assert_eq!(immutable(before[0].clone()),immutable(after[0].clone()));
@@ -215,7 +222,7 @@ async fn expired_owner_is_rejected_and_recovery_replaces_token() {
             TransitionOutcome::Applied
         );
         // Terminal events reject even a matching token supplied by their former owner.
-        sql(&pool, "UPDATE relay.outbox_events SET status='dead_letter'").await;
+        sql(&pool, "UPDATE relay.outbox_events SET status='dead_letter',terminal_at=created_at,terminal_reason='legacy_dead_letter'").await;
         assert_eq!(
             repo.complete(second.key()).await?,
             TransitionOutcome::OwnershipLost
@@ -409,7 +416,7 @@ async fn maximum_counter_and_pre_acquisition_time_reject_without_partial_changes
     isolated(|pool| async move {
         setup(&pool).await;seed(&pool,1).await;
         let repo=PostgresOutboxRepository::new(pool.clone());
-        sql(&pool,"UPDATE relay.outbox_events SET attempt_count=2147483646").await;
+        sql(&pool,"UPDATE relay.outbox_events SET attempt_count=2147483646,cycle_baseline=2147483646").await;
         let owned=acquire(&repo).await;
         assert_eq!(owned.snapshot().attempt_count(),i32::MAX as u32);
         // A future acquired_at models clock reversal before the start of authority.

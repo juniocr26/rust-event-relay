@@ -49,6 +49,7 @@ impl OwnedEventKey {
 pub struct OwnedOutboxEvent {
     snapshot: PendingOutboxEvent,
     lease: DeliveryLease,
+    retry_state: crate::domain::retry::RetryState,
 }
 impl OwnedOutboxEvent {
     pub fn new(snapshot: PendingOutboxEvent, lease: DeliveryLease) -> Result<Self, DeliveryError> {
@@ -60,7 +61,24 @@ impl OwnedOutboxEvent {
         if snapshot.available_at() > lease.acquired_at() {
             return Err(DeliveryError::InvalidTimestamp);
         }
-        Ok(Self { snapshot, lease })
+        let retry_state = crate::domain::retry::RetryState::initial(snapshot.attempt_count())
+            .map_err(|_| DeliveryError::InvalidState)?;
+        Ok(Self {
+            snapshot,
+            lease,
+            retry_state,
+        })
+    }
+    pub fn with_retry_state(
+        mut self,
+        state: crate::domain::retry::RetryState,
+    ) -> Result<Self, crate::domain::retry::RetryError> {
+        state.consumed(self.snapshot.attempt_count())?;
+        self.retry_state = state;
+        Ok(self)
+    }
+    pub fn retry_state(&self) -> crate::domain::retry::RetryState {
+        self.retry_state
     }
     pub fn snapshot(&self) -> &PendingOutboxEvent {
         &self.snapshot

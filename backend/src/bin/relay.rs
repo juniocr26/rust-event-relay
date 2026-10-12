@@ -67,7 +67,7 @@ async fn main() -> Result<(), &'static str> {
     result = PgPoolOptions::new().max_connections(config.pool_max).acquire_timeout(config.pool_acquire).connect_with(options) => result.map_err(|_| "PostgreSQL setup unavailable (source redacted)")? };
     // Read-only validation of the columns used by ownership operations; never migrates.
     let schema = tokio::select! { biased; () = &mut shutdown => None,
-    result = sqlx::query("SELECT id, event_type, aggregate_type, aggregate_id, schema_version, occurred_at, correlation_id, causation_id, payload, status, attempt_count, available_at, created_at, processed_at, ownership_token, acquired_at, expires_at FROM relay.outbox_events LIMIT 0").execute(&pool) => Some(result) };
+    result = sqlx::query("SELECT id, event_type, aggregate_type, aggregate_id, schema_version, occurred_at, correlation_id, causation_id, payload, status, attempt_count, available_at, created_at, processed_at, ownership_token, acquired_at, expires_at, retry_cycle, cycle_baseline, cycle_maximum, state_revision, diagnostic_code, diagnostic_at, failure_evidence, terminal_at, terminal_reason FROM relay.outbox_events LIMIT 0").execute(&pool) => Some(result) };
     let setup_failed = schema.as_ref().is_some_and(Result::is_err);
     let deadline = if !matches!(schema, Some(Ok(_))) {
         Instant::now() + config.shutdown
@@ -87,7 +87,7 @@ async fn main() -> Result<(), &'static str> {
     }
     if setup_failed {
         return Err(
-            "required ownership schema unavailable; inspect migration 20261009000000 and database privileges (source redacted)",
+            "required ownership schema unavailable; inspect migrations 20261009000000/20261012000000 and database privileges (source redacted)",
         );
     }
     tracing::info!("relay stopped");

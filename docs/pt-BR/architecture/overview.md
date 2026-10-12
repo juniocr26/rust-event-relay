@@ -1,3 +1,5 @@
+Schema/contratos atuais: [Marco 3.2](milestone-3-2.md). Seções de marcos anteriores abaixo descrevem o escopo original.
+
 [English](../../en/architecture/overview.md) | [README](../../../README.pt-BR.md)
 
 
@@ -174,7 +176,6 @@ Veja [consulta, restauração, limites e erros](../database/postgres-repository.
 
 [Experimentos integrados](../architecture/milestone-2-6.md) e [revisão do Marco 2](../operations/milestone-2-review.md) atualizam a aceitação sob premissas explícitas. Rollout compartilhado continua pendente; registros anteriores mantêm seu contexto histórico.
 
+## Marco 3.2 — persistência atual
 
-## Política do Marco 3.1
-
-Marco 3.1 define matriz de falhas, contratos de agenda/orçamento/isolamento/replay e próximos marcos. Somente cálculos puros foram implementados; persistência futura e cenários frontend continuam planejados. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).
+Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração fica em 3.3, scanner geral em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Contratos, migration, falhas e rollout](milestone-3-2.md).

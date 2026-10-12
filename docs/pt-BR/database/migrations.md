@@ -1,3 +1,5 @@
+Schema/contratos atuais: [Marco 3.2](../architecture/milestone-3-2.md). Seções de marcos anteriores abaixo descrevem o escopo original.
+
 Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/backend`. Consulte [frontend/backend](../guides/frontend-backend.md).
 
 [English](../../en/database/migrations.md) | [README](../../../README.pt-BR.md)
@@ -102,7 +104,6 @@ A migração mais recente nas fontes é add_delivery_ownership; seu down remove 
 
 Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes de integração](../testing/strategy.md) e [validação executada](../testing/validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marcos 1.7 e 1.8 concluídos: integração e [semântica de falhas/transações](../architecture/failure-and-transactions.md). Marco 1 fechado; Marcos 2.1/2.2 adicionam publisher e contratos/schema de ownership; mutações produtivas e worker continuam adiados.
 
+## Marco 3.2 — persistência atual
 
-## Roadmap do Marco 3
-
-Marco 3.1 define próximo schema e roadmap; migration/ciclo/revisão/agenda de 3.2 permanecem planejados. Migrations aplicadas não foram alteradas. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).
+Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração fica em 3.3, scanner geral em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Contratos, migration, falhas e rollout](../architecture/milestone-3-2.md).

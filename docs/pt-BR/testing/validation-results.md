@@ -748,3 +748,26 @@ Validador documental executado no workspace abrangendo ambos: zero erros, 18 avi
 Consulta somente leitura docker compose ps confirmou app/frontend ativos e PostgreSQL/RabbitMQ saudáveis. Sem consulta de status/migration compartilhada, inspeção/alteração de credenciais, restart, início do relay compartilhado ou reset. Testes opt-in de infraestrutura/recuperação não foram reexecutados pois somente cálculos puros independentes e docs mudaram. Evidência do Marco 2 permanece histórica; CI remota não executada. Sem staging, commit ou push.
 
 [Política e próximos marcos](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).
+
+## Marco 3.2 — 12/10/2026
+
+Bases: rust-event-relay `2257d02543958eff5851a49d7be16887c0b68d6a`; engineering-library `d9f6e556258a9a1739dcb9ad9df7f835f4511853`. Árvores Git limpas na entrada; nenhum AGENTS.md aplicável no projeto/ancestrais. ADRs/política/migrations/modelos/SQL de ownership/harness/proxies/regressões atuais foram inspecionados. Instruções Dev Career Copilot e metodologia documental existente consultadas; fontes PostgreSQL verificaram NULL em CHECK e semântica temporal.
+
+Checks executados localmente no app existente; versões finais passaram:
+
+- cargo fmt --check; cargo clippy --locked --all-targets --all-features -- -D warnings.
+- cargo test --locked: 53 aprovados, 63 casos opt-in ignorados, nenhuma falha.
+- cargo test --locked --test postgres_retry -- --ignored --test-threads=4: 17 aprovados.
+- Regressões PostgreSQL: postgres_ownership 12, postgres_repository 15 opt-in, delivery_ownership_schema 1; todas aprovadas em bancos isolados. Caso independente do repositório também passou na suíte padrão.
+- integrated_recovery: 11 aprovados (10 experimentos e entrada interna child sem ação), sequencialmente em bancos/recursos de broker exclusivos do teste.
+- worker_smoke: três casos originais aprovados, inclusive controle coletivo Supervisor isolado; novo preflight sem schema retry aprovado. Ambos os preflights foram conferidos novamente após ajuste do helper. Nenhuma inicialização compartilhada.
+- cargo build --locked --bins; RUSTDOCFLAGS=-Dwarnings cargo doc --locked --no-deps.
+- Validador bilíngue: 230 documentos no workspace configurado, zero erros, 18 avisos preexistentes de fixtures Go restritas; nenhum finding nos dois repositórios alterados. git diff --check aprovado em ambos.
+
+Rodadas iniciais identificaram organização de itens no Clippy e premissas antigas de fixtures sobre revisão/metadados terminais. Corrigidas sem remover assertions existentes. Backfill terminal legado passou a registrar observação pela migration, sem inventar horário histórico. Testes finais verificam esse instante e preservação de todos os campos originais. Experimentos de incerteza/cancelamento reutilizam proxy existente com barreira de COMMIT do servidor; efeito durável observado não permite generalizar toda incerteza como sucesso.
+
+Inspeção somente leitura confirmou bind app `/app`, bind PostgreSQL `/var/lib/postgresql`, volume RabbitMQ preservado `/var/lib/rabbitmq` e bind de configuração. Histórico SQLx compartilhado mantém somente `20261007000000` e `20261007175358`, ambas aprovadas; outbox compartilhada vazia e relay STOPPED. Ownership/retry continuam pendentes nesse banco; up/down executados somente em bancos isolados. Catálogo não tinha bancos de teste remanescentes na inspeção. Sem reset, migration compartilhada, mudança de credencial broker, restart da aplicação ou ativação do relay neste marco. Diretórios fonte Supervisor corrigidos de `/app/Backend` para `/app/backend`; lifecycle isolado validou fonte sem reconstruir/reiniciar app compartilhado.
+
+CI inclui novo target PostgreSQL, mas não foi executada remotamente. Integração da política, scanner poison geral, replay autenticado/auditado e fechamento integrado permanecem 3.3/3.4/3.5/3.6. Sem stage, commit ou push. Relatório temporário de continuação retornado no chat, sem salvar nos repositórios.
+
+[Implementação e rollout](../architecture/milestone-3-2.md).

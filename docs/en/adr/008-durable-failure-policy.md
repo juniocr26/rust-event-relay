@@ -2,7 +2,7 @@
 
 # ADR 008 — Durable failure policy and recovery contracts
 
-Status: accepted design, production transitions planned. Date: 2026-10-12.
+Status: accepted; 3.2 persistence implemented, application integration and shared rollout planned. Date: 2026-10-12.
 
 ## Context
 
@@ -19,3 +19,5 @@ Preserve terminal events in existing dead_letter state with sanitized diagnostic
 Publication budgets need an additional durable protocol and still cannot atomically measure broker acceptance. Acquisition budgets are smaller and auditable but charge pre-send crashes/outages. Separate quarantine tables improve access separation but add movement and lifecycle consistency costs; retain rows and add audit evidence instead. Immediate release on uncertain send accelerates possible duplicates; lease retention delays recovery without eliminating duplicates. Ten acquisitions is a conservative finite operational default, not evidence that ten failures prove poison; preserve terminal reason and allow audited replay.
 
 3.1 implements only pure budget/backoff calculations and tests. No migrations or pipeline wiring. 3.2–3.6 acceptance and deployment prerequisites are specified in the policy. ADR 007 guarantees remain unchanged.
+
+Implementation update (2026-10-12): 3.2 persistence transitions and isolated tests are implemented; pipeline integration and shared rollout remain pending. [Milestone 3.2](../architecture/milestone-3-2.md).

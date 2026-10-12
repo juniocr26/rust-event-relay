@@ -1,3 +1,5 @@
+Current schema/contracts: [Milestone 3.2](milestone-3-2.md). Earlier milestone sections below describe their original scope.
+
 [Português brasileiro](../../pt-BR/architecture/overview.md) | [README](../../../README.md)
 
 
@@ -174,7 +176,6 @@ See [query, restoration, bounds and errors](../database/postgres-repository.md),
 
 [Integrated experiments](../architecture/milestone-2-6.md) and [Milestone 2 review](../operations/milestone-2-review.md) update acceptance under explicit assumptions. Shared rollout remains pending; earlier records retain their historical context.
 
+## Milestone 3.2 — current persistence scope
 
-## Milestone 3.1 policy
-
-Milestone 3.1 defines the failure matrix, durable retry/budget/isolation/replay contracts and remaining roadmap. Only pure policy calculations are implemented; future persistence and frontend scenarios remain planned. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).
+Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Contracts, migration, failure semantics and rollout](milestone-3-2.md).

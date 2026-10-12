@@ -32,6 +32,26 @@ pub fn uri() -> String {
 // Test-owned plaintext PostgreSQL protocol proxy. It discards CommandComplete
 // COMMIT rather than forwarding it to SQLx; shared services are never interrupted.
 pub async fn lost_commit_ack_pool(pool: &PgPool) -> (PgPool, tokio::task::JoinHandle<bool>) {
+    commit_ack_pool(pool, None).await
+}
+
+/// Hold acknowledgement after observed server COMMIT so cancellation can suppress
+/// the typed result. The barrier proves only this test's server-side commit.
+pub async fn withheld_commit_ack_pool(
+    pool: &PgPool,
+) -> (
+    PgPool,
+    tokio::task::JoinHandle<bool>,
+    tokio::sync::oneshot::Receiver<()>,
+) {
+    let (signal, observed) = tokio::sync::oneshot::channel();
+    let (pool, task) = commit_ack_pool(pool, Some(signal)).await;
+    (pool, task, observed)
+}
+async fn commit_ack_pool(
+    pool: &PgPool,
+    signal: Option<tokio::sync::oneshot::Sender<()>>,
+) -> (PgPool, tokio::task::JoinHandle<bool>) {
     use sqlx::postgres::{PgPoolOptions, PgSslMode};
     use tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
@@ -63,6 +83,10 @@ pub async fn lost_commit_ack_pool(pool: &PgPool) -> (PgPool, tokio::task::JoinHa
                     return false;
                 }
                 if header[0] == b'C' && body == b"COMMIT\0" {
+                    if let Some(signal) = signal {
+                        let _ = signal.send(());
+                        return std::future::pending::<bool>().await;
+                    }
                     return true;
                 }
                 if client_write.write_all(&header).await.is_err()

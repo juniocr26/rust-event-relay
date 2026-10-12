@@ -1,3 +1,5 @@
+Current schema/contracts: [Milestone 3.2](../architecture/milestone-3-2.md). Earlier milestone sections below describe their original scope.
+
 Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](../guides/frontend-backend.md).
 
 [Português brasileiro](../../pt-BR/database/migrations.md) | [README](../../../README.md)
@@ -102,7 +104,6 @@ The latest source migration is add_delivery_ownership; its down removes authorit
 
 See [query, restoration, bounds and errors](postgres-repository.md), [integration test guidance](../testing/strategy.md) and [executed validation](../testing/validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](../architecture/failure-and-transactions.md). Milestone 1 is closed; Milestones 2.1 and 2.2 add the publisher and ownership contracts/schema; production mutations and worker delivery remain deferred.
 
+## Milestone 3.2 — current persistence scope
 
-## Milestone 3 roadmap
-
-Milestone 3.1 selects the next schema and roadmap; all 3.2 migration/cycle/revision/scheduling changes remain planned. Applied migrations are unchanged. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).
+Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Contracts, migration, failure semantics and rollout](../architecture/milestone-3-2.md).

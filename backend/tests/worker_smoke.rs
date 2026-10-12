@@ -34,6 +34,7 @@ async fn ctl(config: &std::path::Path, alias: &str, args: &[&str]) -> String {
 async fn smoke(supervised: bool) {
     isolated(move |pool| async move {
         checked(sqlx::raw_sql(include_str!("../migrations/20261009000000_add_delivery_ownership.up.sql")).execute(&pool).await,"ownership migration");
+        checked(sqlx::raw_sql(include_str!("../migrations/20261012000000_add_durable_retry.up.sql")).execute(&pool).await,"retry migration");
         let event_id = uuid::Uuid::now_v7();
         checked(sqlx::query("INSERT INTO relay.outbox_events (id,event_type,aggregate_type,aggregate_id,schema_version,occurred_at,payload) VALUES ($1,'test','test','1',1,clock_timestamp(),'{\"smoke\":true}')").bind(event_id).execute(&pool).await,"seed test event");
         let name = format!("relay.it.{}",uuid::Uuid::now_v7().simple());
@@ -109,7 +110,27 @@ async fn smoke(supervised: bool) {
 #[tokio::test]
 #[ignore = "requires PostgreSQL CREATE DATABASE"]
 async fn missing_ownership_schema_fails_before_polling_with_sanitized_error() {
-    isolated(|pool| async move {
+    missing_schema(false).await;
+}
+
+#[tokio::test]
+#[ignore = "requires PostgreSQL CREATE DATABASE"]
+async fn missing_retry_schema_fails_before_polling_with_sanitized_error() {
+    missing_schema(true).await;
+}
+
+async fn missing_schema(ownership_only: bool) {
+    isolated(move |pool| async move {
+        if ownership_only {
+            checked(
+                sqlx::raw_sql(include_str!(
+                    "../migrations/20261009000000_add_delivery_ownership.up.sql"
+                ))
+                .execute(&pool)
+                .await,
+                "ownership-only fixture",
+            );
+        }
         let database: String = checked(
             sqlx::query_scalar("SELECT current_database()")
                 .fetch_one(&pool)
@@ -125,6 +146,7 @@ async fn missing_ownership_schema_fails_before_polling_with_sanitized_error() {
         assert!(!output.status.success());
         let diagnostic = String::from_utf8(output.stderr).unwrap();
         assert!(diagnostic.contains("required ownership schema unavailable"));
+        assert!(diagnostic.contains("20261012000000"));
         assert!(!diagnostic.contains(&std::env::var("POSTGRES_PASSWORD").unwrap()));
         assert!(
             !String::from_utf8(output.stdout)

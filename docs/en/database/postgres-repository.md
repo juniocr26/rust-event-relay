@@ -1,3 +1,5 @@
+Current schema/contracts: [Milestone 3.2](../architecture/milestone-3-2.md). Earlier milestone sections below describe their original scope.
+
 Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](../guides/frontend-backend.md).
 
 [Português brasileiro](../../pt-BR/database/postgres-repository.md) | [README](../../../README.md)
@@ -38,3 +40,7 @@ The private timestamp decoder reads PostgreSQL binary microseconds from its 2000
 The fallback is conservative OperationFailed. Categories do not promise successful retry; policy belongs to callers. Typed SQLx/domain/conversion sources are retained. Public Display/Debug expose static classification only; repository methods emit no logs. Never log raw pools/options, credentials, payloads or source chains; diagnostic inspection requires redaction.
 
 Unit tests run without PostgreSQL. The [Milestone 1.7 integration suite](../../../backend/tests/postgres_repository.rs) exercises the public OutboxReader against real PostgreSQL in independent isolated databases. It covers eligibility/bounds/adapter tie-breakers, every restored field, exact stored JSON values, read-only observation by two readers, selected invalid data and recovery, closed pools and missing-table failures. Display/Debug stay sanitized and typed sources remain available. See [configuration, cleanup and limitations](../testing/strategy.md). Milestone 1.8 [documents failure/transaction semantics](../architecture/failure-and-transactions.md); crash/recovery injection remains future validation; producer writes, claims, leases and delivery remain unimplemented.
+
+## Milestone 3.2 — current persistence scope
+
+Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Contracts, migration, failure semantics and rollout](../architecture/milestone-3-2.md).

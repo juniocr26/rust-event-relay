@@ -123,3 +123,7 @@ The same arguments work with `supervisor`; run either command without arguments 
 MIT licensed; see [LICENSE](LICENSE).
 
 [Milestone 1 is closed](docs/en/operations/milestone-1-review.md): envelope, PostgreSQL, migrations, schema, contracts, repository, integration and [failure/transaction semantics](docs/en/architecture/failure-and-transactions.md). [Milestone 2.1](docs/en/architecture/milestone-2-1.md) implements the publisher; [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements state/ownership contracts, with orchestration implemented in [2.4](docs/en/architecture/milestone-2-4.md). [Historical Portuguese handoff source](docs/pt-BR/operations/handoff-marco-1.md).
+
+## Milestone 3.2 — current persistence scope
+
+Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Implementation and rollout](docs/en/architecture/milestone-3-2.md).

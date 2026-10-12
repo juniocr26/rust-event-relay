@@ -2,6 +2,7 @@
 use super::{
     PostgresOutboxRepository, StoredEvent, StoredTimestamp, invalid_data, map_driver_error,
 };
+use crate::domain::retry::RetryState;
 use crate::{
     domain::delivery::DeliveryLease,
     persistence::{
@@ -17,12 +18,13 @@ use sqlx::{Postgres, Row, Transaction};
 // sampled in another statement, after the selected row is locked.
 const SELECT_CANDIDATE: &str = "SELECT id, event_type, aggregate_type, aggregate_id, \
     schema_version, occurred_at, correlation_id, causation_id, payload, attempt_count, \
-    available_at, status, acquired_at, expires_at FROM relay.outbox_events \
+    available_at, status, acquired_at, expires_at, retry_cycle, cycle_baseline, cycle_maximum, state_revision FROM relay.outbox_events \
     WHERE status='pending' AND available_at <= $1 AND attempt_count < 2147483647 \
+    AND attempt_count - cycle_baseline < cycle_maximum AND state_revision < 9223372036854775807 \
     AND (expires_at IS NULL OR expires_at <= $1) \
     ORDER BY available_at, created_at, id LIMIT 1 FOR UPDATE SKIP LOCKED";
 
-async fn begin(
+pub(super) async fn begin(
     repository: &PostgresOutboxRepository,
 ) -> Result<Transaction<'_, Postgres>, PersistenceError> {
     let mut tx = repository.pool.begin().await.map_err(map_driver_error)?;
@@ -33,7 +35,9 @@ async fn begin(
     Ok(tx)
 }
 
-async fn clock(tx: &mut Transaction<'_, Postgres>) -> Result<DateTime<Utc>, PersistenceError> {
+pub(super) async fn clock(
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<DateTime<Utc>, PersistenceError> {
     let row = sqlx::query("SELECT clock_timestamp() AS instant")
         .fetch_one(&mut **tx)
         .await
@@ -64,6 +68,7 @@ impl OutboxAcquirer for PostgresOutboxRepository {
         // observation. A malformed selected row fails the entire invocation.
         let snapshot = StoredEvent::decode(&row)?.restore()?;
         let now = clock(&mut tx).await?;
+        let retry = retry_state(&row, snapshot.attempt_count())?;
         let status: String = row.try_get("status").map_err(invalid_data)?;
         let expiry = row
             .try_get::<Option<StoredTimestamp>, _>("expires_at")
@@ -72,7 +77,9 @@ impl OutboxAcquirer for PostgresOutboxRepository {
         if status != "pending"
             || snapshot.available_at() > now
             || expiry.is_some_and(|expiry| expiry > now)
-            || snapshot.attempt_count() >= crate::domain::delivery::DeliveryState::MAX_ATTEMPTS
+            || !retry
+                .can_acquire(snapshot.attempt_count())
+                .map_err(invalid_data)?
         {
             tx.rollback().await.map_err(map_driver_error)?;
             return Ok(None);
@@ -89,10 +96,21 @@ impl OutboxAcquirer for PostgresOutboxRepository {
             PendingOutboxEvent::new(snapshot.event().clone(), attempts, snapshot.available_at()),
             lease,
         )
+        .map_err(invalid_data)?
+        .with_retry_state(
+            RetryState::restore(
+                attempts,
+                retry.cycle(),
+                retry.baseline(),
+                retry.maximum(),
+                retry.next_revision().map_err(operation_error)?,
+            )
+            .map_err(invalid_data)?,
+        )
         .map_err(invalid_data)?;
         sqlx::query(
             "UPDATE relay.outbox_events SET ownership_token=$2, acquired_at=$3, \
-            expires_at=$4, attempt_count=attempt_count+1 WHERE id=$1",
+            expires_at=$4, attempt_count=attempt_count+1, state_revision=state_revision+1 WHERE id=$1",
         )
         .bind(owned.key().event_id())
         .bind(lease.token().get())
@@ -114,22 +132,24 @@ impl PostgresOutboxRepository {
     ) -> Result<TransitionOutcome, PersistenceError> {
         let mut tx = begin(self).await?;
         // Lock by identity alone: predicate/clock evaluation must follow any wait.
-        let row = sqlx::query("SELECT id FROM relay.outbox_events WHERE id=$1 FOR UPDATE")
-            .bind(owner.event_id())
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(map_driver_error)?;
-        if row.is_none() {
+        let row = sqlx::query(
+            "SELECT id, state_revision FROM relay.outbox_events WHERE id=$1 FOR UPDATE",
+        )
+        .bind(owner.event_id())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(map_driver_error)?;
+        let Some(_row) = row else {
             tx.rollback().await.map_err(map_driver_error)?;
             return Ok(TransitionOutcome::OwnershipLost);
-        }
+        };
         let now = clock(&mut tx).await?;
         let sql = if complete {
             "UPDATE relay.outbox_events SET status='processed', processed_at=$3, \
-             ownership_token=NULL, acquired_at=NULL, expires_at=NULL \
+             ownership_token=NULL, acquired_at=NULL, expires_at=NULL, state_revision=state_revision+1 \
              WHERE id=$1 AND ownership_token=$2 AND status='pending' AND acquired_at <= $3 AND $3 < expires_at"
         } else {
-            "UPDATE relay.outbox_events SET ownership_token=NULL, acquired_at=NULL, expires_at=NULL \
+            "UPDATE relay.outbox_events SET ownership_token=NULL, acquired_at=NULL, expires_at=NULL, state_revision=state_revision+1 \
              WHERE id=$1 AND ownership_token=$2 AND status='pending' AND acquired_at <= $3 AND $3 < expires_at"
         };
         let result = sqlx::query(sql)
@@ -166,13 +186,30 @@ fn commit_rejection_is_known(code: Option<&str>) -> bool {
         !code.starts_with("08") && !matches!(code, "40003" | "57P01" | "57P02" | "57P03")
     })
 }
-fn map_commit_error(error: sqlx::Error) -> PersistenceError {
+pub(super) fn map_commit_error(error: sqlx::Error) -> PersistenceError {
     if let sqlx::Error::Database(database) = &error
         && commit_rejection_is_known(database.code().as_deref())
     {
         return map_driver_error(error);
     }
     PersistenceError::with_source(PersistenceErrorKind::CommitUncertain, error)
+}
+
+fn operation_error(error: crate::domain::retry::RetryError) -> PersistenceError {
+    PersistenceError::with_source(PersistenceErrorKind::OperationFailed, error)
+}
+pub(super) fn retry_state(
+    row: &sqlx::postgres::PgRow,
+    lifetime: u32,
+) -> Result<RetryState, PersistenceError> {
+    RetryState::restore(
+        lifetime,
+        row.try_get("retry_cycle").map_err(invalid_data)?,
+        row.try_get("cycle_baseline").map_err(invalid_data)?,
+        row.try_get("cycle_maximum").map_err(invalid_data)?,
+        row.try_get("state_revision").map_err(invalid_data)?,
+    )
+    .map_err(invalid_data)
 }
 
 #[cfg(test)]

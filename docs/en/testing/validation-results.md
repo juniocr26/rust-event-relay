@@ -748,3 +748,26 @@ Documentation validator was run across both repositories/workspace: zero errors,
 Read-only docker compose ps confirmed existing app/frontend up and PostgreSQL/RabbitMQ healthy. No shared migration/status query, credential inspection/change, service restart, shared relay start or data reset occurred. Opt-in infrastructure/recovery tests were not rerun because only independent pure policy code and documentation changed. Historical Milestone 2 evidence remains historical; CI was not remotely executed. No staging, commit or push.
 
 [Policy and remaining slices](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).
+
+## Milestone 3.2 — 2026-10-12
+
+Base commits: rust-event-relay `2257d02543958eff5851a49d7be16887c0b68d6a`; engineering-library `d9f6e556258a9a1739dcb9ad9df7f835f4511853`. Both Git trees were clean at entry; no applicable project/ancestor AGENTS.md was found. Current ADRs, policy, migrations, models, ownership SQL, isolated harness/fault proxies and regression tests were inspected. Dev Career Copilot instructions and the existing documentation methodology were consulted; PostgreSQL primary documentation verified CHECK NULL and clock/timestamp semantics.
+
+Executed locally in the existing app container; final checks passed:
+
+- cargo fmt --check; cargo clippy --locked --all-targets --all-features -- -D warnings.
+- cargo test --locked: 53 passed, 63 opt-in cases ignored, zero failures.
+- cargo test --locked --test postgres_retry -- --ignored --test-threads=4: 17 passed.
+- PostgreSQL regressions: postgres_ownership 12, postgres_repository 15 opt-in, delivery_ownership_schema 1; all passed in isolated databases. The database-independent repository case also passed in standard tests.
+- integrated_recovery: 11 passed (10 experiments plus the no-op internal child entry), sequential execution against exact test-owned database/broker resources.
+- worker_smoke: original three cases passed, including isolated Supervisor collective control; the new missing-retry-schema preflight case passed. Both missing-schema cases were checked again after the helper update. No shared worker startup.
+- cargo build --locked --bins; RUSTDOCFLAGS=-Dwarnings cargo doc --locked --no-deps.
+- Bilingual documentation validator: 230 documents across its configured workspace, zero errors, 18 existing restricted Go-fixture warnings; no findings in either changed repository. git diff --check passed in both repositories.
+
+Initial checks identified a Clippy item-order issue and old fixture assumptions about revision/terminal metadata. These were corrected without removing existing assertions. Legacy terminal_at backfill was refined to migration observation time rather than inventing a historical failure time. Final SQL tests cover that observation and preservation of every original field. New uncertainty/cancellation experiments reuse the existing proxy with a controlled server-COMMIT barrier; observed durable writes do not generalize every unknown outcome into success.
+
+Read-only environment inspection confirmed app bind `/app`, PostgreSQL bind `/var/lib/postgresql`, preserved RabbitMQ volume `/var/lib/rabbitmq` and configuration bind. Shared SQLx history still contains only `20261007000000` and `20261007175358`, both successful; shared outbox has zero rows and shared relay is STOPPED. Ownership/retry migrations remain pending there; up/down ran only in isolated databases. No test databases remained at catalog inspection. No shared reset, migration, broker credential change, application restart or relay activation occurred in this milestone. Supervisor source directories were corrected from the obsolete `/app/Backend` to `/app/backend`; isolated lifecycle tests verified the source configuration without rebuilding/restarting the shared app.
+
+CI now includes the new PostgreSQL target but was not remotely executed. Pipeline policy integration, general poison scanning, authenticated audited replay and integrated Milestone 3 closure remain 3.3/3.4/3.5/3.6 respectively. No staging, commit or push. The temporary continuation report is returned in chat, not stored in either repository.
+
+[Implementation and rollout](../architecture/milestone-3-2.md).

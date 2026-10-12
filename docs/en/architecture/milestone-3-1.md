@@ -4,6 +4,10 @@
 
 Decision date: 2026-10-12. Status: policy accepted for implementation in 3.2–3.6. Only pure calculations exist in 3.1; no durable retry, isolation or replay transition is implemented. This extends the completed Milestone 2 scope without treating its deferred features as defects.
 
+## Implementation follow-up
+
+The original 3.1 design/acceptance below remains historical. 3.2 now implements persistence; the remaining roadmap is unchanged. [Milestone 3.2 — current persistence scope](milestone-3-2.md).
+
 ## Baseline and invariants
 
 Inspected: [Milestone 2 acceptance](../operations/milestone-2-review.md), [2.3](milestone-2-3.md), [2.4](milestone-2-4.md), [2.5](milestone-2-5.md), [2.6](milestone-2-6.md), [ADR 007](../adr/007-durable-delivery-ownership.md), delivery domain, persistence contracts/errors, PostgreSQL ownership, publisher/adapter, use case/worker, migrations, integration/recovery tests and frontend scenario definitions. Historical test evidence remains historical; current executions are in [validation results](../testing/validation-results.md).

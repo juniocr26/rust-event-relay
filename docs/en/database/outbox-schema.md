@@ -1,3 +1,5 @@
+Current schema/contracts: [Milestone 3.2](../architecture/milestone-3-2.md). Earlier milestone sections below describe their original scope.
+
 Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](../guides/frontend-backend.md).
 
 [Português brasileiro](../../pt-BR/database/outbox-schema.md) | [README](../../../README.md)
@@ -92,7 +94,6 @@ Up creates the table, checks and one polling index in the existing relay namespa
 
 See [schema validation and commands](../testing/strategy.md#outbox-schema-validation--milestone-14), [actual results](../testing/validation-results.md), [migration ownership](migrations.md) and [ADR 004](../adr/004-use-postgresql-transactional-outbox-schema.md). Routing/destination columns, retry execution, DLQ table and worker remain absent. The read repository and RabbitMQ publisher now exist separately; ownership fields are added by the 2.2 migration.
 
+## Milestone 3.2 — current persistence scope
 
-## Milestone 3 roadmap
-
-Milestone 3.1 selects the next schema and roadmap; all 3.2 migration/cycle/revision/scheduling changes remain planned. Applied migrations are unchanged. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).
+Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Contracts, migration, failure semantics and rollout](../architecture/milestone-3-2.md).

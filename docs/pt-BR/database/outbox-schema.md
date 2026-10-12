@@ -1,3 +1,5 @@
+Schema/contratos atuais: [Marco 3.2](../architecture/milestone-3-2.md). Seções de marcos anteriores abaixo descrevem o escopo original.
+
 Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/backend`. Consulte [frontend/backend](../guides/frontend-backend.md).
 
 [English](../../en/database/outbox-schema.md) | [README](../../../README.pt-BR.md)
@@ -92,7 +94,6 @@ Up cria tabela, CHECKs e um índice de polling no namespace relay existente. Dow
 
 Veja [validação e comandos](../testing/strategy.md#validação-do-schema-outbox--marco-14), [resultados reais](../testing/validation-results.md), [responsabilidade das migrações](migrations.md) e [ADR 004](../adr/004-use-postgresql-transactional-outbox-schema.md). Colunas de destino/roteamento, execução de retries, tabela DLQ e worker continuam ausentes. O repositório de leitura e o publicador RabbitMQ já existem separadamente; a migração 2.2 acrescenta os campos de ownership.
 
+## Marco 3.2 — persistência atual
 
-## Roadmap do Marco 3
-
-Marco 3.1 define próximo schema e roadmap; migration/ciclo/revisão/agenda de 3.2 permanecem planejados. Migrations aplicadas não foram alteradas. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).
+Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração fica em 3.3, scanner geral em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Contratos, migration, falhas e rollout](../architecture/milestone-3-2.md).

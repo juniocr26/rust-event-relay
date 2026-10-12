@@ -20,6 +20,7 @@ const READ_ELIGIBLE: &str = "SELECT id, event_type, aggregate_type, aggregate_id
     ORDER BY available_at, created_at, id LIMIT $2";
 
 mod ownership;
+mod retry;
 
 /// Focused repository backed by an injected pool; constructing it does not connect.
 #[derive(Clone)]

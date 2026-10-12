@@ -123,3 +123,7 @@ Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem ar
 Licença MIT; consulte [LICENSE](LICENSE).
 
 [Marco 1 fechado](docs/pt-BR/operations/milestone-1-review.md): envelope, PostgreSQL, migrações, schema, contratos, repositório, integração e [semântica de falhas/transações](docs/pt-BR/architecture/failure-and-transactions.md). [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md) implementa publisher; [Marco 2.2](docs/pt-BR/architecture/milestone-2-2.md) implementa contratos de estado/posse, com orquestração implementada em [2.4](docs/pt-BR/architecture/milestone-2-4.md). [Fonte do handoff histórico](docs/pt-BR/operations/handoff-marco-1.md).
+
+## Marco 3.2 — persistência atual
+
+Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração fica em 3.3, scanner geral em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Implementação e rollout](docs/pt-BR/architecture/milestone-3-2.md).

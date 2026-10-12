@@ -229,6 +229,11 @@ where
             include_str!("../migrations/20261009000000_add_delivery_ownership.up.sql"),
         )
         .await;
+        sql(
+            &pool,
+            include_str!("../migrations/20261012000000_add_durable_retry.up.sql"),
+        )
+        .await;
         let name = format!("relay.it.{}", Uuid::now_v7().simple());
         let topology = Topology {
             exchange: format!("{name}.exchange"),

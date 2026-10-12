@@ -1,3 +1,5 @@
+Schema/contratos atuais: [Marco 3.2](milestone-3-2.md). Seções de marcos anteriores abaixo descrevem o escopo original.
+
 [English](../../en/architecture/failure-and-transactions.md) | [README](../../../README.pt-BR.md)
 
 
@@ -71,7 +73,6 @@ Testes atuais comprovam invariantes do envelope, armazenamento representável, r
 
 Tabela durável e API de observação não fornecem garantia de entrega funcional. Publicação antes da confirmação no banco pode duplicar em retry; confirmação antes de publicar pode perder entrega. Idempotência do consumidor precisa coordenar deduplicação com efeitos de negócio. ADR 007 define lease/token e tentativas; concorrência produtiva, retry/backoff, dead-letter/quarentena/replay, limites de bytes/contagem/concorrência, retenção, duplicatas do produtor e ordem por agregado seguem abertos. Documento não escolhe nem implementa essas decisões, e entrega ponta a ponta não existe. Marcos 2.1/2.2 implementam separadamente publisher e modelos/contratos/schema de ownership. ADRs 001-005 continuam aplicáveis; fechamento documental não exige novo ADR.
 
+## Marco 3.2 — persistência atual
 
-## Política do Marco 3.1
-
-Marco 3.1 define matriz de falhas, contratos de agenda/orçamento/isolamento/replay e próximos marcos. Somente cálculos puros foram implementados; persistência futura e cenários frontend continuam planejados. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).
+Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração fica em 3.3, scanner geral em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Contratos, migration, falhas e rollout](milestone-3-2.md).

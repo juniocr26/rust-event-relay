@@ -2,7 +2,7 @@
 
 # ADR 008 — Política durável de falhas e contratos de recuperação
 
-Status: desenho aceito; transições de produção planejadas. Data: 2026-10-12.
+Status: aceito; persistência 3.2 implementada, integração da aplicação e rollout compartilhado planejados. Data: 2026-10-12.
 
 ## Contexto
 
@@ -19,3 +19,5 @@ Preservar evento terminal em dead_letter com diagnóstico/evidência/auditoria s
 Orçamento de publicações exige protocolo durável adicional e não mede aceite externo atomicamente. Aquisições são solução menor auditável, cobrando crash/outage antes do envio. Tabela separada favorece separação de acesso mas exige movimentação/consistência; preservar linha e complementar evidência. Release imediato incerto acelera duplicações possíveis; retenção adia recuperação sem eliminar duplicatas. Dez aquisições é padrão operacional finito, não prova poison; preservar motivo e permitir replay auditado.
 
 3.1 implementa somente cálculos puros de orçamento/backoff e testes, sem migrations ou integração. Critérios 3.2–3.6 e pré-requisitos estão na política. Garantias ADR 007 preservadas.
+
+Atualização de implementação (12/10/2026): transições persistentes/testes isolados de 3.2 implementados; integração do pipeline e rollout compartilhado continuam pendentes. [Marco 3.2](../architecture/milestone-3-2.md).

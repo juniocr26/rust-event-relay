@@ -41,3 +41,6 @@ pub use ownership::{
     AcquireRequest, OutboxAcquirer, OutboxCompleter, OutboxReleaser, OwnedEventKey,
     OwnedOutboxEvent, TransitionOutcome,
 };
+
+mod retry;
+pub use retry::*;

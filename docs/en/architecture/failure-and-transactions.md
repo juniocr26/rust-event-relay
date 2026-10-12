@@ -1,3 +1,5 @@
+Current schema/contracts: [Milestone 3.2](milestone-3-2.md). Earlier milestone sections below describe their original scope.
+
 [Português brasileiro](../../pt-BR/architecture/failure-and-transactions.md) | [README](../../../README.md)
 
 
@@ -71,7 +73,6 @@ Current tests establish envelope invariants, representable storage, selected-row
 
 A durable table and observation API alone provide no working delivery guarantee. Future publication can precede database acknowledgement and duplicate on retry; acknowledgement before publication can lose delivery. Consumer idempotency must coordinate deduplication with business effects. ADR 007 now selects lease/token authority and attempt semantics; production concurrent ownership, retry classification/backoff, dead-letter/quarantine/replay, operational byte/count/concurrency limits, retention, producer duplicate semantics and per-aggregate ordering remain open. This document does not choose or implement them, and end-to-end worker delivery is not implemented. Milestones 2.1/2.2 separately implement publisher and ownership models/contracts/schema. ADRs 001-005 remain the applicable decisions; no new ADR is needed for documentation closure.
 
+## Milestone 3.2 — current persistence scope
 
-## Milestone 3.1 policy
-
-Milestone 3.1 defines the failure matrix, durable retry/budget/isolation/replay contracts and remaining roadmap. Only pure policy calculations are implemented; future persistence and frontend scenarios remain planned. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).
+Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Contracts, migration, failure semantics and rollout](milestone-3-2.md).

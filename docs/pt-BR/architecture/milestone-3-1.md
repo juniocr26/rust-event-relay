@@ -4,6 +4,10 @@
 
 Data: 2026-10-12. Política decidida para implementação em 3.2–3.6. Neste marco existem apenas cálculos puros; reagendamento, isolamento e replay duráveis continuam planejados. A conclusão do Marco 2 permanece válida dentro do seu escopo.
 
+## Continuação da implementação
+
+O desenho/aceitação original de 3.1 abaixo mantém contexto histórico. 3.2 implementa persistência; demais marcos continuam previstos. [Marco 3.2 — persistência atual](milestone-3-2.md).
+
 ## Base e garantias
 
 Foram inspecionados a aceitação do Marco 2, matrizes 2.3–2.6, ADR 007, domínio de entrega, contratos/erros de persistência, operações PostgreSQL, publisher/RabbitMQ, deliver_once/worker, migrations, testes de integração/recuperação e cenários Vue. Evidências antigas permanecem históricas; execuções atuais constam em testing/validation-results.
