@@ -633,7 +633,7 @@ Static local-link/anchor, fence, language-pair and documentation-only SHA-256 ch
 
 ## Milestone 2.3 — 2026-10-12
 
-Starting checkout: clean `bbc2c1f`; no commit/push. Existing healthy app, PostgreSQL and RabbitMQ containers reused without restart/rebuild/reset. No dependencies or shared publisher code changed. Commands ran through `docker compose exec -T app` unless noted. New [scope/semantics](../architecture/milestone-2-3.md) and [Portuguese continuity report](../../../Reports/MILESTONE_2_3_HANDOFF.md) describe limitations separately from evidence.
+Starting checkout: clean `bbc2c1f`; no commit/push. Existing healthy app, PostgreSQL and RabbitMQ containers reused without restart/rebuild/reset. No dependencies or shared publisher code changed. Commands ran through `docker compose exec -T app` unless noted. New [scope/semantics](../architecture/milestone-2-3.md) and Portuguese continuity report (file absent in the 2.4 checkout) describe limitations separately from evidence.
 
 | Check actually executed | Result |
 | --- | --- |
@@ -658,3 +658,23 @@ Ownership migration was applied only in test-owned databases and remains pending
 Documentation scope: Rust READMEs/catalogs, architecture/contracts/failures, schema/migration/repository guidance, security/deployment updates, strategy/results, bilingual 2.3 page and the Portuguese handoff. Engineering Library updated only its bilingual existing dossier/interview/catalog/verification pages, preserving historical review and distinguishing general lease/locking/uncertainty principles from Rust choices. Documentation validation results are appended after final checks below.
 
 Final documentation checks: `python3 -B engineering-library/tools/check_docs.py --workspace .` from the sibling workspace passed: 212 documents, zero errors and 18 pre-existing link-blocked fixture warnings. This checks Rust and Library language pairs, indexes, relative links/anchors and interview structure; external links are not fetched. A separate check of `Reports/MILESTONE_2_3_HANDOFF.md` passed every relative file/anchor link because Reports is outside the catalog scan. `git diff --check` passed separately in rust-event-relay and engineering-library. No Library application tests/runtime commands were executed; its eight changed files are Markdown only.
+
+## Milestone 2.4 — 2026-10-12
+
+Started from clean `edb1f90`; the previous milestone was committed. The requested 2.3 handoff is absent from this checkout. Dangling links to it were corrected to existing milestone/validation evidence, retaining historical validation prose. [Current use-case scope](../architecture/milestone-2-4.md) and [handoff (pt-BR)](../../../Reports/MILESTONE_2_4_HANDOFF.md) describe implemented behavior and evidence limits.
+
+Existing app/PostgreSQL/RabbitMQ containers were inspected and reused without restart/rebuild/reset. Read-only development metadata shows successful migrations `20261007000000` and `20261007175358`, with no ownership_token column: ownership migration remains pending. No migration was applied and no event rows or credentials were printed. Infrastructure source, dependencies and schema were unchanged; opt-in infrastructure regressions were not rerun without a relevant change.
+
+| Executed command | Result |
+| --- | --- |
+| `docker compose exec -T app cargo fmt --check` | Passed |
+| `docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings` | Passed |
+| `docker compose exec -T app cargo test --locked --test delivery_use_case` | 5 passed |
+| `docker compose exec -T app cargo test --locked` | 38 passed, 31 opt-in tests ignored; no failures |
+| `docker compose exec -T app cargo build --locked` | Passed |
+| `docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps --all-features` | Passed |
+| `python3 -B engineering-library/tools/check_docs.py --workspace .` from parent workspace | 214 documents, zero errors, 18 pre-existing restricted-fixture warnings |
+| Separate relative-link check for Reports/MILESTONE_2_4_HANDOFF.md | Passed; Reports is outside the catalog scan |
+| `git diff --check` in both repositories | Passed |
+
+Five fake tests iterate all five publication categories, all transition outcomes/error categories and all acquisition failure categories. They prove complete original-envelope equality, single acquisition/publication calls, correct owner key, confirmation-before-completion, absence of forbidden cleanup/retry, preserved original/source and release errors, sanitized Debug and Send/static dispatch. Explicit Notify synchronization tests waiting for publisher confirmation and cancellation during acquisition/publication/completion/release. They do not establish actual PostgreSQL rollback, RabbitMQ nonacceptance, commit cancellation behavior or end-to-end crash recovery. No application test failed; incomplete documentation links were resolved during drafting. No commit/push. Next: 2.5 worker composition and operation; 2.6 end-to-end failure experiments.

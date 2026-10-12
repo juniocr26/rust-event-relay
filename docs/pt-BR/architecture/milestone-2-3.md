@@ -2,7 +2,7 @@
 
 # Marco 2.3 — Operações PostgreSQL de posse da entrega
 
-Implementado em 2026-10-12 a partir de `bbc2c1f` limpo. [ADR 007](../adr/007-durable-delivery-ownership.md) continua autoritativo; modelos, ciclo de vida e assinaturas públicas preservados. Consulte [validação executada](../testing/validation-results.md#marco-23--2026-10-12) e [relatório de continuidade](../../../Reports/MILESTONE_2_3_HANDOFF.md).
+Implementado em 2026-10-12 a partir de `bbc2c1f` limpo. [ADR 007](../adr/007-durable-delivery-ownership.md) continua autoritativo; modelos, ciclo de vida e assinaturas públicas preservados. Consulte [validação executada](../testing/validation-results.md#marco-23--2026-10-12) e [registro de validação 2.3](../testing/validation-results.md#marco-23--2026-10-12).
 
 ## Escopo e contratos implementados
 

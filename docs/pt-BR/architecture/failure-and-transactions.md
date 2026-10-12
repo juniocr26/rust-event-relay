@@ -3,6 +3,12 @@
 
 # Semântica de falhas e transações - Marco 1.8
 
+## Marco 2.4 — 2026-10-12
+
+O caso de uso de entrega executa aquisição reconhecida → publicação do envelope original → completion somente após aceitação confirmada. Falhas definitivas liberam uma vez; incerteza mantém lease. Resultados preservam falha principal e cleanup separadamente. HTTP continua independente; não há worker composto. Consulte [Marco 2.4](milestone-2-4.md) para resultados, cancelamento e limites de recuperação. Próximo: 2.5 composição/operação do worker; 2.6 experimentos ponta a ponta.
+
+Seções anteriores preservam o escopo do marco/revisão registrado.
+
 ## Extensão atual — Marco 2.3
 
 [Operações PostgreSQL de posse](milestone-2-3.md) implementam ports de 2.2 com transações Read Committed curtas, tempo do banco pós-lock e rejeição de owners antigos. Snapshots continuam incluindo pending com lease. Seções originais abaixo conservam escopo histórico; comportamento atual, incerteza/cancelamento e próximo 2.4 estão no marco vinculado.

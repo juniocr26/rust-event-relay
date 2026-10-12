@@ -3,6 +3,12 @@
 
 # Testing
 
+## Milestone 2.4 — 2026-10-12
+
+The callable delivery use case now performs one acknowledged acquisition → original envelope publication → completion only after confirmed acceptance. Definitive publication failures release once; uncertainty retains the lease. Results preserve primary and cleanup failures separately. HTTP remains independent; no worker is composed. See [Milestone 2.4](../architecture/milestone-2-4.md) for outcomes, cancellation and recovery limitations. Next: 2.5 worker composition/operation; 2.6 end-to-end failure experiments.
+
+Earlier sections retain their recorded milestone/review scope.
+
 ## Current extension — Milestone 2.2
 
 [Delivery state and ownership](../architecture/milestone-2-2.md) and [ADR 007](../adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.

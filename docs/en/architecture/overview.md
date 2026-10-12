@@ -3,6 +3,12 @@
 
 # Architecture
 
+## Milestone 2.4 — 2026-10-12
+
+The callable delivery use case now performs one acknowledged acquisition → original envelope publication → completion only after confirmed acceptance. Definitive publication failures release once; uncertainty retains the lease. Results preserve primary and cleanup failures separately. HTTP remains independent; no worker is composed. See [Milestone 2.4](milestone-2-4.md) for outcomes, cancellation and recovery limitations. Next: 2.5 worker composition/operation; 2.6 end-to-end failure experiments.
+
+Earlier sections retain their recorded milestone/review scope.
+
 ## Current extension — Milestone 2.3
 
 [PostgreSQL ownership operations](milestone-2-3.md) implement the existing 2.2 ports with short Read Committed transactions, post-lock database time and stale-owner rejection. Read-only snapshots still include leased pending rows. The original milestone sections below retain their historical scope; current behavior, uncertainty/cancellation limits and next 2.4 orchestration are detailed in the linked milestone.
@@ -90,7 +96,7 @@ Future delivery initially targets at-least-once semantics, not exactly-once deli
 | --- | --- |
 | 0 — Foundation | Rust, Docker, configuration, tracing, shutdown, health, tests, bilingual docs (implemented) |
 | 1 — Durable event model | **Closed: 1.1-1.8 implemented and validated within their documented scope**; see [closure review](../operations/milestone-1-review.md) |
-| 2 — First delivery adapter | 2.1 publisher, 2.2 ownership types/ports/schema and 2.3 PostgreSQL ownership operations implemented; 2.4–2.6 orchestration, worker and crash experiments deferred |
+| 2 — First delivery adapter | 2.1 publisher, 2.2 ownership types/ports/schema and 2.3 PostgreSQL ownership operations implemented; 2.4 use case implemented; 2.5–2.6 worker and crash experiments deferred |
 | 3 — Reliability | Exponential backoff, DLQ, idempotency, crash recovery, poison messages |
 | 4 — Concurrency | Bounded channels, worker pools, concurrency limits, backpressure, graceful draining |
 | 5 — Multiple destinations | HTTP webhooks, Redis Streams, routing abstraction |

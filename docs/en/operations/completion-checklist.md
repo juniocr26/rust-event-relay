@@ -1,5 +1,11 @@
 # rust-event-relay: Repository completion checklist
 
+## Milestone 2.4 — 2026-10-12
+
+The callable delivery use case now performs one acknowledged acquisition → original envelope publication → completion only after confirmed acceptance. Definitive publication failures release once; uncertainty retains the lease. Results preserve primary and cleanup failures separately. HTTP remains independent; no worker is composed. See [Milestone 2.4](../architecture/milestone-2-4.md) for outcomes, cancellation and recovery limitations. Next: 2.5 worker composition/operation; 2.6 end-to-end failure experiments.
+
+Earlier sections retain their recorded milestone/review scope.
+
 Static review on 2026-10-10; no runtime execution. Checked items describe completed documentation work, not completed application features or closed evidence gaps.
 
 - [x] Inventory: existing documentation and source/config/tests inspected; original inventory retained in library manifest.

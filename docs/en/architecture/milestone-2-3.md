@@ -2,7 +2,7 @@
 
 # Milestone 2.3 — PostgreSQL delivery ownership operations
 
-Implemented 2026-10-12 from clean `bbc2c1f`. [ADR 007](../adr/007-durable-delivery-ownership.md) remains authoritative; no model, lifecycle or public signature was redesigned. See [executed validation](../testing/validation-results.md#milestone-23--2026-10-12) and the [Portuguese continuity report](../../../Reports/MILESTONE_2_3_HANDOFF.md).
+Implemented 2026-10-12 from clean `bbc2c1f`. [ADR 007](../adr/007-durable-delivery-ownership.md) remains authoritative; no model, lifecycle or public signature was redesigned. See [executed validation](../testing/validation-results.md#milestone-23--2026-10-12) and the [2.3 validation record](../testing/validation-results.md#milestone-23--2026-10-12).
 
 ## Implemented scope and contracts
 

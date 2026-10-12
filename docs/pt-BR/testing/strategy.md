@@ -3,6 +3,12 @@
 
 # Testes
 
+## Marco 2.4 — 2026-10-12
+
+O caso de uso de entrega executa aquisição reconhecida → publicação do envelope original → completion somente após aceitação confirmada. Falhas definitivas liberam uma vez; incerteza mantém lease. Resultados preservam falha principal e cleanup separadamente. HTTP continua independente; não há worker composto. Consulte [Marco 2.4](../architecture/milestone-2-4.md) para resultados, cancelamento e limites de recuperação. Próximo: 2.5 composição/operação do worker; 2.6 experimentos ponta a ponta.
+
+Seções anteriores preservam o escopo do marco/revisão registrado.
+
 ## Extensão atual — Marco 2.2
 
 [Estado de entrega e posse](../architecture/milestone-2-2.md) e [ADR 007](../adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.

@@ -3,6 +3,12 @@
 
 # Arquitetura
 
+## Marco 2.4 — 2026-10-12
+
+O caso de uso de entrega executa aquisição reconhecida → publicação do envelope original → completion somente após aceitação confirmada. Falhas definitivas liberam uma vez; incerteza mantém lease. Resultados preservam falha principal e cleanup separadamente. HTTP continua independente; não há worker composto. Consulte [Marco 2.4](milestone-2-4.md) para resultados, cancelamento e limites de recuperação. Próximo: 2.5 composição/operação do worker; 2.6 experimentos ponta a ponta.
+
+Seções anteriores preservam o escopo do marco/revisão registrado.
+
 ## Extensão atual — Marco 2.3
 
 [Operações PostgreSQL de posse](milestone-2-3.md) implementam ports de 2.2 com transações Read Committed curtas, tempo do banco pós-lock e rejeição de owners antigos. Snapshots continuam incluindo pending com lease. Seções originais abaixo conservam escopo histórico; comportamento atual, incerteza/cancelamento e próximo 2.4 estão no marco vinculado.
@@ -90,7 +96,7 @@ A futura entrega inicialmente mira semântica de pelo menos uma vez, sem entrega
 | --- | --- |
 | 0 — Fundação | Rust, Docker, configuração, tracing, encerramento, health, testes, documentação bilíngue (implementado) |
 | 1 — Modelo durável de eventos | **Fechado: 1.1-1.8 implementados e validados no escopo documentado**; veja [revisão de fechamento](../operations/milestone-1-review.md) |
-| 2 — Primeiro adaptador | 2.1 publisher, 2.2 tipos/portas/schema e 2.3 operações PostgreSQL implementados; 2.4–2.6 orquestração, worker e experimentos adiados |
+| 2 — Primeiro adaptador | 2.1 publisher, 2.2 tipos/portas/schema e 2.3 operações PostgreSQL implementados; 2.4 caso de uso implementado; 2.5–2.6 worker e experimentos adiados |
 | 3 — Confiabilidade | Backoff exponencial, DLQ, idempotência, recuperação de crashes, mensagens problemáticas |
 | 4 — Concorrência | Canais limitados, pools de workers, limites de concorrência, contrapressão, drenagem no encerramento |
 | 5 — Múltiplos destinos | Webhooks HTTP, Redis Streams, abstração de roteamento |

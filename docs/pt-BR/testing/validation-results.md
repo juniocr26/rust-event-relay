@@ -633,7 +633,7 @@ Checagens estáticas de links/âncoras, fences, pares de idioma e SHA-256 para a
 
 ## Marco 2.3 — 2026-10-12
 
-Checkout inicial limpo `bbc2c1f`; sem commit/push. Containers app/PostgreSQL/RabbitMQ existentes e saudáveis foram reutilizados sem restart/rebuild/reset. Dependências/publisher compartilhado preservados. Comandos executados via `docker compose exec -T app`, salvo indicação. [Escopo/semântica](../architecture/milestone-2-3.md) e [continuidade](../../../Reports/MILESTONE_2_3_HANDOFF.md) distinguem limites e evidência.
+Checkout inicial limpo `bbc2c1f`; sem commit/push. Containers app/PostgreSQL/RabbitMQ existentes e saudáveis foram reutilizados sem restart/rebuild/reset. Dependências/publisher compartilhado preservados. Comandos executados via `docker compose exec -T app`, salvo indicação. [Escopo/semântica](../architecture/milestone-2-3.md) e continuidade (arquivo ausente no checkout 2.4) distinguem limites e evidência.
 
 | Check realmente executado | Resultado |
 | --- | --- |
@@ -658,3 +658,23 @@ Migração de posse aplicada somente em bancos de teste e pendente no desenvolvi
 Escopo documental: READMEs/índices Rust, arquitetura/contratos/falhas, schema/migração/repositório, atualizações de segurança/implantação, estratégia/resultados, página 2.3 bilíngue e handoff em português. Engineering Library mudou somente dossiê/entrevista/índice/verificação existentes bilíngues, preservando revisão histórica e distinguindo princípios gerais de decisões Rust. Resultados de checks documentais finais são acrescentados abaixo.
 
 Checks documentais finais: `python3 -B engineering-library/tools/check_docs.py --workspace .` no workspace irmão aprovado: 212 documentos, zero erros e 18 warnings link-blocked de fixtures preexistentes. Verifica pares de idiomas, índices, links/âncoras e estrutura de entrevistas de Rust/Library; não consulta links externos. Checagem separada de `Reports/MILESTONE_2_3_HANDOFF.md` aprovou todos os links relativos/âncoras, pois Reports fica fora do scan do catálogo. `git diff --check` aprovado separadamente em rust-event-relay e engineering-library. Nenhum teste/runtime de aplicação da Library foi executado; oito arquivos alterados são apenas Markdown.
+
+## Marco 2.4 — 2026-10-12
+
+Início em `edb1f90` limpo; marco anterior já commitado. O handoff 2.3 solicitado está ausente deste checkout. Links quebrados foram corrigidos para registros existentes de marco/validação, preservando o texto histórico de evidência. [Escopo atual](../architecture/milestone-2-4.md) e [handoff](../../../Reports/MILESTONE_2_4_HANDOFF.md) descrevem implementação e limites.
+
+Containers app/PostgreSQL/RabbitMQ existentes foram inspecionados e reutilizados sem restart/rebuild/reset. Metadados somente de leitura mostram migrações `20261007000000` e `20261007175358` aplicadas com sucesso, sem coluna ownership_token: migração de posse permanece pendente. Nenhuma migração aplicada; eventos e credenciais não foram impressos. Infraestrutura, dependências e schema não mudaram; regressões opt-in reais não foram repetidas sem mudança pertinente.
+
+| Comando executado | Resultado |
+| --- | --- |
+| `docker compose exec -T app cargo fmt --check` | Aprovado |
+| `docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings` | Aprovado |
+| `docker compose exec -T app cargo test --locked --test delivery_use_case` | 5 aprovados |
+| `docker compose exec -T app cargo test --locked` | 38 aprovados, 31 opt-in ignorados; zero falhas |
+| `docker compose exec -T app cargo build --locked` | Aprovado |
+| `docker compose exec -T -e RUSTDOCFLAGS='-D warnings' app cargo doc --locked --no-deps --all-features` | Aprovado |
+| `python3 -B engineering-library/tools/check_docs.py --workspace .` a partir do workspace pai | 214 documentos, zero erros, 18 warnings preexistentes de fixtures restritos |
+| Verificação separada dos links relativos de Reports/MILESTONE_2_4_HANDOFF.md | Aprovada; Reports fica fora do catálogo |
+| `git diff --check` nos dois projetos | Aprovado |
+
+Cinco testes com fakes percorrem cinco categorias de publicação, todos os resultados/categorias de erro de transição e falhas de aquisição. Demonstram igualdade completa do envelope original, aquisição/publicação únicas, chave correta, confirmação antes de completion, ausência de cleanup/retry proibidos, preservação de erro/fonte e falhas de release, Debug sanitizado e Send/despacho estático. Notify sincroniza espera pela confirmação e cancelamento durante aquisição/publicação/completion/release. Não comprovam rollback PostgreSQL real, não aceitação RabbitMQ, cancelamento durante commit ou crash/recuperação ponta a ponta. Nenhum teste de aplicação falhou; links documentais incompletos foram resolvidos na redação. Sem commit/push. Próximo: 2.5 composição e operação do worker; 2.6 experimentos ponta a ponta.

@@ -2,6 +2,8 @@
 
 # Reliable Event Relay
 
+Milestone 2.4: [one-attempt delivery orchestration](docs/en/architecture/milestone-2-4.md) is implemented as a callable library use case. No polling worker is wired to the runtime; next is 2.5 worker composition and operation.
+
 A Rust service exploring reliable event delivery, retries, idempotency, backpressure, dead-letter handling, and failure recovery in distributed systems.
 
 This open-source engineering portfolio and study project investigates distributed event delivery under failure. Rust is the implementation tool; the engineering problem is the reason for the repository. English is the canonical documentation language; the Portuguese documentation covers the same scope.
@@ -17,11 +19,11 @@ Read purpose/setup first, then architecture and contracts, security and failures
 
 **Implemented today:** environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a PostgreSQL observation repository and production ownership operations, isolated opt-in PostgreSQL repository integration tests, a confirmed RabbitMQ publisher adapter, local broker management and Supervisor process control, validated delivery-state/ownership types and focused mutation contracts, a durable lease migration (not applied automatically), real ownership concurrency/expiration tests, CI checks and bilingual documentation.
 
-**Planned / future exploration:** producer outbox writes and worker processing, delivery orchestration (2.4), polling worker (2.5), crash/recovery experiments (2.6), retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
+**Planned / future exploration:** producer outbox writes and worker processing, polling worker (2.5), crash/recovery experiments (2.6), retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
 
 [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements the ownership decision, models, contracts and schema only. Leased events remain pending; expired owners cannot complete/release. Tokens protect database transitions but do not fence publication or establish end-to-end delivery.
 
-[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. Development ownership migration remains pending. [Continuity report (pt-BR)](Reports/MILESTONE_2_3_HANDOFF.md). Next: 2.4 use-case orchestration; no worker or end-to-end guarantee.
+[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. Development ownership migration remains pending. [Continuity report (pt-BR)](Reports/MILESTONE_2_4_HANDOFF.md). Next: 2.5 worker composition and operation; no worker or end-to-end guarantee.
 
 ## Architecture
 
@@ -110,4 +112,4 @@ The same arguments work with `supervisor`; run either command without arguments 
 
 MIT licensed; see [LICENSE](LICENSE).
 
-[Milestone 1 is closed](docs/en/operations/milestone-1-review.md): envelope, PostgreSQL, migrations, schema, contracts, repository, integration and [failure/transaction semantics](docs/en/architecture/failure-and-transactions.md). [Milestone 2.1](docs/en/architecture/milestone-2-1.md) implements the publisher; [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements state/ownership contracts, with delivery orchestration deferred to 2.4. [Historical Portuguese handoff source](docs/pt-BR/operations/handoff-marco-1.md).
+[Milestone 1 is closed](docs/en/operations/milestone-1-review.md): envelope, PostgreSQL, migrations, schema, contracts, repository, integration and [failure/transaction semantics](docs/en/architecture/failure-and-transactions.md). [Milestone 2.1](docs/en/architecture/milestone-2-1.md) implements the publisher; [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements state/ownership contracts, with orchestration implemented in [2.4](docs/en/architecture/milestone-2-4.md). [Historical Portuguese handoff source](docs/pt-BR/operations/handoff-marco-1.md).

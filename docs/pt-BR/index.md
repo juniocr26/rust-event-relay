@@ -6,6 +6,8 @@ Percurso: propósito/setup → arquitetura/contratos → segurança/falhas → t
 
 ## architecture
 
+- [Marco 2.4 — Caso de uso de entrega](architecture/milestone-2-4.md)
+
 Componentes, fluxos e fronteiras implementadas.
 
 - [Semântica de falhas e transações - Marco 1.8](architecture/failure-and-transactions.md)
