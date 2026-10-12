@@ -4,6 +4,13 @@
 
 Revisão estática do código: 2026-10-10. Fatos implementados, teoria geral e mudanças hipotéticas são separados abaixo. Comandos runtime não foram executados.
 
+## Atualização — 2026-10-12
+
+[Marco 2.3](../architecture/milestone-2-3.md) implementa transições condicionais com evidência real de contenção/expiração. Migração de posse continua pendente no desenvolvimento, confirmada por metadados sem escrita; apenas bancos isolados foram migrados. Não há fencing no broker, orquestração ponta a ponta, desempenho produtivo ou experimento de confirmação COMMIT perdida. Revisão abaixo é histórica (2026-10-10).
+
+## Revisão histórica
+
+
 Compose fornece PostgreSQL, RabbitMQ e app de desenvolvimento gerenciado pelo Supervisor. O HTTP depende de configuração/tracing/listener; não cria PgPool nem RabbitMqPublisher. Health das dependências pode condicionar startup, mas `/health` continua liveness do processo. Supervisor permite 30 s de drain HTTP e Compose concede 35 s ao encerramento do gerenciador. Mudanças exigem stop/build/start; não há reload automático ou worker implantado. Bind/volume preserva recriações comuns, não perda do host/armazenamento.
 
 Migrações SQLx são versionadas e aplicadas explicitamente, não pelo startup HTTP. Preserve IDs e conteúdo aplicado. A migração de ownership tem fonte e evidência isolada; o registro anterior informa que continuava pendente no banco compartilhado de desenvolvimento. Esta revisão não consultou esse banco nem atualizou seu estado. Down remove colunas de ownership; downs anteriores podem destruir outbox. Down e reaplicar schema não restauram linhas. Rollout real exige compatibilidade e backup/restore verificados separadamente, não reset destrutivo.

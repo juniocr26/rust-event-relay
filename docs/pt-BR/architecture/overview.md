@@ -3,10 +3,9 @@
 
 # Arquitetura
 
-## Extensão atual — Marco 2.2
+## Extensão atual — Marco 2.3
 
-[Estado de entrega e posse](milestone-2-2.md) e [ADR 007](../adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.
-
+[Operações PostgreSQL de posse](milestone-2-3.md) implementam ports de 2.2 com transações Read Committed curtas, tempo do banco pós-lock e rejeição de owners antigos. Snapshots continuam incluindo pending com lease. Seções originais abaixo conservam escopo histórico; comportamento atual, incerteza/cancelamento e próximo 2.4 estão no marco vinculado.
 
 ## Marco 2.1 — Publisher e gestão local de processos
 
@@ -91,7 +90,7 @@ A futura entrega inicialmente mira semântica de pelo menos uma vez, sem entrega
 | --- | --- |
 | 0 — Fundação | Rust, Docker, configuração, tracing, encerramento, health, testes, documentação bilíngue (implementado) |
 | 1 — Modelo durável de eventos | **Fechado: 1.1-1.8 implementados e validados no escopo documentado**; veja [revisão de fechamento](../operations/milestone-1-review.md) |
-| 2 — Primeiro adaptador | 2.1 publisher e 2.2 tipos/portas/schema implementados; 2.3–2.6 mutações, orquestração, worker e experimentos adiados |
+| 2 — Primeiro adaptador | 2.1 publisher, 2.2 tipos/portas/schema e 2.3 operações PostgreSQL implementados; 2.4–2.6 orquestração, worker e experimentos adiados |
 | 3 — Confiabilidade | Backoff exponencial, DLQ, idempotência, recuperação de crashes, mensagens problemáticas |
 | 4 — Concorrência | Canais limitados, pools de workers, limites de concorrência, contrapressão, drenagem no encerramento |
 | 5 — Múltiplos destinos | Webhooks HTTP, Redis Streams, abstração de roteamento |

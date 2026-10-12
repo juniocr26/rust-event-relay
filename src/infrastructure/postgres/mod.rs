@@ -1,4 +1,4 @@
-//! PostgreSQL read-only persistence. Pool lifecycle belongs to the caller.
+//! PostgreSQL observation and durable ownership persistence. Pool lifecycle belongs to the caller.
 use chrono::{DateTime, Utc};
 use serde_json::Value;
 use sqlx::{
@@ -19,7 +19,9 @@ const READ_ELIGIBLE: &str = "SELECT id, event_type, aggregate_type, aggregate_id
     FROM relay.outbox_events WHERE status = 'pending' AND available_at <= $1 \
     ORDER BY available_at, created_at, id LIMIT $2";
 
-/// Focused reader backed by an injected pool; constructing it does not connect.
+mod ownership;
+
+/// Focused repository backed by an injected pool; constructing it does not connect.
 #[derive(Clone)]
 pub struct PostgresOutboxRepository {
     pool: PgPool,

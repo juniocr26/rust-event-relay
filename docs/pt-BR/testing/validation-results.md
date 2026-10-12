@@ -630,3 +630,31 @@ Extensão final de cobertura diagnóstica: `cargo test --locked --test persisten
 Revisados composição HTTP, SQL de leitura, confirmações/incerteza do publisher, modelos/portas de ownership, migração lease e CI. Corrigidas afirmações atuais de dependência de broker ausente/Marco 2 não iniciado; navegação ADR 006/007 e escopo bilíngue alinhados. Mutações SQL, orquestração/polling adiados; sem garantia ponta a ponta. Não executados testes padrão/opt-in, CI, migrações, Cargo, broker ou PostgreSQL. Resultados históricos dos marcos preservados.
 
 Checagens estáticas de links/âncoras, fences, pares de idioma e SHA-256 para alterações somente documentais estão na [revisão de entrevista](../../../../engineering-library/docs/pt-BR/testing/verification.md). Arquivos reais de ambiente e backups sensíveis não foram lidos/alterados.
+
+## Marco 2.3 — 2026-10-12
+
+Checkout inicial limpo `bbc2c1f`; sem commit/push. Containers app/PostgreSQL/RabbitMQ existentes e saudáveis foram reutilizados sem restart/rebuild/reset. Dependências/publisher compartilhado preservados. Comandos executados via `docker compose exec -T app`, salvo indicação. [Escopo/semântica](../architecture/milestone-2-3.md) e [continuidade](../../../Reports/MILESTONE_2_3_HANDOFF.md) distinguem limites e evidência.
+
+| Check realmente executado | Resultado |
+| --- | --- |
+| cargo fmt --check | Aprovado |
+| cargo clippy --locked --all-targets --all-features -- -D warnings | Aprovado em todos os targets/features finais, incluindo proxy |
+| cargo test --locked | 33 não ignorados aprovados; infraestrutura opt-in executada separadamente |
+| cargo test --locked --test postgres_ownership -- --ignored --test-threads=4 | 12 casos PostgreSQL reais aprovados |
+| cargo test --locked --test postgres_repository -- --ignored --test-threads=4 | 15 regressões existentes aprovadas |
+| cargo test --locked --test delivery_ownership_schema -- --ignored | 1 regressão de schema aprovada |
+| cargo build --locked | Aprovado |
+| RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps | Aprovado |
+| Metadados read-only de migração/schema de desenvolvimento e catálogo de fixtures | Só migrações originais instaladas; sem coluna de posse; zero bancos relay_it_ restantes |
+
+Primeiro Clippy falhou por binding de teste escondendo helper request; renomeado. Primeira integração com oito casos passou sete e falhou na prova de início transacional anterior à expiração. Coordenador mantinha snapshot de atividade em cache; pg_stat_clear_snapshot explícito corrige essa leitura de evidência. Suíte corrigida passou e versão final ampliada a 12 casos foi aprovada. Código produtivo não foi alterado para enfraquecer predicado de autoridade.
+
+Testes reais demonstram aquisições concorrentes disjuntas, SKIP LOCKED, rejeição por expiração pós-espera de completion/release, token antigo após recuperação, dado inválido/overflow verificado de duração sem mutação, contador esgotado, envelope/metadados estáveis, limpeza atômica e conflitos repetidos/ausência/terminal. Fixture com timestamp futuro verifica limite adquirido inferior, não reversão real de relógio. Lease de um microssegundo é observado expirado após retorno. Testes determinísticos existentes foram reexecutados para igualdade exata de expiração; isso difere da evidência real ao redor da expiração.
+
+Rejeição SQL imediata e constraint diferida no COMMIT preservam linhas e retornam OperationFailed. Proxy de protocolo de teste descarta resposta de conclusão COMMIT nas três operações; todas retornam CommitUncertain e consulta independente confirma estado durável. Prova um cenário incerto confirmado, sem concluir commit ou rollback de toda incerteza. Cancelamento durante lock wait pré-mutação preserva fixture e pool utilizável. Cancelamento no COMMIT, falha de processo/rede antes de observar conclusão, todos os schedules/isolamentos, justiça, desempenho/perda de energia, Rust nativo e CI remoto continuam não verificados.
+
+Migração de posse aplicada somente em bancos de teste e pendente no desenvolvimento; sem migração nova ou schema alterado. RabbitMQ opt-in não reexecutado: nenhum publisher/dependência compartilhado mudou nem instrução aplicável exigiu isso; testes padrão do publisher passaram. Registros de validação anteriores permanecem históricos.
+
+Escopo documental: READMEs/índices Rust, arquitetura/contratos/falhas, schema/migração/repositório, atualizações de segurança/implantação, estratégia/resultados, página 2.3 bilíngue e handoff em português. Engineering Library mudou somente dossiê/entrevista/índice/verificação existentes bilíngues, preservando revisão histórica e distinguindo princípios gerais de decisões Rust. Resultados de checks documentais finais são acrescentados abaixo.
+
+Checks documentais finais: `python3 -B engineering-library/tools/check_docs.py --workspace .` no workspace irmão aprovado: 212 documentos, zero erros e 18 warnings link-blocked de fixtures preexistentes. Verifica pares de idiomas, índices, links/âncoras e estrutura de entrevistas de Rust/Library; não consulta links externos. Checagem separada de `Reports/MILESTONE_2_3_HANDOFF.md` aprovou todos os links relativos/âncoras, pois Reports fica fora do scan do catálogo. `git diff --check` aprovado separadamente em rust-event-relay e engineering-library. Nenhum teste/runtime de aplicação da Library foi executado; oito arquivos alterados são apenas Markdown.

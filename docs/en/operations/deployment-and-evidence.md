@@ -4,6 +4,13 @@
 
 Static source review: 2026-10-10. Implemented facts, general theory and hypothetical changes are distinguished below. Runtime commands were not executed.
 
+## Current update — 2026-10-12
+
+[Milestone 2.3](../architecture/milestone-2-3.md) implements conditional ownership transitions with real contention/expiration evidence. Ownership migration remains pending in development, verified by read-only metadata; only isolated test databases were migrated. No broker fencing, end-to-end orchestration, production performance or lost-COMMIT-acknowledgement experiment is established. The source review below is historical (2026-10-10).
+
+## Historical review
+
+
 Compose supplies local PostgreSQL, RabbitMQ and a development app managed by Supervisor. The HTTP process waits for config/tracing/listener setup; it does not create a PgPool or RabbitMqPublisher. Container dependency health can gate startup but `/health` remains process liveness. Supervisor allows 30 s for HTTP drain and Compose grants 35 s for manager shutdown. Source changes require stop/build/start; auto-reload and a deployed worker are absent. Bind/named storage survives ordinary recreation, not host/storage loss.
 
 SQLx migrations are versioned and explicitly applied, not applied automatically by HTTP startup. Preserve migration IDs and existing applied content. The ownership migration is source plus isolated test evidence; the previous milestone record says it remained pending in the shared development database. This review did not inspect that database or update its status. A down migration removes ownership columns; earlier downs can destroy the outbox. Neither down nor reapplying schema restores rows. A real rollout needs compatibility review and separately verified backup/restore, not a destructive reset.

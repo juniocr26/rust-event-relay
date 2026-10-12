@@ -630,3 +630,31 @@ Final diagnostic coverage extension: `cargo test --locked --test persistence_con
 Rechecked HTTP composition, read-only SQL, publisher confirmation/uncertainty, pure ownership models/ports, lease migration and CI definitions. Removed stale current claims about absent broker dependencies or unstarted Milestone 2, added ADR 006/007 navigation and aligned bilingual current scope. Ownership SQL mutations, orchestration and polling remain deferred; no end-to-end delivery guarantee is established. Default/opt-in tests, CI jobs, migrations, Cargo commands, broker and PostgreSQL were not executed. Historical milestone results remain unchanged.
 
 Static local-link/anchor, fence, language-pair and documentation-only SHA-256 checks are recorded in the shared [interview review](../../../../engineering-library/docs/en/testing/verification.md). Runtime environment files and secret-bearing backups were not read or modified.
+
+## Milestone 2.3 — 2026-10-12
+
+Starting checkout: clean `bbc2c1f`; no commit/push. Existing healthy app, PostgreSQL and RabbitMQ containers reused without restart/rebuild/reset. No dependencies or shared publisher code changed. Commands ran through `docker compose exec -T app` unless noted. New [scope/semantics](../architecture/milestone-2-3.md) and [Portuguese continuity report](../../../Reports/MILESTONE_2_3_HANDOFF.md) describe limitations separately from evidence.
+
+| Check actually executed | Result |
+| --- | --- |
+| cargo fmt --check | Passed |
+| cargo clippy --locked --all-targets --all-features -- -D warnings | Passed, all final targets/features including the proxy |
+| cargo test --locked | 33 non-ignored tests passed; opt-in infrastructure cases executed separately |
+| cargo test --locked --test postgres_ownership -- --ignored --test-threads=4 | 12 real PostgreSQL cases passed |
+| cargo test --locked --test postgres_repository -- --ignored --test-threads=4 | 15 existing regressions passed |
+| cargo test --locked --test delivery_ownership_schema -- --ignored | 1 existing schema regression passed |
+| cargo build --locked | Passed |
+| RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps | Passed |
+| Read-only development migration/schema metadata and fixture database catalog | Only original migrations installed; ownership column absent; zero relay_it_ databases remain |
+
+Initial Clippy failed because a test binding shadowed the request helper; renamed it. First eight-case integration run passed seven cases and failed the lock-wait transaction-start assertion. The coordinator held a cached activity snapshot; explicit pg_stat_clear_snapshot refresh fixes the evidence probe. The corrected suite passed, then the final expanded 12-case suite passed. No production code was altered to weaken the asserted authority semantics.
+
+Real tests demonstrate concurrent disjoint acquisitions, locked-row skipping, post-lock expiration rejection for completion/release, stale-token rejection after recovery, malformed selected data/checked duration overflow without mutation, bounded counter exhaustion, stable envelope/unrelated metadata, atomic clearing and repeated/missing/terminal conflicts. A future-timestamp fixture tests the acquired_at lower bound; it is not a real clock reversal. A one-microsecond lease is already expired at post-return observation. Existing deterministic model tests were rerun for exact expiration equality, which is separate from integration evidence around real expiry.
+
+Immediate SQL rejection and deferred constraint rejection at COMMIT both preserve rows and return OperationFailed. A test-owned protocol proxy discards the server's COMMIT completion response for all three operations; each returns CommitUncertain while independent durable-state inspection confirms the commit. This proves one committed uncertain scenario, not that every uncertain result implies commit or rollback. Cancelled pre-mutation lock wait leaves the fixture unchanged and pool usable. Cancellation during COMMIT, crash/network failure before observed server completion, every concurrency/isolation schedule, fairness, production performance/power-loss durability, native-host Rust and remote CI remain unverified.
+
+Ownership migration was applied only in test-owned databases and remains pending in development; no new migration or schema edits. Real RabbitMQ opt-in regressions were not rerun because no shared publisher/dependency change or applicable instruction required them; default publisher tests passed. Prior validation records above remain historical.
+
+Documentation scope: Rust READMEs/catalogs, architecture/contracts/failures, schema/migration/repository guidance, security/deployment updates, strategy/results, bilingual 2.3 page and the Portuguese handoff. Engineering Library updated only its bilingual existing dossier/interview/catalog/verification pages, preserving historical review and distinguishing general lease/locking/uncertainty principles from Rust choices. Documentation validation results are appended after final checks below.
+
+Final documentation checks: `python3 -B engineering-library/tools/check_docs.py --workspace .` from the sibling workspace passed: 212 documents, zero errors and 18 pre-existing link-blocked fixture warnings. This checks Rust and Library language pairs, indexes, relative links/anchors and interview structure; external links are not fetched. A separate check of `Reports/MILESTONE_2_3_HANDOFF.md` passed every relative file/anchor link because Reports is outside the catalog scan. `git diff --check` passed separately in rust-event-relay and engineering-library. No Library application tests/runtime commands were executed; its eight changed files are Markdown only.

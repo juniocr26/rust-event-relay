@@ -3,10 +3,9 @@
 
 # Schema outbox — Marco 1.4
 
-## Extensão atual — Marco 2.2
+## Extensão atual — Marco 2.3
 
-[Estado de entrega e posse](../architecture/milestone-2-2.md) e [ADR 007](../adr/007-durable-delivery-ownership.md) definem recuperação por lease durável e contratos separados de adquirir/concluir/liberar. Migração nova `20261009000000_add_delivery_ownership` adiciona token/acquired_at/expires_at nullable com lease coerente apenas em pending. Seções de marcos anteriores abaixo descrevem escopo original; afirmações antigas de posse/contador indefinidos são substituídas pelo ADR 007. Adapters produtivos de mutação ficam para 2.3; SELECT do reader e publisher preservados.
-
+[Operações PostgreSQL de posse](../architecture/milestone-2-3.md) implementam ports de 2.2 com transações Read Committed curtas, tempo do banco pós-lock e rejeição de owners antigos. Snapshots continuam incluindo pending com lease. Seções originais abaixo conservam escopo histórico; comportamento atual, incerteza/cancelamento e próximo 2.4 estão no marco vinculado.
 
 ## Objetivo e responsabilidade
 

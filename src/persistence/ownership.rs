@@ -1,4 +1,4 @@
-//! Future atomic database operations; no production implementation in Milestone 2.2.
+//! Atomic durable ownership operations, independent of storage drivers.
 use super::{PendingOutboxEvent, PersistenceError};
 use crate::domain::delivery::{DeliveryError, DeliveryLease, LeaseDuration, OwnershipToken};
 use std::future::Future;

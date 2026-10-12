@@ -224,3 +224,11 @@ Run `./scripts/check-postgres.sh` and `docker compose exec -T app sqlx migrate i
 ## Milestone 2.1 tests
 
 [RabbitMQ integration, Supervisor lifecycle and management validation commands](../architecture/milestone-2-1.md#test-commands-and-evidence) are opt-in. Default tests remain database/broker-independent. The real-broker proxy checks acceptance uncertainty on confirm timeout/cancellation without broker restarts.
+
+## Milestone 2.3 ownership integration
+
+Run the existing containers; this suite applies the ownership migration only inside each harness-owned database. It covers 12 real cases, including coordinated locks/expiration and immediate/deferred rejection. Exact equality is model evidence; the isolated proxy tests acknowledgement loss after observed COMMIT; cancellation during commit remains unverified. See [scope and evidence](../architecture/milestone-2-3.md) and [results](validation-results.md). No RabbitMQ/shared publisher/dependency changes were made; broker regression was not required or rerun.
+
+```bash
+docker compose exec -T app cargo test --locked --test postgres_ownership -- --ignored --test-threads=4
+```

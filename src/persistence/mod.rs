@@ -1,7 +1,7 @@
 //! Application-facing outbox observation and ownership boundaries.
 //!
 //! Returned pending events are snapshots, not claims. Producer transactions and
-//! relay lifecycle mutations use separate ownership contracts, without adapters yet.
+//! relay lifecycle mutations use separate ownership contracts.
 mod error;
 mod model;
 

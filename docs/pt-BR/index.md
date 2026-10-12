@@ -11,6 +11,7 @@ Componentes, fluxos e fronteiras implementadas.
 - [Semântica de falhas e transações - Marco 1.8](architecture/failure-and-transactions.md)
 - [Marco 2.1 — Publisher RabbitMQ e gestão de processos](architecture/milestone-2-1.md)
 - [Marco 2.2 — Estado de entrega e posse de eventos](architecture/milestone-2-2.md)
+- [Marco 2.3 — Operações PostgreSQL de posse](architecture/milestone-2-3.md)
 - [Arquitetura](architecture/overview.md)
 - [Abstração de persistência — Marco 1.5](architecture/persistence-contracts.md)
 

@@ -11,6 +11,7 @@ Components, flows and implemented boundaries.
 - [Failure and transaction semantics - Milestone 1.8](architecture/failure-and-transactions.md)
 - [Milestone 2.1 — RabbitMQ publisher and process management](architecture/milestone-2-1.md)
 - [Milestone 2.2 — Delivery state and event ownership](architecture/milestone-2-2.md)
+- [Milestone 2.3 — PostgreSQL ownership operations](architecture/milestone-2-3.md)
 - [Architecture](architecture/overview.md)
 - [Persistence abstraction — Milestone 1.5](architecture/persistence-contracts.md)
 

@@ -4,6 +4,13 @@
 
 Revisão estática do código: 2026-10-10. Fatos implementados, teoria geral e mudanças hipotéticas são separados abaixo. Comandos runtime não foram executados.
 
+## Atualização — 2026-10-12
+
+[Marco 2.3](../architecture/milestone-2-3.md) implementa transições condicionais com evidência real de contenção/expiração. Migração de posse continua pendente no desenvolvimento, confirmada por metadados sem escrita; apenas bancos isolados foram migrados. Não há fencing no broker, orquestração ponta a ponta, desempenho produtivo ou experimento de confirmação COMMIT perdida. Revisão abaixo é histórica (2026-10-10).
+
+## Revisão histórica
+
+
 A API HTTP contém apenas `GET /health`, resposta fixa de liveness sem dependências ou login. Tracing JSON estruturado usa `RUST_LOG`. Erros de persistência/publicação expõem categorias sanitizadas em Display/Debug, mas conservam fontes tipadas. Imprimir essas fontes pode revelar conexão, SQL ou payload; formatação externa segura não é redação completa de logs. A revisão não leu credenciais reais ou linhas de aplicação.
 
 Tokens de ownership autorizam futuras transições condicionais no banco, não sigilo de dados. UUID identifica evento estável entre retries; token identifica uma aquisição. Modelos puros rejeitam tokens zero/inválidos, horários incoerentes, owners antigos e transições na expiração exata. Campos nullable da migração precisam estar ausentes juntos ou formar lease pending coerente. Constraints validam formato da linha; não provam histórico de transição, relógio corretamente amostrado ou enforcement concorrente de ownership. Isso exige mutações produtivas e testes concorrentes PostgreSQL, atualmente ausentes.

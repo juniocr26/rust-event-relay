@@ -3,10 +3,9 @@
 
 # Failure and transaction semantics - Milestone 1.8
 
-## Current extension — Milestone 2.2
+## Current extension — Milestone 2.3
 
-[Delivery state and ownership](milestone-2-2.md) and [ADR 007](../adr/007-durable-delivery-ownership.md) now define durable lease recovery and separate acquisition/completion/release contracts. New migration `20261009000000_add_delivery_ownership` adds nullable token/acquired_at/expires_at with coherent pending-only leases. Earlier milestone sections below describe their original scope; earlier claims that ownership/attempt semantics are undecided are superseded by ADR 007. Production mutation adapters remain deferred to 2.3; reader SELECT and publisher behavior remain unchanged.
-
+[PostgreSQL ownership operations](milestone-2-3.md) implement the existing 2.2 ports with short Read Committed transactions, post-lock database time and stale-owner rejection. Read-only snapshots still include leased pending rows. The original milestone sections below retain their historical scope; current behavior, uncertainty/cancellation limits and next 2.4 orchestration are detailed in the linked milestone.
 
 Milestone 1 supplies a durable representation and a read-only adapter, not a working delivery engine. This document closes the semantics/documentation acceptance criterion without implementing producer writes, ownership, transitions or destinations. Reviewed base: `7cba38d`; closing changes are uncommitted. See [review](../operations/milestone-1-review.md) and [current validation](../testing/validation-results.md#milestone-18-and-milestone-1-closure-2026-10-08).
 

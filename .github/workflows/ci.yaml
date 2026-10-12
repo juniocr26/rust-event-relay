@@ -41,6 +41,7 @@ jobs:
           rustup default 1.95.0
       - run: cargo test --locked --test postgres_repository -- --ignored --test-threads=4
       - run: cargo test --locked --test delivery_ownership_schema -- --ignored
+      - run: cargo test --locked --test postgres_ownership -- --ignored --test-threads=4
   rabbitmq-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 10

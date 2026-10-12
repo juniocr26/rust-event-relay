@@ -224,3 +224,11 @@ Execute `./scripts/check-postgres.sh` e `docker compose exec -T app sqlx migrate
 ## Testes do Marco 2.1
 
 [Comandos de integração RabbitMQ, ciclo Supervisor e validação management](../architecture/milestone-2-1.md#comandos-de-teste-e-evidências) são opt-in. Suíte padrão continua independente de banco/broker. Proxy com broker real verifica aceitação incerta após timeout/cancelamento sem reiniciar broker.
+
+## Integração de posse do Marco 2.3
+
+Reutilizar containers existentes; suíte aplica migração de posse apenas dentro de cada banco do harness. São 12 casos reais, com locks/expiração coordenados e rejeição imediata/diferida. Igualdade exata é evidência do modelo; proxy isolado testa confirmação perdida após COMMIT observado; cancelamento durante commit não verificado. Veja [escopo/evidência](../architecture/milestone-2-3.md) e [resultados](validation-results.md). Publisher/dependências RabbitMQ não mudaram; regressão do broker não foi exigida nem reexecutada.
+
+```bash
+docker compose exec -T app cargo test --locked --test postgres_ownership -- --ignored --test-threads=4
+```
