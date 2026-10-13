@@ -5,7 +5,7 @@ mod support;
 use lapin::{Channel, Connection, ConnectionProperties, options::*};
 use reliable_event_relay::{
     application::{
-        delivery::{DeliveryOutcome, ReleaseOutcome, deliver_once},
+        delivery::{DeliveryOutcome, FailureHandling, deliver_once},
         publisher::{EventPublisher, PublishError, PublishErrorKind},
         worker::{Decision, decision},
     },
@@ -118,6 +118,14 @@ struct Resources {
 }
 impl Resources {
     async fn spawn(&self, instrumented: Option<&str>, broker_port: Option<u16>) -> usize {
+        self.spawn_configured(instrumented, broker_port, "").await
+    }
+    async fn spawn_configured(
+        &self,
+        instrumented: Option<&str>,
+        broker_port: Option<u16>,
+        maintenance: &str,
+    ) -> usize {
         let database: String = checked(
             sqlx::query_scalar("SELECT current_database()")
                 .fetch_one(&self.pool)
@@ -134,7 +142,8 @@ impl Resources {
             cmd.env("RECOVERY_CHILD", mode)
                 .env("RECOVERY_READY", self.temp.join("ready"));
         }
-        cmd.env("POSTGRES_DB", database)
+        cmd.env("RELAY_MAINTENANCE_CANDIDATES", maintenance)
+            .env("POSTGRES_DB", database)
             .env("RABBITMQ_EXCHANGE", &self.topology.exchange)
             .env("RABBITMQ_QUEUE", &self.topology.queue)
             .env("RABBITMQ_ROUTING_KEY", &self.topology.routing_key)
@@ -499,7 +508,7 @@ async fn uncertain_publication_retains_claim_and_fresh_connection_does_not_repla
         hold.store(true,std::sync::atomic::Ordering::Release);
         let repo=PostgresOutboxRepository::new(r.pool.clone());
         let outcome=deliver_once(&repo,&publisher,request(1500)).await;
-        assert!(matches!(outcome,DeliveryOutcome::PublicationFailed { ref error,release:ReleaseOutcome::LeaseRetained,.. } if error.kind()==PublishErrorKind::Uncertain));
+        assert!(matches!(outcome,DeliveryOutcome::PublicationFailed { ref error,handling:FailureHandling::LeaseRetained,.. } if error.kind()==PublishErrorKind::Uncertain));
         assert_eq!(decision(&outcome),Decision::Replace);assert!(!publisher.is_usable());drop(publisher);
         message(&r.channel,&r.topology.queue,id).await; let before=state(&r.pool).await;
         assert_eq!(before[0]["status"],"pending");assert_eq!(before[0]["count"],1);
@@ -827,4 +836,95 @@ async fn harness_cleans_exact_resources_after_assertion_failure() {
     println!(
         "intentional assertion failure: exact child reaped, proxy joined, temp removed, broker resources and database independently absent"
     );
+}
+
+impl reliable_event_relay::persistence::OutboxRetryScheduler for CompletionConnection {
+    async fn schedule_retry(
+        &self,
+        r: reliable_event_relay::persistence::ScheduleRetry,
+    ) -> Result<
+        reliable_event_relay::persistence::RetryTransition<
+            reliable_event_relay::persistence::ScheduledRetry,
+        >,
+        PersistenceError,
+    > {
+        self.direct.schedule_retry(r).await
+    }
+}
+impl reliable_event_relay::persistence::OutboxFailurePreserver for CompletionConnection {
+    async fn preserve_failure(
+        &self,
+        r: reliable_event_relay::persistence::PreserveFailure,
+    ) -> Result<
+        reliable_event_relay::persistence::RetryTransition<
+            reliable_event_relay::persistence::PreservedFailure,
+        >,
+        PersistenceError,
+    > {
+        self.direct.preserve_failure(r).await
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires real PostgreSQL CREATE DATABASE and RabbitMQ"]
+async fn definitive_unroutable_schedules_recovers_original_and_preserves_final_failure() {
+    experiment(|r| async move {
+        use reliable_event_relay::{application::delivery::deliver_once_with_delay, application::retry_policy::selected_delay, persistence::*};
+        let id=Uuid::now_v7();seed(&r.pool,id).await;
+        let repo=PostgresOutboxRepository::new(r.pool.clone());
+        let publisher=RabbitMqPublisher::connect(config(r.topology.clone())).await.unwrap();
+        r.channel.queue_unbind(r.topology.queue.clone().into(),r.topology.exchange.clone().into(),r.topology.routing_key.clone().into(),Default::default()).await.unwrap();
+        let out=deliver_once_with_delay(&repo,&publisher,request(8000), |n|selected_delay(n,0)).await;
+        let DeliveryOutcome::PublicationFailed {claim,error,handling:FailureHandling::Scheduled(Ok(RetryTransition::Applied(scheduled)))}=out else {panic!("durable schedule")};
+        assert_eq!(error.kind(),PublishErrorKind::Unroutable);assert!(publisher.is_usable());assert_eq!(claim.key.event_id(),id);
+        assert_eq!(decision(&DeliveryOutcome::NoEvent),Decision::Idle);
+        let available:chrono::DateTime<chrono::Utc>=checked(sqlx::query_scalar("SELECT available_at FROM relay.outbox_events").fetch_one(&r.pool).await,"durable availability");
+        assert_eq!(available,scheduled.available_at);
+        assert!(repo.acquire(request(8000)).await.unwrap().is_none());empty(&r.channel,&r.topology.queue).await;
+        r.channel.queue_bind(r.topology.queue.clone().into(),r.topology.exchange.clone().into(),r.topology.routing_key.clone().into(),QueueBindOptions::default(),Default::default()).await.unwrap();
+        until(&r.pool,"SELECT clock_timestamp() >= available_at FROM relay.outbox_events").await;
+        // A new repository instance models loss of volatile schedule state.
+        let fresh=PostgresOutboxRepository::new(r.pool.clone());
+        let out=deliver_once(&fresh,&publisher,request(8000)).await;
+        let DeliveryOutcome::Published {claim:second,completion:Ok(TransitionOutcome::Applied)}=out else {panic!("completion")};
+        assert_eq!(second.key.event_id(),id);assert_ne!(claim.key.token(),second.key.token());assert_eq!(second.attempt_count,2);
+        message(&r.channel,&r.topology.queue,id).await;
+        let final_id=Uuid::now_v7();seed(&r.pool,final_id).await;
+        checked(sqlx::query("UPDATE relay.outbox_events SET attempt_count=9 WHERE id=$1").bind(final_id).execute(&r.pool).await,"final fixture");
+        r.channel.queue_unbind(r.topology.queue.clone().into(),r.topology.exchange.clone().into(),r.topology.routing_key.clone().into(),Default::default()).await.unwrap();
+        let out=deliver_once_with_delay(&repo,&publisher,request(8000), |_|panic!("no final sampling")).await;
+        assert!(matches!(out,DeliveryOutcome::PublicationFailed {error,handling:FailureHandling::Terminal(Ok(RetryTransition::Applied(value))),..} if error.kind()==PublishErrorKind::Unroutable && value.reason==reliable_event_relay::domain::retry::TerminalReason::AcquisitionBudgetExhausted));
+        let preserved:bool=checked(sqlx::query_scalar("SELECT status='dead_letter' AND processed_at IS NULL AND attempt_count=10 AND ownership_token IS NULL FROM relay.outbox_events WHERE id=$1").bind(final_id).fetch_one(&r.pool).await,"preserved final event");assert!(preserved);
+        empty(&r.channel,&r.topology.queue).await;publisher.close().await.unwrap();
+    }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires real PostgreSQL CREATE DATABASE and RabbitMQ"]
+async fn configured_worker_maintenance_protects_live_final_owner_and_keeps_general_delivery_possible()
+ {
+    experiment(|r| async move {
+        let exhausted_id=Uuid::now_v7();seed(&r.pool,exhausted_id).await;
+        checked(sqlx::query("UPDATE relay.outbox_events SET attempt_count=9 WHERE id=$1").bind(exhausted_id).execute(&r.pool).await,"final candidate fixture");
+        let repo=PostgresOutboxRepository::new(r.pool.clone());
+        let owned=repo.acquire(request(1500)).await.unwrap().unwrap();
+        let configured=format!("{}:{}:{}",exhausted_id,owned.retry_state().cycle(),owned.retry_state().revision());
+        let other=Uuid::now_v7();seed(&r.pool,other).await;
+        let child=r.spawn_configured(None,None,&configured).await;
+        r.log_until(child,"exact-ID maintenance outcome").await;
+        r.log_until(child,"Conflict").await;
+        message(&r.channel,&r.topology.queue,other).await;
+        until(&r.pool,"SELECT bool_and(clock_timestamp() >= expires_at) FROM relay.outbox_events WHERE ownership_token IS NOT NULL").await;
+        r.stop(child,"-TERM").await;
+        let pending:bool=checked(sqlx::query_scalar("SELECT status='pending' AND attempt_count=10 AND processed_at IS NULL FROM relay.outbox_events WHERE id=$1").bind(exhausted_id).fetch_one(&r.pool).await,"live-owner preservation and no repeated maintenance");assert!(pending);
+        // An independent observation supplies authority for a new explicitly
+        // configured run; this is not automatic requeue inside the first worker.
+        let revision:i64=checked(sqlx::query_scalar("SELECT state_revision FROM relay.outbox_events WHERE id=$1").bind(exhausted_id).fetch_one(&r.pool).await,"fresh candidate observation");
+        let fresh=format!("{exhausted_id}:1:{revision}");
+        let child=r.spawn_configured(None,None,&fresh).await;
+        r.log_until(child,"Applied").await;
+        r.stop(child,"-TERM").await;
+        let terminal:bool=checked(sqlx::query_scalar("SELECT status='dead_letter' AND processed_at IS NULL AND attempt_count=10 FROM relay.outbox_events WHERE id=$1").bind(exhausted_id).fetch_one(&r.pool).await,"expired owner maintenance");assert!(terminal);
+        empty(&r.channel,&r.topology.queue).await;
+    }).await;
 }

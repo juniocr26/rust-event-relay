@@ -126,4 +126,6 @@ Licença MIT; consulte [LICENSE](LICENSE).
 
 ## Marco 3.2 — persistência atual
 
-Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração fica em 3.3, scanner geral em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Implementação e rollout](docs/pt-BR/architecture/milestone-3-2.md).
+Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração implementada em 3.3; scanner geral fica em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Implementação e rollout](docs/pt-BR/architecture/milestone-3-2.md).
+
+[Marco 3.3 — integração atual](docs/pt-BR/architecture/milestone-3-3.md).

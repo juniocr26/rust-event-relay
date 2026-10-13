@@ -82,3 +82,7 @@ docker compose exec -T app cargo test --locked --test postgres_retry -- --ignore
 3.3 wires contextual definitive failure decisions, persisted cycle allowance and explicit unbiased jitter into deliver_once/worker while preserving uncertain leases and completion semantics; it must define bounded maintenance admission through the exact-row port. 3.4 adds general poison diagnosis/scanning. 3.5 adds authenticated audited replay with original identity. 3.6 adds integrated milestone acceptance/closure. Frontend remains illustrative and unchanged; 3.2 alone does not claim a deployed retry pipeline.
 
 Primary references: [PostgreSQL CHECK semantics](https://www.postgresql.org/docs/18/ddl-constraints.html), [time sampling](https://www.postgresql.org/docs/18/functions-datetime.html), [timestamp bounds](https://www.postgresql.org/docs/18/datatype-datetime.html).
+
+## Milestone 3.3 — current integration
+
+Application delivery/worker integration is implemented; earlier sections retain their dated historical scope. [Current contracts, jitter, contextual outcome table, maintenance and cancellation limits](milestone-3-3.md). General poison scanning remains 3.4, audited replay 3.5 and full acceptance 3.6; shared rollout remains pending.

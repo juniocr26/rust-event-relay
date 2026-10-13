@@ -126,4 +126,6 @@ MIT licensed; see [LICENSE](LICENSE).
 
 ## Milestone 3.2 — current persistence scope
 
-Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Implementation and rollout](docs/en/architecture/milestone-3-2.md).
+Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration is implemented in 3.3; general poison scanning remains 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Implementation and rollout](docs/en/architecture/milestone-3-2.md).
+
+[Milestone 3.3 — current integration](docs/en/architecture/milestone-3-3.md).

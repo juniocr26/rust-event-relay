@@ -20,6 +20,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 sqlx = { version = "=0.8.6", default-features = false, features = ["postgres", "runtime-tokio", "uuid", "chrono", "json"] }
 lapin = { version = "=4.12.0", default-features = false, features = ["tokio"] }
 url = "2"
+rand = "0.8"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["test-util", "process"] }

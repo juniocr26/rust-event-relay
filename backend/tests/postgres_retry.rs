@@ -576,3 +576,112 @@ async fn persisted_noninitial_cycle_allowance_and_terminal_reason_evidence_are_e
         Ok(())
     }).await;
 }
+
+/// Injected definitive rejection; these cases establish PostgreSQL acknowledgement
+/// loss through the real use case, not a real RabbitMQ NACK.
+struct RejectedPublisher;
+impl reliable_event_relay::application::publisher::EventPublisher for RejectedPublisher {
+    async fn publish(
+        &self,
+        _: &reliable_event_relay::domain::event::EventEnvelope,
+    ) -> Result<(), reliable_event_relay::application::publisher::PublishError> {
+        use reliable_event_relay::application::publisher::*;
+        Err(PublishError::new(PublishErrorKind::Rejected))
+    }
+}
+struct TransitionConnection {
+    direct: PostgresOutboxRepository,
+    transition: PostgresOutboxRepository,
+}
+impl OutboxAcquirer for TransitionConnection {
+    async fn acquire(
+        &self,
+        r: AcquireRequest,
+    ) -> Result<Option<OwnedOutboxEvent>, PersistenceError> {
+        self.direct.acquire(r).await
+    }
+}
+impl OutboxCompleter for TransitionConnection {
+    async fn complete(&self, key: OwnedEventKey) -> Result<TransitionOutcome, PersistenceError> {
+        self.direct.complete(key).await
+    }
+}
+impl OutboxRetryScheduler for TransitionConnection {
+    async fn schedule_retry(
+        &self,
+        r: ScheduleRetry,
+    ) -> Result<RetryTransition<ScheduledRetry>, PersistenceError> {
+        self.transition.schedule_retry(r).await
+    }
+}
+impl OutboxFailurePreserver for TransitionConnection {
+    async fn preserve_failure(
+        &self,
+        r: PreserveFailure,
+    ) -> Result<RetryTransition<PreservedFailure>, PersistenceError> {
+        self.transition.preserve_failure(r).await
+    }
+}
+#[tokio::test]
+#[ignore = "requires PostgreSQL and CREATE DATABASE"]
+async fn delivery_reports_lost_schedule_and_terminal_ack_without_repeating_or_erasing_primary() {
+    use reliable_event_relay::application::{
+        delivery::*, publisher::*, retry_policy::selected_delay,
+    };
+    isolated(|pool| async move {
+        setup(&pool).await;
+        for terminal in [false, true] {
+            sql(&pool, "DELETE FROM relay.outbox_events").await;
+            seed(&pool, 1).await;
+            if terminal {
+                sql(&pool, "UPDATE relay.outbox_events SET attempt_count=9").await;
+            }
+            let (proxy_pool, proxy) = faults::lost_commit_ack_pool(&pool).await;
+            let repo = TransitionConnection {
+                direct: PostgresOutboxRepository::new(pool.clone()),
+                transition: PostgresOutboxRepository::new(proxy_pool.clone()),
+            };
+            let out = tokio::time::timeout(
+                Duration::from_secs(5),
+                deliver_once_with_delay(&repo, &RejectedPublisher, request(), |n| {
+                    selected_delay(n, 0)
+                }),
+            )
+            .await
+            .unwrap();
+            let DeliveryOutcome::PublicationFailed {
+                error, handling, ..
+            } = out
+            else {
+                panic!("publication failure")
+            };
+            assert_eq!(error.kind(), PublishErrorKind::Rejected);
+            let error = match handling {
+                FailureHandling::Scheduled(Err(error)) if !terminal => error,
+                FailureHandling::Terminal(Err(error)) if terminal => error,
+                other => panic!("expected lost acknowledgement: {other:?}"),
+            };
+            assert_eq!(error.kind(), PersistenceErrorKind::CommitUncertain);
+            assert!(proxy.await.unwrap());
+            proxy_pool.close().await;
+            let durable = rows(&pool).await;
+            assert_eq!(durable[0]["state_revision"], 2); // acquisition + exactly one transition
+            assert_eq!(durable[0]["attempt_count"], if terminal { 10 } else { 1 });
+            assert_eq!(
+                durable[0]["status"],
+                if terminal { "dead_letter" } else { "pending" }
+            );
+            assert!(durable[0]["processed_at"].is_null());
+            assert!(durable[0]["ownership_token"].is_null());
+            assert!(repo.direct.acquire(request()).await?.is_none());
+        }
+        Ok(())
+    })
+    .await;
+}
+
+impl OutboxReleaser for TransitionConnection {
+    async fn release(&self, key: OwnedEventKey) -> Result<TransitionOutcome, PersistenceError> {
+        self.direct.release(key).await
+    }
+}

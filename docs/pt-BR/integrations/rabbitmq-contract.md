@@ -20,3 +20,7 @@ O adapter RabbitMQ chamável implementa o port `EventPublisher` da aplicação. 
 O mutex serializa uma publicação em andamento. Espera de admissão e publicação têm prazos separados; setup e fechamento também são limitados. Serialização/indisponibilidade, rejeição, ausência de rota e incerteza são resultados distintos. Timeout/erro/cancelamento após início do envio pode deixar aceitação desconhecida; o adapter aposenta o channel e exige reconexão explícita. Não faz retry automático. Token de lease do banco não é enviado como fencing ao broker e não impede envio externo de processo obsoleto.
 
 Leitor PostgreSQL, ports de ownership e publisher são caminhos separados de biblioteca. `main` compõe apenas configuração/tracing/liveness HTTP. Não há transação de produtor, worker polling, SQL de aquisição/completion, efeito de consumidor ou integração de pagamento ligando-os. Aquisição → publicação → conclusão permanece orquestração hipotética. Um diagrama ligando adapters como worker em execução seria incorreto.
+
+## Marco 3.3 — integração atual
+
+Integração de entrega/worker implementada; seções anteriores mantêm seu escopo histórico datado. [Contratos atuais, jitter, matriz contextual, manutenção e cancelamento](../architecture/milestone-3-3.md). Scanning geral fica em 3.4, replay auditado em 3.5 e aceitação completa em 3.6; rollout compartilhado permanece pendente.

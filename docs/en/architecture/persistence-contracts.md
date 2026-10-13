@@ -129,3 +129,7 @@ Milestone 2.2 additionally defines `CommitUncertain` for future mutation commit 
 ## Milestone 3.2 — current persistence scope
 
 Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Contracts, migration, failure semantics and rollout](milestone-3-2.md).
+
+## Milestone 3.3 — current integration
+
+Application delivery/worker integration is implemented; earlier sections retain their dated historical scope. [Current contracts, jitter, contextual outcome table, maintenance and cancellation limits](milestone-3-3.md). General poison scanning remains 3.4, audited replay 3.5 and full acceptance 3.6; shared rollout remains pending.

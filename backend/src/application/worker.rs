@@ -6,7 +6,8 @@ use super::{
 use crate::{
     config::WorkerConfig,
     persistence::{
-        AcquireRequest, OutboxAcquirer, OutboxCompleter, OutboxReleaser, TransitionOutcome,
+        AcquireRequest, OutboxAcquirer, OutboxCompleter, OutboxExhaustedMaintainer,
+        OutboxFailurePreserver, OutboxReleaser, OutboxRetryScheduler, TransitionOutcome,
     },
 };
 use std::{future::Future, time::Duration};
@@ -32,6 +33,10 @@ pub enum Decision {
 }
 
 /// All secondary transition results are retained in the logged outcome.
+/// Every definitive event failure, including acknowledged schedules/terminal states,
+/// uses failure pacing before general admission. This bounds hot topology failures
+/// without waiting for one event's durable due time. Unusable/uncertain publishers
+/// instead use reconnection pacing; reconnection never reconciles prior acceptance.
 pub fn decision(outcome: &DeliveryOutcome) -> Decision {
     match outcome {
         DeliveryOutcome::NoEvent => Decision::Idle,
@@ -88,10 +93,16 @@ pub async fn run<R, L>(
     shutdown: &mut (impl Future<Output = ()> + Unpin),
 ) -> Instant
 where
-    R: OutboxAcquirer + OutboxCompleter + OutboxReleaser,
+    R: OutboxAcquirer
+        + OutboxCompleter
+        + OutboxReleaser
+        + OutboxRetryScheduler
+        + OutboxFailurePreserver
+        + OutboxExhaustedMaintainer,
     L: PublisherLifecycle,
 {
     let mut publisher = None;
+    let mut maintenance = config.maintenance().iter().copied();
     let deadline = 'worker: loop {
         // Poll signal before constructing/admitting any operation.
         tokio::select! { biased; () = &mut *shutdown => break Instant::now() + config.shutdown, _ = std::future::ready(()) => {} }
@@ -141,6 +152,29 @@ where
                 break Instant::now() + config.shutdown;
             }
             continue;
+        }
+        // One configured observation consumed before each general delivery admission.
+        // Consume before awaiting: conflicts, errors, uncertainty and cancellation
+        // never automatically repeat a stale request in this run.
+        if let Some(candidate) = maintenance.next() {
+            let (result, stop) = drain_on_shutdown(
+                repository.preserve_exhausted(candidate),
+                &mut *shutdown,
+                config.drain,
+                config.shutdown,
+            )
+            .await;
+            if let Some(result) = result {
+                tracing::info!(candidate = ?candidate, outcome = ?result, "exact-ID maintenance outcome");
+            }
+            if let Some(deadline) = stop {
+                break deadline;
+            }
+            // Maintenance may have waited on storage. Recheck publisher health
+            // before admitting a claim; replacement stays in the existing loop.
+            if publisher.as_ref().is_some_and(|p| !lifecycle.usable(p)) {
+                continue;
+            }
         }
         let request = AcquireRequest::new(config.lease);
         let (outcome, stop) = drain_on_shutdown(

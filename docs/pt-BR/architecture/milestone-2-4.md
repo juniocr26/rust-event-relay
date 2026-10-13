@@ -71,3 +71,7 @@ Descartar future pode suprimir seu resultado. Não comprova rollback, não aceit
 [Testes do caso de uso](../../../backend/tests/delivery_use_case.rs) cobrem todas as categorias de publicação e resultados de transição, igualdade completa do envelope, preservação de erro/fonte, contexto ID/token, sequência de chamadas únicas, espera pela confirmação, cancelamento em quatro fronteiras aguardadas e Send/despacho estático. O fixture expirado demonstra que a aplicação não substitui autoridade do banco pelo seu relógio. Consulte [validação datada](../testing/validation-results.md#marco-24--2026-10-12) e handoff 2.4 (ausente no checkout 2.5).
 
 Infraestrutura e schema não mudaram; suítes reais opt-in de PostgreSQL/RabbitMQ não foram repetidas sem motivo. Não há polling, registro de worker no Supervisor, reconexão, retry/backoff/jitter, quarentena/DLQ, endpoint produtor ou idempotência do consumidor. Não há alegação de desempenho, entrega ponta a ponta pelo menos uma vez ou exatamente uma vez. **2.5** compõe e opera worker de polling, lifecycle/reconexão do publisher e integração Supervisor. **2.6** executa experimentos ponta a ponta de falha, crash e recuperação.
+
+## Marco 3.3 — integração atual
+
+Integração de entrega/worker implementada; seções anteriores mantêm seu escopo histórico datado. [Contratos atuais, jitter, matriz contextual, manutenção e cancelamento](milestone-3-3.md). Scanning geral fica em 3.4, replay auditado em 3.5 e aceitação completa em 3.6; rollout compartilhado permanece pendente.

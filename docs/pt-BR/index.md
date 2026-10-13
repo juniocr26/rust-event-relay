@@ -93,3 +93,5 @@ Aplicabilidade e omissões estão justificadas no [checklist](operations/complet
 - [ADR 008 — durable failure policy](adr/008-durable-failure-policy.md)
 
 - [Marco 3.2 — persistência atual](architecture/milestone-3-2.md)
+
+[Marco 3.3 — integração atual](architecture/milestone-3-3.md).

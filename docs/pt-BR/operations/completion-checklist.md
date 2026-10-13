@@ -62,3 +62,7 @@ SQL/concorrência de ownership, worker, efeitos produtor/consumidor, linhas inv�
 ## Política do Marco 3.1
 
 Marco 3.1 define matriz de falhas, contratos de agenda/orçamento/isolamento/replay e próximos marcos. Somente cálculos puros foram implementados; persistência futura e cenários frontend continuam planejados. [Policy](../architecture/milestone-3-1.md) | [ADR 008](../adr/008-durable-failure-policy.md).
+
+## Marco 3.3 — integração atual
+
+Integração de entrega/worker implementada; seções anteriores mantêm seu escopo histórico datado. [Contratos atuais, jitter, matriz contextual, manutenção e cancelamento](../architecture/milestone-3-3.md). Scanning geral fica em 3.4, replay auditado em 3.5 e aceitação completa em 3.6; rollout compartilhado permanece pendente.

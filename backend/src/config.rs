@@ -69,6 +69,8 @@ mod tests {
 #[derive(Debug, Clone)]
 pub struct WorkerConfig {
     pub lease: crate::domain::delivery::LeaseDuration,
+    /// Independently observed exact ID/cycle/revision; at most 32 per process run.
+    maintenance: Vec<crate::persistence::ExhaustedEvent>,
     pub idle: std::time::Duration,
     pub failure: std::time::Duration,
     pub reconnect: std::time::Duration,
@@ -80,6 +82,9 @@ pub struct WorkerConfig {
     pub shutdown: std::time::Duration,
 }
 impl WorkerConfig {
+    pub fn maintenance(&self) -> &[crate::persistence::ExhaustedEvent] {
+        &self.maintenance
+    }
     pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> Result<Self, ConfigError> {
         let value = |key: &str, default: u64, max: u64| -> Result<u64, ConfigError> {
             let n = get(key)
@@ -97,7 +102,40 @@ impl WorkerConfig {
             .checked_mul(1000)
             .and_then(|n| i64::try_from(n).ok())
             .ok_or_else(|| ConfigError("RELAY_LEASE_MS conversion overflow".into()))?;
+        let raw = get("RELAY_MAINTENANCE_CANDIDATES").unwrap_or_default();
+        if raw.len() > 4096 {
+            return Err(ConfigError("maintenance input exceeds 4096 bytes".into()));
+        }
+        let mut maintenance = Vec::new();
+        if !raw.is_empty() {
+            for item in raw.split(',') {
+                if maintenance.len() == 32 {
+                    return Err(ConfigError("at most 32 maintenance candidates".into()));
+                }
+                let fields: Vec<_> = item.split(':').collect();
+                let invalid = || {
+                    ConfigError("maintenance requires UUID:cycle:revision with unique IDs".into())
+                };
+                if fields.len() != 3 {
+                    return Err(invalid());
+                }
+                let id = fields[0].parse::<uuid::Uuid>().map_err(|_| invalid())?;
+                let cycle = fields[1].parse::<i32>().map_err(|_| invalid())?;
+                let revision = fields[2].parse::<i64>().map_err(|_| invalid())?;
+                if maintenance
+                    .iter()
+                    .any(|c: &crate::persistence::ExhaustedEvent| c.id() == id)
+                {
+                    return Err(invalid());
+                }
+                maintenance.push(
+                    crate::persistence::ExhaustedEvent::new(id, cycle, revision)
+                        .map_err(|_| invalid())?,
+                );
+            }
+        }
         let config = Self {
+            maintenance,
             lease: crate::domain::delivery::LeaseDuration::from_micros(micros)
                 .map_err(|_| ConfigError("invalid lease".into()))?,
             idle: duration("RELAY_IDLE_MS", 1000, 60000)?,

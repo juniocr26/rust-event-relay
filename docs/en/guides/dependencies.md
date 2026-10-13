@@ -35,3 +35,7 @@ PostgreSQL follows the same visible-state philosophy through `.dockerized-postgr
 See [query, restoration, bounds and errors](../database/postgres-repository.md), [integration test guidance](../testing/strategy.md) and [executed validation](../testing/validation-results.md). SQLx is now an application dependency as well as separate migration tooling. Writes, claims and processing remain deferred; Milestones 1.7 and 1.8 are complete: integration evidence and [failure/transaction semantics](../architecture/failure-and-transactions.md). Milestone 1 is closed; [Milestone 2.1](../architecture/milestone-2-1.md) adds the publisher while worker delivery remains deferred.
 
 [Milestone 2.1](../architecture/milestone-2-1.md) adds Lapin 4.12.0 (Tokio, local plaintext AMQP) and URL encoding. After rebuilding artifacts, start the `http` child with `supervisorctl start http`.
+
+## Milestone 3.3 — current integration
+
+Application delivery/worker integration is implemented; earlier sections retain their dated historical scope. [Current contracts, jitter, contextual outcome table, maintenance and cancellation limits](../architecture/milestone-3-3.md). General poison scanning remains 3.4, audited replay 3.5 and full acceptance 3.6; shared rollout remains pending.

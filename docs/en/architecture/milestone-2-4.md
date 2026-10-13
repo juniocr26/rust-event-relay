@@ -71,3 +71,7 @@ Dropping a future can suppress its outcome. It does not establish rollback, nona
 [Use-case tests](../../../backend/tests/delivery_use_case.rs) cover all publication categories and transition results, exact envelope equality, original error/source preservation, event/token context, single-call sequencing, confirmation gating, cancellation at four awaited boundaries and Send/static-dispatch behavior. The expired fixture intentionally shows that the application does not substitute its clock for database authority. See [dated validation](../testing/validation-results.md#milestone-24--2026-10-12) and 2.4 handoff (absent in the 2.5 checkout).
 
 Infrastructure code and schema are unchanged, so unrelated opt-in real PostgreSQL/RabbitMQ regressions were not rerun. There is no polling worker, Supervisor registration, reconnection, retry/backoff/jitter, quarantine/DLQ, producer endpoint or consumer idempotency. No performance, end-to-end at-least-once or exactly-once claim is made. **2.5** composes and operates the polling worker, publisher lifecycle/reconnection and Supervisor integration. **2.6** performs end-to-end crash/recovery failure experiments.
+
+## Milestone 3.3 — current integration
+
+Application delivery/worker integration is implemented; earlier sections retain their dated historical scope. [Current contracts, jitter, contextual outcome table, maintenance and cancellation limits](milestone-3-3.md). General poison scanning remains 3.4, audited replay 3.5 and full acceptance 3.6; shared rollout remains pending.

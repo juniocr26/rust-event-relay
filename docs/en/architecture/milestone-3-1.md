@@ -103,3 +103,7 @@ Pure [policy calculations](../../../backend/src/application/retry_policy.rs) and
 
 
 Historical counts predating ownership acquisitions cannot be reconstructed; baseline zero conservatively preserves their budget impact. Proposed schedule/terminal ports perform one transaction and return Applied or OwnershipLost for O predicate mismatch, retaining existing PersistenceError categories including CommitUncertain. Acknowledged repeated transitions with the old token/revision are rejected, not treated as idempotent success. M revision conflicts leave the row unchanged. Revision/audit-counter arithmetic must be checked; exhaustion refuses the transition without wrapping.
+
+## Milestone 3.3 — current integration
+
+Application delivery/worker integration is implemented; earlier sections retain their dated historical scope. [Current contracts, jitter, contextual outcome table, maintenance and cancellation limits](milestone-3-3.md). General poison scanning remains 3.4, audited replay 3.5 and full acceptance 3.6; shared rollout remains pending.

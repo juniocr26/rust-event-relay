@@ -1,6 +1,6 @@
 use reliable_event_relay::{
     application::{
-        delivery::{DeliveryClaim, DeliveryOutcome, ReleaseOutcome},
+        delivery::{DeliveryClaim, DeliveryOutcome, FailureHandling},
         publisher::{EventPublisher, PublishError, PublishErrorKind},
         worker::{self, Decision, PublisherLifecycle},
     },
@@ -27,6 +27,10 @@ use tokio::{
 
 struct Repo {
     tokens: Mutex<Vec<OwnershipToken>>,
+    maintenance: Mutex<Vec<(ExhaustedEvent, usize)>>,
+    maintenance_error: Option<PersistenceErrorKind>,
+    maintenance_block: bool,
+    maintenance_entered: Notify,
     responses: Mutex<VecDeque<Result<Option<OwnedOutboxEvent>, PersistenceError>>>,
     admitted: Notify,
     block: AtomicBool,
@@ -35,6 +39,10 @@ impl Repo {
     fn new() -> Self {
         Self {
             tokens: Mutex::new(vec![]),
+            maintenance: Mutex::new(vec![]),
+            maintenance_error: None,
+            maintenance_block: false,
+            maintenance_entered: Notify::new(),
             responses: Mutex::new(VecDeque::new()),
             admitted: Notify::new(),
             block: AtomicBool::new(false),
@@ -143,6 +151,7 @@ fn claim() -> DeliveryClaim {
         )
         .unwrap(),
         attempt_count: 1,
+        retry: reliable_event_relay::domain::retry::RetryState::initial(1).unwrap(),
     }
 }
 #[test]
@@ -199,23 +208,47 @@ fn exhaustive_outcome_policy_and_sanitized_diagnostics() {
         } else {
             Decision::Pace
         };
-        let releases = [
-            ReleaseOutcome::LeaseRetained,
-            ReleaseOutcome::Attempted(Ok(TransitionOutcome::Applied)),
-            ReleaseOutcome::Attempted(Ok(TransitionOutcome::OwnershipLost)),
-            ReleaseOutcome::Attempted(Err(PersistenceError::new(
+        let handling_results = [
+            FailureHandling::LeaseRetained,
+            FailureHandling::PolicyFailed(
+                reliable_event_relay::application::retry_policy::PolicyError::InvalidSample,
+            ),
+            FailureHandling::Released(Ok(TransitionOutcome::Applied)),
+            FailureHandling::Released(Ok(TransitionOutcome::OwnershipLost)),
+            FailureHandling::Released(Err(PersistenceError::new(
+                PersistenceErrorKind::CommitUncertain,
+            ))),
+            FailureHandling::Terminal(Ok(RetryTransition::Applied(PreservedFailure {
+                terminal_at: chrono::DateTime::from_timestamp(0, 0).unwrap(),
+                reason:
+                    reliable_event_relay::domain::retry::TerminalReason::AcquisitionBudgetExhausted,
+                revision: 2,
+            }))),
+            FailureHandling::Terminal(Ok(RetryTransition::Conflict)),
+            FailureHandling::Terminal(Err(PersistenceError::new(
                 PersistenceErrorKind::OperationFailed,
             ))),
-            ReleaseOutcome::Attempted(Err(PersistenceError::new(
+            FailureHandling::Terminal(Err(PersistenceError::new(
+                PersistenceErrorKind::CommitUncertain,
+            ))),
+            FailureHandling::Scheduled(Ok(RetryTransition::Applied(ScheduledRetry {
+                available_at: chrono::DateTime::from_timestamp(0, 0).unwrap(),
+                revision: 1,
+            }))),
+            FailureHandling::Scheduled(Ok(RetryTransition::Conflict)),
+            FailureHandling::Scheduled(Err(PersistenceError::new(
+                PersistenceErrorKind::OperationFailed,
+            ))),
+            FailureHandling::Scheduled(Err(PersistenceError::new(
                 PersistenceErrorKind::CommitUncertain,
             ))),
         ];
-        for release in releases {
+        for handling in handling_results {
             assert_eq!(
                 worker::decision(&DeliveryOutcome::PublicationFailed {
                     claim: claim(),
                     error: PublishError::new(kind),
-                    release
+                    handling
                 }),
                 expected
             );
@@ -403,4 +436,139 @@ async fn known_unusable_publisher_is_closed_before_any_acquisition() {
     stop.notify_one();
     task.await;
     assert_eq!(lifecycle.connects.load(Ordering::SeqCst), 1);
+}
+
+impl OutboxRetryScheduler for Repo {
+    async fn schedule_retry(
+        &self,
+        _: ScheduleRetry,
+    ) -> Result<RetryTransition<ScheduledRetry>, PersistenceError> {
+        Ok(RetryTransition::Applied(ScheduledRetry {
+            available_at: chrono::DateTime::from_timestamp(1000, 0).unwrap(),
+            revision: 2,
+        }))
+    }
+}
+impl OutboxFailurePreserver for Repo {
+    async fn preserve_failure(
+        &self,
+        _: PreserveFailure,
+    ) -> Result<RetryTransition<PreservedFailure>, PersistenceError> {
+        Ok(RetryTransition::Conflict)
+    }
+}
+impl OutboxExhaustedMaintainer for Repo {
+    async fn preserve_exhausted(
+        &self,
+        candidate: ExhaustedEvent,
+    ) -> Result<RetryTransition<PreservedFailure>, PersistenceError> {
+        self.maintenance
+            .lock()
+            .unwrap()
+            .push((candidate, self.tokens.lock().unwrap().len()));
+        self.maintenance_entered.notify_one();
+        if self.maintenance_block {
+            pending::<()>().await;
+        }
+        if let Some(kind) = self.maintenance_error {
+            return Err(PersistenceError::new(kind));
+        }
+        Ok(RetryTransition::Conflict)
+    }
+}
+
+#[test]
+fn maintenance_configuration_is_bounded_and_validated() {
+    let a = uuid::Uuid::now_v7();
+    for bad in [
+        "secret".to_string(),
+        format!("{a}:0:0"),
+        format!("{a}:1:-1"),
+        format!("{a}:1:0,{a}:1:1"),
+        format!("{}:1:0", uuid::Uuid::nil()),
+        "x".repeat(4097),
+    ] {
+        assert!(
+            WorkerConfig::from_lookup(
+                |k| (k == "RELAY_MAINTENANCE_CANDIDATES").then(|| bad.clone())
+            )
+            .is_err()
+        );
+    }
+    let list = (0..33)
+        .map(|_| format!("{}:1:0", uuid::Uuid::now_v7()))
+        .collect::<Vec<_>>()
+        .join(",");
+    assert!(
+        WorkerConfig::from_lookup(|k| (k == "RELAY_MAINTENANCE_CANDIDATES").then(|| list.clone()))
+            .is_err()
+    );
+    let list = list.rsplit_once(',').unwrap().0;
+    assert_eq!(
+        WorkerConfig::from_lookup(|k| (k == "RELAY_MAINTENANCE_CANDIDATES").then(|| list.into()))
+            .unwrap()
+            .maintenance()
+            .len(),
+        32
+    );
+}
+#[tokio::test(start_paused = true)]
+async fn maintenance_attempts_alternate_with_general_admission_and_never_repeat_stale_candidates() {
+    for error in [
+        None,
+        Some(PersistenceErrorKind::OperationFailed),
+        Some(PersistenceErrorKind::CommitUncertain),
+    ] {
+        let mut repo = Repo::new();
+        repo.maintenance_error = error;
+        let raw = format!(
+            "{}:2:17,{}:3:19",
+            uuid::Uuid::now_v7(),
+            uuid::Uuid::now_v7()
+        );
+        let cfg = WorkerConfig::from_lookup(|k| {
+            (k == "RELAY_MAINTENANCE_CANDIDATES").then(|| raw.clone())
+        })
+        .unwrap();
+        let lifecycle = Lifecycle::new();
+        let stop = Notify::new();
+        let mut signal = Box::pin(stop.notified());
+        let mut task = Box::pin(worker::run(&repo, &lifecycle, &cfg, &mut signal));
+        for i in 0..3 {
+            tokio::select! { _=&mut task=>panic!("stop"), ()=repo.admitted.notified()=>{} }
+            if i < 2 {
+                advance(cfg.idle).await;
+            }
+        }
+        let attempted = repo.maintenance.lock().unwrap().clone();
+        assert_eq!(attempted.len(), 2);
+        assert_eq!(attempted[0].0.revision(), 17);
+        assert_eq!(attempted[0].1, 0);
+        assert_eq!(attempted[1].0.revision(), 19);
+        assert_eq!(attempted[1].1, 1);
+        stop.notify_one();
+        task.await;
+    }
+}
+#[tokio::test(start_paused = true)]
+async fn cancelled_maintenance_does_not_admit_delivery_or_followup() {
+    let mut repo = Repo::new();
+    repo.maintenance_block = true;
+    let raw = format!(
+        "{}:1:10,{}:1:20",
+        uuid::Uuid::now_v7(),
+        uuid::Uuid::now_v7()
+    );
+    let cfg =
+        WorkerConfig::from_lookup(|k| (k == "RELAY_MAINTENANCE_CANDIDATES").then(|| raw.clone()))
+            .unwrap();
+    let lifecycle = Lifecycle::new();
+    let stop = Notify::new();
+    let mut signal = Box::pin(stop.notified());
+    let mut task = Box::pin(worker::run(&repo, &lifecycle, &cfg, &mut signal));
+    tokio::select! {_=&mut task=>panic!("stop"), ()=repo.maintenance_entered.notified()=>{}}
+    stop.notify_one();
+    task.await;
+    assert!(repo.tokens.lock().unwrap().is_empty());
+    assert_eq!(repo.maintenance.lock().unwrap().len(), 1);
 }

@@ -35,3 +35,7 @@ PostgreSQL segue a mesma filosofia de estado visível com `.dockerized-postgres/
 Veja [consulta, restauração, limites e erros](../database/postgres-repository.md), [testes de integração](../testing/strategy.md) e [validação executada](../testing/validation-results.md). SQLx agora também é dependência da aplicação. Escrita, claims e processamento ficam adiados; Marcos 1.7 e 1.8 concluídos: integração e [semântica de falhas/transações](../architecture/failure-and-transactions.md). Marco 1 fechado; Marcos 2.1/2.2 adicionam publisher e contratos/schema de ownership; mutações produtivas e worker continuam adiados.
 
 [Marco 2.1](../architecture/milestone-2-1.md) adiciona Lapin 4.12.0 (Tokio, AMQP local plaintext) e encoding de URL. Após reconstruir artefatos, inicie filho `http` com `supervisorctl start http`.
+
+## Marco 3.3 — integração atual
+
+Integração de entrega/worker implementada; seções anteriores mantêm seu escopo histórico datado. [Contratos atuais, jitter, matriz contextual, manutenção e cancelamento](../architecture/milestone-3-3.md). Scanning geral fica em 3.4, replay auditado em 3.5 e aceitação completa em 3.6; rollout compartilhado permanece pendente.

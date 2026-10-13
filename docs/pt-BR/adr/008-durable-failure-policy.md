@@ -2,7 +2,7 @@
 
 # ADR 008 — Política durável de falhas e contratos de recuperação
 
-Status: aceito; persistência 3.2 implementada, integração da aplicação e rollout compartilhado planejados. Data: 2026-10-12.
+Status: aceito; persistência 3.2 e integração da aplicação 3.3 implementadas; rollout compartilhado planejado. Data: 2026-10-12.
 
 ## Contexto
 
@@ -21,3 +21,5 @@ Orçamento de publicações exige protocolo durável adicional e não mede aceit
 3.1 implementa somente cálculos puros de orçamento/backoff e testes, sem migrations ou integração. Critérios 3.2–3.6 e pré-requisitos estão na política. Garantias ADR 007 preservadas.
 
 Atualização de implementação (12/10/2026): transições persistentes/testes isolados de 3.2 implementados; integração do pipeline e rollout compartilhado continuam pendentes. [Marco 3.2](../architecture/milestone-3-2.md).
+
+Atualização (2026-10-13): [integração 3.3](../architecture/milestone-3-3.md) implementada. Serialização sem contexto retém lease; atestado permanente explícito autoriza preservação. Unavailable mantém liberação antes do envio conforme ADR somente enquanto houver orçamento; falha definitiva final preserva esgotamento. Rollout compartilhado permanece pendente.

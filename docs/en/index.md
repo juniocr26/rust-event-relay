@@ -93,3 +93,5 @@ Category applicability and omissions are justified in the [completion checklist]
 - [ADR 008 — durable failure policy](adr/008-durable-failure-policy.md)
 
 - [Milestone 3.2 — current persistence scope](architecture/milestone-3-2.md)
+
+[Milestone 3.3 — current integration](architecture/milestone-3-3.md).

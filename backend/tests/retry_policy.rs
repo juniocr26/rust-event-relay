@@ -74,3 +74,30 @@ fn invalid_bounds_precision_and_timestamp_overflow_are_rejected() {
         Err(PolicyError::InvalidTimestamp)
     );
 }
+
+#[test]
+fn integrated_equal_jitter_has_inclusive_microsecond_endpoints() {
+    use reliable_event_relay::application::retry_policy::{
+        PolicyError, sample_delay, selected_delay,
+    };
+    for (n, floor, ceiling) in [
+        (1, 500_000, 1_000_000),
+        (2, 1_000_000, 2_000_000),
+        (10, 150_000_000, 300_000_000),
+        (i32::MAX as u32, 150_000_000, 300_000_000),
+    ] {
+        assert_eq!(selected_delay(n, 0).unwrap().as_micros(), floor);
+        assert_eq!(
+            selected_delay(n, ceiling - floor).unwrap().as_micros(),
+            ceiling
+        );
+        assert_eq!(selected_delay(n, -1), Err(PolicyError::InvalidSample));
+        assert_eq!(
+            selected_delay(n, ceiling - floor + 1),
+            Err(PolicyError::InvalidSample)
+        );
+        assert!((floor..=ceiling).contains(&sample_delay(n).unwrap().as_micros()));
+    }
+    assert!(selected_delay(0, 0).is_err());
+    assert!(selected_delay(u32::MAX, 0).is_err());
+}

@@ -103,3 +103,7 @@ Vue/cenários continuam inalterados e sem infraestrutura. Cenários ilustrativos
 
 
 Contagens anteriores à aquisição por ownership não podem ser reconstruídas; baseline zero preserva conservadoramente seu impacto no orçamento. Ports futuros de agenda/terminal executam uma transação e retornam Applied ou OwnershipLost quando O não corresponde, preservando categorias PersistenceError incluindo CommitUncertain. Repetição reconhecida com token/revisão antigos é recusada, não sucesso idempotente. Conflito de revisão M não altera linha. Aritmética de revisão/contador de auditoria deve ser verificada; esgotamento recusa transição sem wrap.
+
+## Marco 3.3 — integração atual
+
+Integração de entrega/worker implementada; seções anteriores mantêm seu escopo histórico datado. [Contratos atuais, jitter, matriz contextual, manutenção e cancelamento](milestone-3-3.md). Scanning geral fica em 3.4, replay auditado em 3.5 e aceitação completa em 3.6; rollout compartilhado permanece pendente.

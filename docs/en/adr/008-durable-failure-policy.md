@@ -2,7 +2,7 @@
 
 # ADR 008 — Durable failure policy and recovery contracts
 
-Status: accepted; 3.2 persistence implemented, application integration and shared rollout planned. Date: 2026-10-12.
+Status: accepted; 3.2 persistence and 3.3 application integration implemented; shared rollout planned. Date: 2026-10-12.
 
 ## Context
 
@@ -21,3 +21,5 @@ Publication budgets need an additional durable protocol and still cannot atomica
 3.1 implements only pure budget/backoff calculations and tests. No migrations or pipeline wiring. 3.2–3.6 acceptance and deployment prerequisites are specified in the policy. ADR 007 guarantees remain unchanged.
 
 Implementation update (2026-10-12): 3.2 persistence transitions and isolated tests are implemented; pipeline integration and shared rollout remain pending. [Milestone 3.2](../architecture/milestone-3-2.md).
+
+Implementation update (2026-10-13): [3.3 application integration](../architecture/milestone-3-3.md) is implemented. Uncontextualized serialization conservatively retains its lease; explicit permanent attestation authorizes preservation. Infrastructure Unavailable retains ADR before-send release only while allowance remains; final definitive failure preserves exhaustion. Shared rollout remains pending.

@@ -13,10 +13,15 @@ pub trait EventPublisher {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PublishErrorKind {
+    /// Before-send admission/resource failure; no acceptance in this invocation.
     Unavailable,
+    /// Before-send encoding failure; category alone proves no permanence.
     Serialization,
+    /// Definitive negative confirmation; no required acceptance established.
     Rejected,
+    /// Definitive failure of required routing; topology may be repairable.
     Unroutable,
+    /// Sending may have begun; acceptance is unknown. Never compensate blindly.
     Uncertain,
 }
 
@@ -24,16 +29,35 @@ pub enum PublishErrorKind {
 pub struct PublishError {
     kind: PublishErrorKind,
     source: Option<Box<dyn Error + Send + Sync>>,
+    permanent_evidence: Option<crate::domain::retry::FailureEvidence>,
 }
 impl PublishError {
     pub fn new(kind: PublishErrorKind) -> Self {
-        Self { kind, source: None }
+        Self {
+            kind,
+            source: None,
+            permanent_evidence: None,
+        }
     }
     pub fn with_source(kind: PublishErrorKind, source: impl Error + Send + Sync + 'static) -> Self {
         Self {
             kind,
             source: Some(Box::new(source)),
+            permanent_evidence: None,
         }
+    }
+    /// Explicit adapter/caller attestation of a reproducible event-specific encoder
+    /// defect. Generic serialization errors must use the ordinary constructors.
+    /// This grants terminal policy authority; it is not inferred from the category.
+    pub fn permanent_serialization(evidence: crate::domain::retry::FailureEvidence) -> Self {
+        Self {
+            kind: PublishErrorKind::Serialization,
+            source: None,
+            permanent_evidence: Some(evidence),
+        }
+    }
+    pub fn permanent_evidence(&self) -> Option<crate::domain::retry::FailureEvidence> {
+        self.permanent_evidence
     }
     pub fn kind(&self) -> PublishErrorKind {
         self.kind

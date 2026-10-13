@@ -1,4 +1,4 @@
-//! Pure Milestone 3 policy calculations; not wired to delivery or persistence.
+//! Pure backoff calculations with a separate production equal-jitter sampler.
 use crate::domain::delivery::DeliveryState;
 use chrono::{DateTime, Duration, Utc};
 
@@ -94,4 +94,32 @@ impl RetryBackoff {
         now.checked_add_signed(Duration::microseconds(delay))
             .ok_or(PolicyError::InvalidTimestamp)
     }
+}
+
+/// ADR 008: equal jitter on the inclusive whole-microsecond interval.
+/// Sampling is separate so callers can inject exact boundary offsets in tests.
+pub fn selected_delay(
+    acquisition: u32,
+    offset: i64,
+) -> Result<crate::domain::retry::RetryDelay, PolicyError> {
+    let ceiling = RetryBackoff::new(1_000_000, 300_000_000)?.ceiling_micros(acquisition)?;
+    let floor = ceiling / 2 + ceiling % 2;
+    if !(0..=ceiling - floor).contains(&offset) {
+        return Err(PolicyError::InvalidSample);
+    }
+    let micros = floor
+        .checked_add(offset)
+        .ok_or(PolicyError::InvalidBounds)?;
+    crate::domain::retry::RetryDelay::from_micros(micros).map_err(|_| PolicyError::InvalidBounds)
+}
+/// Thread-local OS-seeded rand 0.8 generator; gen_range uses unbiased bounded
+/// sampling, never naive modulo reduction. No RNG is held across an await.
+pub fn sample_delay(acquisition: u32) -> Result<crate::domain::retry::RetryDelay, PolicyError> {
+    use rand::Rng;
+    let ceiling = RetryBackoff::new(1_000_000, 300_000_000)?.ceiling_micros(acquisition)?;
+    let floor = ceiling / 2 + ceiling % 2;
+    selected_delay(
+        acquisition,
+        rand::thread_rng().gen_range(0..=ceiling - floor),
+    )
 }

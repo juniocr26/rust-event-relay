@@ -771,3 +771,39 @@ Read-only environment inspection confirmed app bind `/app`, PostgreSQL bind `/va
 CI now includes the new PostgreSQL target but was not remotely executed. Pipeline policy integration, general poison scanning, authenticated audited replay and integrated Milestone 3 closure remain 3.3/3.4/3.5/3.6 respectively. No staging, commit or push. The temporary continuation report is returned in chat, not stored in either repository.
 
 [Implementation and rollout](../architecture/milestone-3-2.md).
+
+## Milestone 3.3 — 2026-10-13
+
+Base Rust `e6f8a2f44d9ac250e1bcdf5f0b6a3b5b7bd5f1eb`; Library `303ed8602aa5727e2a47bf02a2ef7f0856e21760`, both initially clean. No applicable AGENTS.md or supplied continuation report. Historical entries above were not counted as current checks.
+
+Executed in the existing app container (Rust 1.95.0), using harness-owned UUID databases, unique broker topology and owned child/proxy processes:
+
+- Standard tests: 60 passed; opt-in tests separately executed below. Controlled delivery tests: 8; worker tests: 12; retry policy tests: 4. No flaky statistical jitter checks.
+- PostgreSQL retry: 18 passed, including injected Rejected publication through deliver_once with real schedule/terminal COMMIT acknowledgement loss. The publisher is a fake in those two transition experiments, explicitly not a broker NACK.
+- Integrated recovery: 12 real cases passed plus internal boundary_child entry (no-op without RECOVERY_CHILD). Includes real unroutability → persisted schedule → early acquisition denied → repaired route/fresh token/original identity completed, terminal final failure, and configured worker maintenance protecting active ownership/unrelated delivery.
+- PostgreSQL ownership: 12; repository: 15 opt-in; ownership schema: 1; RabbitMQ publisher: 2; worker smoke: 4; closed-connection adapter regression: 1, all passed. Across opt-in targets: 65 substantive cases plus the internal no-op entry.
+- cargo fmt -- --check, strict cargo clippy --locked --all-targets -- -D warnings, cargo build --locked --bins and RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps passed.
+- Documentation validator unit suite: 18 passed. Final read-only documentation validator: 232 documents, zero errors and 18 existing restricted-fixture warnings; git diff --check passed in both repositories.
+
+Corrected during this work: strict Clippy caught a test MutexGuard scope spanning await; the test now clones the bounded observations before suspension. The first interim documentation scan found four missing new validation anchors while these entries were still being written; final validation includes them. No production defect requiring SQL/schema/protocol changes was found. Existing recovery acquisition counts remain unchanged; the new scheduled-recovery case uses two committed acquisitions because the first definitively fails and the second completes after durable eligibility returns.
+
+Read-only environment inspection: PostgreSQL and RabbitMQ healthy; HTTP RUNNING, shared relay STOPPED/Not started. sqlx migrate info reports only 20261007000000/20261007175358 installed; 20261009000000 ownership and 20261012000000 durable retry pending. Shared migrations were not applied; no shared service stop/start/rebuild, credentials or volumes changed. Only isolated fixtures apply migrations. Remote CI was not executed. No staging, commit or push. Library changes are documentation only. No Viva Bem modifications.
+
+Limitations: generic serialization lacks event/global context and conservatively retains ownership. Finite configured maintenance supplies no discovery or general backlog coverage, pauses without a usable publisher and has no durable restart cursor; stale configuration must be removed and metadata re-observed. No generic uncertain-result reconciliation or consumer idempotency exists. [Contracts and exact remaining 3.4 scope](../architecture/milestone-3-3.md).
+
+Commands executed:
+
+```bash
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo test --locked --test postgres_retry --test postgres_ownership --test postgres_repository --test delivery_ownership_schema --test rabbitmq_publisher --test worker_smoke --test integrated_recovery -- --ignored --test-threads=4
+docker compose exec -T app cargo test --locked --lib closed_owned_connection_is_unavailable -- --ignored
+docker compose exec -T app cargo test --locked --test integrated_recovery configured_worker_maintenance -- --ignored --nocapture
+docker compose exec -T app cargo clippy --locked --all-targets -- -D warnings
+docker compose exec -T app cargo build --locked --bins
+docker compose exec -T app sh -c 'RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps'
+docker compose exec -T app cargo fmt -- --check
+python3 -B ../engineering-library/tools/check_docs.py --workspace ..
+python3 -B -m unittest discover -s ../engineering-library/tools -p 'test_check_docs.py' -v
+git diff --check
+git -C ../engineering-library diff --check
+```

@@ -20,3 +20,7 @@ The callable RabbitMQ adapter implements the application-owned `EventPublisher` 
 The publisher mutex serializes one in-flight publication. Admission waiting and publication waiting have separate deadlines; setup and close are also bounded. Serialization/unavailable, rejected, unroutable and uncertain are distinct outcomes. Timeout/error/cancellation after sending begins can leave broker acceptance unknown; the adapter retires the channel and requires explicit reconnection. It performs no automatic retry. A database lease token is not sent as a broker fencing mechanism and cannot stop a stale process's external send.
 
 The PostgreSQL reader, ownership ports and this publisher are separate library paths. `main` only composes config/tracing/HTTP liveness. There is no producer transaction, polling worker, acquisition SQL, completion SQL, consumer effect or payment integration connecting them. Proposed acquisition → publish → complete remains hypothetical orchestration. A diagram that connects these adapters as a running worker would be inaccurate.
+
+## Milestone 3.3 — current integration
+
+Application delivery/worker integration is implemented; earlier sections retain their dated historical scope. [Current contracts, jitter, contextual outcome table, maintenance and cancellation limits](../architecture/milestone-3-3.md). General poison scanning remains 3.4, audited replay 3.5 and full acceptance 3.6; shared rollout remains pending.

@@ -82,3 +82,7 @@ docker compose exec -T app cargo test --locked --test postgres_retry -- --ignore
 3.3 integra decisões contextuais definitivas, orçamento persistido e jitter explicitamente não enviesado em deliver_once/worker, preservando leases incertos e semântica de conclusão; deve definir admissão limitada de manutenção pela porta de linha exata. 3.4 adiciona diagnóstico/scanner geral de poison; 3.5 replay autenticado/auditado com identidade original; 3.6 aceitação integrada/fechamento. Frontend permanece ilustrativo e inalterado; 3.2 não comprova pipeline de retry implantado.
 
 Fontes primárias: [CHECK PostgreSQL](https://www.postgresql.org/docs/18/ddl-constraints.html), [amostragem temporal](https://www.postgresql.org/docs/18/functions-datetime.html), [limites de timestamp](https://www.postgresql.org/docs/18/datatype-datetime.html).
+
+## Marco 3.3 — integração atual
+
+Integração de entrega/worker implementada; seções anteriores mantêm seu escopo histórico datado. [Contratos atuais, jitter, matriz contextual, manutenção e cancelamento](milestone-3-3.md). Scanning geral fica em 3.4, replay auditado em 3.5 e aceitação completa em 3.6; rollout compartilhado permanece pendente.

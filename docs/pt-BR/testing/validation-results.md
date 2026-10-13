@@ -771,3 +771,39 @@ Inspeção somente leitura confirmou bind app `/app`, bind PostgreSQL `/var/lib/
 CI inclui novo target PostgreSQL, mas não foi executada remotamente. Integração da política, scanner poison geral, replay autenticado/auditado e fechamento integrado permanecem 3.3/3.4/3.5/3.6. Sem stage, commit ou push. Relatório temporário de continuação retornado no chat, sem salvar nos repositórios.
 
 [Implementação e rollout](../architecture/milestone-3-2.md).
+
+## Marco 3.3 — 2026-10-13
+
+Base Rust `e6f8a2f44d9ac250e1bcdf5f0b6a3b5b7bd5f1eb`; Library `303ed8602aa5727e2a47bf02a2ef7f0856e21760`, ambos inicialmente limpos. Sem AGENTS.md aplicável ou relatório anterior fornecido. Evidência histórica acima não conta como execução atual.
+
+Executado no contêiner app existente (Rust 1.95.0), com bancos UUID do harness, topologia única de broker e processos/proxies próprios:
+
+- Testes padrão: 60 passaram; opt-in executados separadamente abaixo. Casos controlados de entrega: 8; worker: 12; política de retry: 4. Sem estatística frágil para jitter.
+- PostgreSQL retry: 18 passaram, incluindo publisher Rejected injetado em deliver_once com perda real de reconhecimento COMMIT em agendamento/terminalização. O publisher é fake nessas experiências, não NACK real.
+- Recuperação integrada: 12 casos reais e entrada interna boundary_child, no-op sem RECOVERY_CHILD. Inclui rota real ausente → agendamento → aquisição antecipada negada → rota corrigida/token novo/identidade original concluída; falha final terminal; manutenção configurada protegendo dono ativo e entrega independente.
+- Ownership PostgreSQL: 12; repository: 15 opt-in; schema ownership: 1; publisher RabbitMQ: 2; worker smoke: 4; regressão de conexão fechada: 1; todos passaram. Total opt-in: 65 casos substantivos e entrada interna no-op.
+- cargo fmt -- --check, Clippy estrito em todos os targets, build dos dois binários e rustdoc com -D warnings passaram.
+- Testes do validador documental: 18 passaram. Validador documental final somente leitura: 232 documentos, zero erros e 18 avisos existentes de fixtures restritos; git diff --check passou nos dois repositórios.
+
+Correções durante o trabalho: Clippy detectou escopo de MutexGuard de teste atravessando await; teste agora copia as observações limitadas antes de suspender. Scan documental intermediário encontrou quatro anchors novos ausentes enquanto estas entradas eram escritas; validação final inclui os anchors. Nenhum defeito confirmado exigiu mudança de SQL/schema/protocolo. Contagens anteriores de recuperação permanecem; novo caso agendado usa duas aquisições comprometidas porque a primeira falha definitivamente e a segunda conclui após elegibilidade durável.
+
+Inspeção somente leitura: PostgreSQL/RabbitMQ saudáveis; HTTP RUNNING, relay compartilhado STOPPED/Not started. sqlx migrate info: somente 20261007000000/20261007175358 instaladas; ownership 20261009000000 e retry 20261012000000 pendentes. Nenhuma migration compartilhada aplicada, serviço compartilhado parado/iniciado/reconstruído, credencial ou volume alterado. Migrations aplicadas apenas nos fixtures isolados. CI remoto não executado. Sem staging/commit/push. Library somente documentação; Viva Bem inalterado.
+
+Limites: Serialization genérico não distingue evento/encoder global e retém ownership conservadoramente. Manutenção finita configurada não descobre candidatos/cobre backlog geral, pausa sem publisher utilizável e não tem cursor durável após restart; remover configuração antiga e reobservar metadados. Sem reconciliação genérica ou idempotência de consumidor. [Contratos e escopo exato restante de 3.4](../architecture/milestone-3-3.md).
+
+Comandos executados:
+
+```bash
+docker compose exec -T app cargo test --locked
+docker compose exec -T app cargo test --locked --test postgres_retry --test postgres_ownership --test postgres_repository --test delivery_ownership_schema --test rabbitmq_publisher --test worker_smoke --test integrated_recovery -- --ignored --test-threads=4
+docker compose exec -T app cargo test --locked --lib closed_owned_connection_is_unavailable -- --ignored
+docker compose exec -T app cargo test --locked --test integrated_recovery configured_worker_maintenance -- --ignored --nocapture
+docker compose exec -T app cargo clippy --locked --all-targets -- -D warnings
+docker compose exec -T app cargo build --locked --bins
+docker compose exec -T app sh -c 'RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps'
+docker compose exec -T app cargo fmt -- --check
+python3 -B ../engineering-library/tools/check_docs.py --workspace ..
+python3 -B -m unittest discover -s ../engineering-library/tools -p 'test_check_docs.py' -v
+git diff --check
+git -C ../engineering-library diff --check
+```
