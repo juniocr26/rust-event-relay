@@ -111,3 +111,5 @@ Durable retry schema, ownership/cycle/revision-protected scheduling and terminal
 ## Authorized local rollout — 2026-10-13
 
 [Current local operation](../operations/local-relay-rollout.md): both http/relay autostart, ownership/retry migrations installed explicitly, authenticated broker topology and manual/interactive controls verified. Earlier pending/stopped descriptions retain historical scope. Production readiness and remaining 3.4–3.6 work are not claimed.
+
+[Milestone 3.5 — replay](../architecture/milestone-3-5.md) | [ADR 009](../adr/009-authorized-idempotent-replay.md) | [Operator replay](../operations/replay.md)

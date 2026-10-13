@@ -102,3 +102,5 @@ Aplicabilidade e omissões estão justificadas no [checklist](operations/complet
 ## Marco 3.4 — descoberta/isolamento atuais
 
 Descoberta limitada e isolamento com autoridade atual implementados; replay permanece 3.5 e fechamento integrado 3.6. Rollout local preservado; esta alteração não tem migration ou reinício compartilhado. [Marco 3.4 — descoberta/isolamento atuais](architecture/milestone-3-4.md).
+
+[Milestone 3.5 — replay](architecture/milestone-3-5.md) | [ADR 009](adr/009-authorized-idempotent-replay.md) | [Operator replay](operations/replay.md)

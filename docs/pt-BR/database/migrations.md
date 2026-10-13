@@ -111,3 +111,5 @@ Schema durável de retry, agenda/preservação terminal protegidas por dono/cicl
 ## Rollout local autorizado — 2026-10-13
 
 [Operação local atual](../operations/local-relay-rollout.md): http/relay com autostart, migrations ownership/retry instaladas explicitamente, topologia autenticada e controles manuais/interativos verificados. Descrições pendentes/paradas anteriores permanecem históricas. Sem alegação de prontidão produtiva ou conclusão de 3.4–3.6.
+
+[Milestone 3.5 — replay](../architecture/milestone-3-5.md) | [ADR 009](../adr/009-authorized-idempotent-replay.md) | [Operator replay](../operations/replay.md)

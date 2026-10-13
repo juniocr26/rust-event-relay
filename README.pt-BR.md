@@ -139,3 +139,5 @@ Schema durável de retry, agenda/preservação terminal protegidas por dono/cicl
 ## Marco 3.4 — descoberta/isolamento atuais
 
 Descoberta limitada e isolamento com autoridade atual implementados; replay permanece 3.5 e fechamento integrado 3.6. Rollout local preservado; esta alteração não tem migration ou reinício compartilhado. [Marco 3.4 — descoberta/isolamento atuais](docs/pt-BR/architecture/milestone-3-4.md).
+
+[Marco 3.5 — replay autorizado](docs/pt-BR/architecture/milestone-3-5.md) | [API operacional](docs/pt-BR/operations/replay.md). Fonte implementada; migration 5 e ativação da API privilegiada continuam pendentes no ambiente compartilhado.

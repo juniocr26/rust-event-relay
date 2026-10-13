@@ -47,3 +47,6 @@ pub use retry::*;
 
 mod discovery;
 pub use discovery::*;
+
+mod replay;
+pub use replay::*;

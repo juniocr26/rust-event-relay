@@ -850,3 +850,7 @@ Evidência nova: mistura de inválidos/orçamento/capacidade/válidos, conteúdo
 Checks operacionais somente leitura: Compose válido; http/relay ainda RUNNING; PostgreSQL saudável/autenticado e configuração em execução coincide com Compose. Quatro migrations existentes bem-sucedidas, inclusive 20261009000000 e 20261012000000. Sem migration nova/compartilhada, reinício, mudança de credenciais, reset de storage ou purge de fila compartilhada. Containers existentes reutilizados. Frontend e Viva Bem intactos. Sem stage/commit/push. Comportamento novo validado em workers isolados; relay compartilhado já em execução não foi reiniciado para carregá-lo.
 
 Validador documental: 236 documentos, zero erros, 18 avisos anteriores de fixtures restritas; seus 18 testes unitários passaram. git diff --check passou nos dois projetos. Schedules finitos não provam justiça/cobertura completa, limite de bytes, perda de energia, toda concorrência, exactly-once ou idempotência de consumidor. Replay auditado e fechamento continuam 3.5/3.6.
+
+## Marco 3.5 — 13/10/2026
+
+[Checks executados e limites operacionais](../architecture/milestone-3-5.md#validação-executada). Migration 5/ativação privilegiada compartilhada pendentes; testes isolados de banco/broker não provam efeito de negócio de consumidor nem execução remota de CI.

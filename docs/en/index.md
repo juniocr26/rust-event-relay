@@ -102,3 +102,5 @@ Category applicability and omissions are justified in the [completion checklist]
 ## Milestone 3.4 — current discovery/isolation
 
 Bounded discovery and fresh-authority isolation are implemented; replay remains 3.5 and integrated closure 3.6. Current local rollout is preserved; this change has no migration or shared restart. [Milestone 3.4 — current discovery/isolation](architecture/milestone-3-4.md).
+
+[Milestone 3.5 — replay](architecture/milestone-3-5.md) | [ADR 009](adr/009-authorized-idempotent-replay.md) | [Operator replay](operations/replay.md)

@@ -967,3 +967,32 @@ async fn real_worker_discovers_beyond_unsafe_prefix_and_publishes_valid_identity
         empty(&r.channel,&r.topology.queue).await;
     }).await;
 }
+
+#[tokio::test]
+#[ignore = "requires PostgreSQL/RabbitMQ; isolated resources only"]
+async fn authorized_http_replay_new_cycle_confirmed_publication_and_completion() {
+    experiment(|r| async move {
+        use axum::{body::{Body,to_bytes},http::Request};
+        use tower::ServiceExt;
+        use reliable_event_relay::{infrastructure::operator_http::{self,OperatorCredentials},persistence::ReplayReceipt};
+        sql(&r.pool,include_str!("../migrations/20261013000000_add_audited_replay.up.sql")).await;
+        let id=Uuid::now_v7();seed(&r.pool,id).await;
+        checked(sqlx::query("UPDATE relay.outbox_events SET status='dead_letter',attempt_count=7,state_revision=4,terminal_at=clock_timestamp(),terminal_reason='legacy_dead_letter' WHERE id=$1").bind(id).execute(&r.pool).await,"terminal replay fixture");
+        let repo=PostgresOutboxRepository::new(r.pool.clone());
+        let credentials=OperatorCredentials::parse(&serde_json::json!([{"token":"a".repeat(64),"actor":"fixture-operator","allow_replay":true,"maximum_budget":10}]).to_string()).unwrap();
+        let app=operator_http::router(repo.clone(),credentials);
+        let request_id=Uuid::now_v7();
+        let http_request=Request::builder().method("POST").uri("/operator/replays").header("content-type","application/json").header("authorization",format!("Bearer {}","a".repeat(64))).body(Body::from(serde_json::json!({"request_id":request_id,"event_id":id,"expected_revision":4,"expected_cycle":1,"reason":"isolated route restored","budget":10,"delay_ms":0,"ticket":null}).to_string())).unwrap();
+        let response=app.oneshot(http_request).await.unwrap();assert_eq!(response.status(),200);
+        let receipt:ReplayReceipt=serde_json::from_slice(&to_bytes(response.into_body(),4096).await.unwrap()).unwrap();assert_eq!((receipt.cycle,receipt.baseline,receipt.revision),(2,7,5));
+        let audit:bool=checked(sqlx::query_scalar("SELECT actor='fixture-operator' AND event_id=$1 AND prior_terminal->>'terminal_reason'='legacy_dead_letter' FROM relay.replay_requests WHERE request_id=$2").bind(id).bind(request_id).fetch_one(&r.pool).await,"independent durable replay audit");assert!(audit);
+        empty(&r.channel,&r.topology.queue).await;
+        let publisher=RabbitMqPublisher::connect(config(r.topology.clone())).await.unwrap();
+        let outcome=deliver_once(&repo,&publisher,request(8000)).await;
+        let DeliveryOutcome::Published{claim,completion:Ok(TransitionOutcome::Applied)}=outcome else{panic!("confirmed replay completion")};
+        assert_eq!(claim.key.event_id(),id);assert_eq!(claim.attempt_count,8);
+        message(&r.channel,&r.topology.queue,id).await;
+        let completed:bool=checked(sqlx::query_scalar("SELECT status='processed' AND attempt_count=8 AND retry_cycle=2 AND cycle_baseline=7 AND state_revision=7 AND ownership_token IS NULL FROM relay.outbox_events WHERE id=$1").bind(id).fetch_one(&r.pool).await,"independent completion observation");assert!(completed);
+        empty(&r.channel,&r.topology.queue).await;publisher.close().await.unwrap();
+    }).await;
+}

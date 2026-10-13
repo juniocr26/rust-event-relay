@@ -139,3 +139,5 @@ Durable retry schema, ownership/cycle/revision-protected scheduling and terminal
 ## Milestone 3.4 — current discovery/isolation
 
 Bounded discovery and fresh-authority isolation are implemented; replay remains 3.5 and integrated closure 3.6. Current local rollout is preserved; this change has no migration or shared restart. [Milestone 3.4 — current discovery/isolation](docs/en/architecture/milestone-3-4.md).
+
+[Milestone 3.5 — authorized replay](docs/en/architecture/milestone-3-5.md) | [Operator API](docs/en/operations/replay.md). Source implemented; migration 5 and privileged API activation remain pending on shared data.

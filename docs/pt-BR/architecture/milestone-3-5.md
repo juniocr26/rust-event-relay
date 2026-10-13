@@ -1,0 +1,29 @@
+[Other language](../../en/architecture/milestone-3-5.md)
+
+# Marco 3.5 — Replay autorizado, idempotente e auditável
+
+Implementado em 13/10/2026. [ADR 009](../adr/009-authorized-idempotent-replay.md) define confiança/locks/elegibilidade; [API operacional](../operations/replay.md) cobre configuração, exemplos seguros e incerteza.
+
+## Implementação
+
+ReplayIntent/ReplayReceipt e port OutboxReplay com futures Send nativos independentes de SQLx/HTTP. Aplicação verifica autorização em replay/repetição/consulta. Bearer HTTP concreto deriva ator/permissão de configuração confiável limitada. POST altera; GET observa recibo do próprio ator; health continua liveness. Sem payload/credenciais/evidência de auditoria nas respostas nem mudança frontend. Desabilitado por padrão; composição opt-in verifica schema sem migrar.
+
+PostgreSQL coordena UUID global de request antes do lock do evento. Intenção explícita/evidência terminal anterior são inseridas em tabela auditável imutável atomicamente com novo ciclo. Envelope/identidade/timestamps/contador vitalício preservados; baseline recebe contador atual, orçamento autorizado, revisão verificada e disponibilidade do relógio pós-lock. Repetição retorna recibo histórico mesmo após avanço; intenção diferente/revisão concorrente obsoleta conflitam. Conteúdo inválido/não suportado, metadados inseguros e capacidade esgotada rejeitados sem reparo. Falha/cancelamento reutilizam classificação/proxies existentes. Limites numéricos/papéis de banco no ADR.
+
+Arquivos: backend/src/persistence/replay.rs, application/replay.rs, infrastructure/postgres/replay.rs, infrastructure/operator_http.rs, composição main/modules; migration 20261013000000 up/down; testes replay_application, replay_http, postgres_replay e integrated_recovery; subtle direto/tower apenas testes; configuração Compose/env opt-in e comando CI; documentação EN/PT-BR de ADR/operação/arquitetura/navegação/validação. CI configurado, sem alegação de execução remota.
+
+## Validação executada
+
+Rust 1.95.0 no app existente com CARGO_TARGET_DIR=/tmp/relay-m35-target separado: formatação; Clippy estrito todos os targets/features; suíte padrão; oito testes replay PostgreSQL isolados; builds binários; rustdoc estrito; regressões ownership/retry/discovery/repository/schema; recovery integrado e smoke do worker compilado. Testes de credencial usam router/autenticação/aplicação reais, com port de persistência contador provando ausência de I/O não autorizado. Replay integrado usa mesmo router com PostgreSQL real e observador independente do broker.
+
+Experimentos verificam identidade/conteúdo/histórico/evidência anterior, repetição antes/depois de avanço, consulta de outro ator negada, concorrência de intenção alterada/mesmo UUID/UUIDs diferentes, estado atual após espera de lock, lifecycle/conteúdo/representações incompatíveis, disponibilidade atrasada, capacidade numérica, rejeição ordinária/deferred COMMIT, reconhecimento perdido com recibo observado independentemente e cancelamento após commit do servidor sem retorno. Bancos recebem nomes exatos e drop verificado; recursos broker próprios são removidos por nome exato, sem purge/reset de fila compartilhada. Recovery existente cobre cleanup após assertion failure. Teste puro não prova lock de banco; ACK da fixture não prova efeito de negócio do consumidor.
+
+## Observação operacional e rollout pendente
+
+Em 13/10/2026: PostgreSQL/RabbitMQ healthy no Compose, http/relay RUNNING no Supervisor, ledger compartilhado com quatro versões bem-sucedidas até 20261012000000. Serviços haviam sido iniciados externamente recentemente; não assumir atual a afirmação anterior de ausência de restart. Nenhum processo compartilhado foi parado/reiniciado por esta implementação; credenciais/dados/filas preservados. Binários novos compilados somente em target separado: compilação não substitui executável em execução. Versão exata da fonte carregada nos processos preexistentes não foi estabelecida; não se afirma ativação 3.5. Hashes dos executáveis em execução diferem dos artefatos compilados separados; PIDs/uptimes preservados durante a tarefa. Migration 5 só validada em bancos isolados; aplicação compartilhada/ativação privilegiada dependem de autorização separada. Rollout anteriormente autorizado preservado.
+
+## Escopo exato de aceitação do Marco 3.6
+
+Fechar política durável/recuperação com matriz explícita 3.1–3.5: falha retryable definitiva persiste due time limitado/evidência sanitizada; falha final/esgotamento preserva dead_letter/histórico vitalício; discovery progride além de linhas inseguras/não suportadas sem repará-las; dono ativo protegido; conteúdo inválido preservado e replay rejeitado; replay autorizado abre exatamente um ciclo com intenção/auditoria/identidade. Exercitar restart/recuperação do worker, concorrência discovery/ownership/replay, scheduling/admissão limitada, cancelamento entre fronteiras, rejeição conhecida/COMMIT incerto com observação durável independente. Verificar publicação confirmada/conclusão durável reconhecida, inclusive sucesso final do orçamento; separar broker de efeito de consumidor e documentar duplicações possíveis.
+
+Reexecutar checks estritos/suítes isoladas pertinentes na fonte final, verificar cleanup exato, revisar documentação bilíngue operação/reparo/incerteza/CI e registrar compilado versus executado/migrations. Rollout migration 5/API exige autorização separada e não é requisito automático de fechamento; se aprovado, validar privilégios, injeção de credenciais/rede, ledger, artefato do processo e observações independentes sem interferência em mensagens compartilhadas. Registrar pendências. Fora do escopo: plataforma de idempotência de consumidor, implementação de reparo auditado, transformação de payload, reset de identidade, UI de replay, benchmark fairness/throughput, alegação HA/TLS produtiva ou reversão de efeitos passados. Extensões exigem escopo separado.

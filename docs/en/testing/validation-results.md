@@ -871,3 +871,7 @@ python3 -B -m unittest discover -s ../engineering-library/tools -p 'test_check_d
 git diff --check
 git -C ../engineering-library diff --check
 ```
+
+## Milestone 3.5 — 2026-10-13
+
+[Executed replay checks and operational limits](../architecture/milestone-3-5.md#executed-validation). Migration 5/shared privileged activation remain pending; independent isolated database/broker tests do not prove consumer business effects or remote CI execution.
