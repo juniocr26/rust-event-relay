@@ -60,3 +60,7 @@ Controlled fakes cover no claim, unchanged envelope, all completion results, sch
 No SQL, schema migration, RabbitMQ protocol, frontend or consumer behavior changes. Shared ownership/retry migrations remain pending and relay remains stopped. No data reset, credential modification, shared migration, activation, staging, commit or push. No new general scanner, replay or acceptance-closure claim.
 
 3.4 must add bounded raw-row candidate discovery and envelope validation/poison evidence, isolate confirmed invalid stored envelopes under maintenance authority without constructing a valid owned envelope, preserve terminal history, protect live owners, define revision freshness/contention/fairness limits and prevent malformed rows repeatedly obstructing independent valid work. It must include exhausted metadata discovery because exact-ID configuration is not general backlog coverage. Invalid ownership/identity shapes need separately authorized audited repair, never invented authority. Authenticated audited replay remains 3.5; full Milestone 3 acceptance/closure remains 3.6.
+
+## Authorized local rollout — 2026-10-13
+
+[Current local operation](../operations/local-relay-rollout.md): both http/relay autostart, ownership/retry migrations installed explicitly, authenticated broker topology and manual/interactive controls verified. Earlier pending/stopped descriptions retain historical scope. Production readiness and remaining 3.4–3.6 work are not claimed.

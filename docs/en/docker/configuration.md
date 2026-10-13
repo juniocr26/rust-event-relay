@@ -163,4 +163,8 @@ No new environment variables, pools or persistence tuning are introduced. The ne
 
 ## RabbitMQ and program management — Milestone 2.1
 
-Open **http://localhost:15672/** and enter the same `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` set in ignored `.env`. RabbitMQ initializes management access and scoped project-vhost permissions; initialization variables do not update an existing volume. Never reset broker data for credential changes. [Full setup, deadlines, topology, exact Supervisor commands and troubleshooting](../architecture/milestone-2-1.md) describes host loopback management versus internal rabbitmq:5672, the persistent broker volume and physical Supervisor config. `all` controls only app programs, currently `http`; databases remain separate Compose services.
+Open **http://localhost:15672/** and enter the same `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` set in ignored `.env`. RabbitMQ initializes management access and scoped project-vhost permissions; initialization variables do not update an existing volume. Never reset broker data for credential changes. [Full setup, deadlines, topology, exact Supervisor commands and troubleshooting](../architecture/milestone-2-1.md) describes host loopback management versus internal rabbitmq:5672, the persistent broker volume and physical Supervisor config. `all` controls app programs `http` and `relay`; databases remain separate Compose services.
+
+## Current local startup — 2026-10-13
+
+Both children autostart; local ownership/retry migrations were explicitly applied. [Installation, manual/interactive controls, restart behavior, topology and executed rollout](../operations/local-relay-rollout.md). No automatic migrations, data reset, credential change or frontend change.

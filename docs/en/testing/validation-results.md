@@ -807,3 +807,33 @@ python3 -B -m unittest discover -s ../engineering-library/tools -p 'test_check_d
 git diff --check
 git -C ../engineering-library diff --check
 ```
+
+## Local relay autostart rollout — 2026-10-13
+
+Bases: Rust cae62cc654efc0b411408dd84a0b92a57738eb38; Library c272476429fe4c9223f274d74293edeabb8c79b5, both clean. User explicitly authorized local migration/activation. Reviewed current Supervisor/Compose/adapter/schema preflight and both additive migration SQL files. Shared outbox had zero rows/exhausted events; initial migrations only were installed. Authenticated host management verified existing credentials without disclosure.
+
+Explicit sqlx migrate run applied 20261009000000 and 20261012000000; all four migrations now installed/successful, nine retry columns present, outbox still empty. Only app rebuilt/recreated using docker compose up -d --build --no-deps app; existing PostgreSQL, broker, frontend, credentials and storage preserved. No automatic startup migrations, data reset, volume deletion, queue purge or demonstration publication. Frontend source diff is empty.
+
+Executed: automatic http/relay RUNNING; authenticated management page/API at localhost:15672 and configured durable exchange/queue/binding; direct/interactive controls through supervisorctl and supervisor; stop relay remained stopped while HTTP and broker management/queue metadata/counts remained available; start resumed; SIGKILL of each running child triggered unexpected-exit recovery. Existing graceful shutdown limits unchanged. Shared queue observed zero ready/unacknowledged messages; nonempty payload persistence was not tested by inventing messages. Browser form login not operated.
+
+Strict Clippy all targets passed; cargo fmt check passed; four isolated worker_smoke tests passed, including autostart from physical Supervisor config and real test-owned database/broker resources. Standard suite: 60 passed. Final read-only documentation validator: 234 documents, zero errors and 18 existing restricted-fixture warnings; git diff --check passed in both repositories. Host management/API and HTTP health were also reverified while relay was intentionally stopped, then relay was restored to RUNNING. Historical 3.3 integration executions retain their own scope; remote CI not run. No staging/commit/push. [Current local instructions](../operations/local-relay-rollout.md).
+
+Commands executed:
+
+```bash
+python3 scripts/check-rabbitmq.py
+python3 scripts/check-rabbitmq.py --require-topology
+docker compose exec -T app sqlx migrate info
+docker compose exec -T app sqlx migrate run
+docker compose up -d --build --no-deps app
+docker compose exec -T app python3 /app/scripts/check-supervisor.py
+docker compose exec -T app supervisorctl stop relay
+docker compose exec -T app supervisorctl start relay
+docker compose exec -T app supervisor status
+docker compose exec -T app cargo clippy --locked --all-targets -- -D warnings
+docker compose exec -T app cargo test --locked --test worker_smoke -- --ignored --test-threads=4
+docker compose exec -T app cargo test --locked
+python3 -B ../engineering-library/tools/check_docs.py --workspace ..
+git diff --check
+git -C ../engineering-library diff --check
+```

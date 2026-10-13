@@ -107,3 +107,7 @@ See [query, restoration, bounds and errors](postgres-repository.md), [integratio
 ## Milestone 3.2 — current persistence scope
 
 Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Contracts, migration, failure semantics and rollout](../architecture/milestone-3-2.md).
+
+## Authorized local rollout — 2026-10-13
+
+[Current local operation](../operations/local-relay-rollout.md): both http/relay autostart, ownership/retry migrations installed explicitly, authenticated broker topology and manual/interactive controls verified. Earlier pending/stopped descriptions retain historical scope. Production readiness and remaining 3.4–3.6 work are not claimed.

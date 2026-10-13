@@ -26,3 +26,7 @@ Desempenho tem limites de linhas e uma publicação em andamento, mas número de
 ## Marco 2.6 — Escopo atual
 
 [Experimentos integrados](../architecture/milestone-2-6.md) e [revisão do Marco 2](../operations/milestone-2-review.md) atualizam a aceitação sob premissas explícitas. Rollout compartilhado continua pendente; registros anteriores mantêm seu contexto histórico.
+
+## Rollout local autorizado — 2026-10-13
+
+[Operação local atual](local-relay-rollout.md): http/relay com autostart, migrations ownership/retry instaladas explicitamente, topologia autenticada e controles manuais/interativos verificados. Descrições pendentes/paradas anteriores permanecem históricas. Sem alegação de prontidão produtiva ou conclusão de 3.4–3.6.

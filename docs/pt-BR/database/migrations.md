@@ -107,3 +107,7 @@ Veja [consulta, restauração, limites e erros](postgres-repository.md), [testes
 ## Marco 3.2 — persistência atual
 
 Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração fica em 3.3, scanner geral em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Contratos, migration, falhas e rollout](../architecture/milestone-3-2.md).
+
+## Rollout local autorizado — 2026-10-13
+
+[Operação local atual](../operations/local-relay-rollout.md): http/relay com autostart, migrations ownership/retry instaladas explicitamente, topologia autenticada e controles manuais/interativos verificados. Descrições pendentes/paradas anteriores permanecem históricas. Sem alegação de prontidão produtiva ou conclusão de 3.4–3.6.

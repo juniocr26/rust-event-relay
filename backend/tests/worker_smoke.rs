@@ -64,8 +64,13 @@ async fn smoke(supervised: bool) {
         let mut case_task=tokio::spawn(async move {
             if supervised {
                 while !case_config.parent().unwrap().join("control.sock").exists() { tokio::time::sleep(Duration::from_millis(10)).await; }
-                assert!(ctl(&case_config,"supervisorctl",&["status","relay"]).await.contains("STOPPED"));
-                ctl(&case_config,"supervisorctl",&["start","relay"]).await;
+                // The installed Compose/Supervisor policy starts the worker automatically.
+                loop {
+                    let status=ctl(&case_config,"supervisorctl",&["status","relay"]).await;
+                    if status.contains("RUNNING") {break;}
+                    assert!(!status.contains("FATAL") && !status.contains("BACKOFF"));
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
             }
             loop {
                 let processed: bool=checked(sqlx::query_scalar("SELECT status='processed' AND processed_at IS NOT NULL AND ownership_token IS NULL AND acquired_at IS NULL AND expires_at IS NULL AND attempt_count=1 FROM relay.outbox_events WHERE id=$1").bind(event_id).fetch_one(&case_pool).await,"completion observation");

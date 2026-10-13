@@ -60,3 +60,7 @@ Fakes controlados cobrem ausência de claim, envelope inalterado, resultados de 
 Sem mudanças em SQL, migrations, protocolo RabbitMQ, frontend ou consumidor. Migrations compartilhadas de ownership/retry continuam pendentes; relay permanece parado. Sem reset, alteração de credenciais, rollout, ativação, staging, commit ou push. Nenhuma alegação de scanner geral, replay ou fechamento do milestone.
 
 3.4 deve implementar descoberta limitada de candidatos raw, validação de envelopes/evidência de poison e isolamento de invalidade comprovada sob autoridade de manutenção sem construir envelope owned válido; preservar histórico terminal, proteger donos ativos, definir revisão fresca/contenção/limites de justiça e evitar obstrução repetida de trabalho independente por linhas inválidas. Deve incluir descoberta de metadados esgotados, pois configuração exata não cobre backlog geral. Shapes inválidos de identidade/ownership exigem reparo auditado autorizado separadamente, nunca autoridade inventada. Replay autenticado/auditado fica em 3.5; aceitação/fechamento completos em 3.6.
+
+## Rollout local autorizado — 2026-10-13
+
+[Operação local atual](../operations/local-relay-rollout.md): http/relay com autostart, migrations ownership/retry instaladas explicitamente, topologia autenticada e controles manuais/interativos verificados. Descrições pendentes/paradas anteriores permanecem históricas. Sem alegação de prontidão produtiva ou conclusão de 3.4–3.6.

@@ -5,7 +5,7 @@
 [Preparação frontend/backend — estrutura e comandos atuais](docs/pt-BR/guides/frontend-backend.md). Comandos Cargo nativos rodam em `backend/`; comandos frontend em `frontend/`.
 
 
-[Marco 2.6 — Recuperação integrada](docs/pt-BR/architecture/milestone-2-6.md): experimentos reais de crash, incerteza, concorrência e shutdown concluídos. [Marco 2 fechado sob premissas explícitas](docs/pt-BR/operations/milestone-2-review.md). Migração compartilhada pendente; relay STOPPED/autostart=false.
+[Marco 2.6 — Recuperação integrada](docs/pt-BR/architecture/milestone-2-6.md): experimentos reais de crash, incerteza, concorrência e shutdown concluídos. [Marco 2 fechado sob premissas explícitas](docs/pt-BR/operations/milestone-2-review.md). Migrations locais de ownership/retry instaladas; http e relay com autostart. [Rollout atual](docs/pt-BR/operations/local-relay-rollout.md).
 
 Um serviço Rust que explora entrega confiável de eventos, tentativas, idempotência, contrapressão, isolamento de mensagens problemáticas e recuperação de falhas em sistemas distribuídos.
 
@@ -26,7 +26,7 @@ Leia propósito/setup, arquitetura e contratos, segurança/falhas, testes/evidê
 
 [Marco 2.2](docs/pt-BR/architecture/milestone-2-2.md) implementa decisão de posse, modelos, contratos e schema. Eventos com lease permanecem pending; donos expirados não podem concluir/liberar. Tokens protegem transições no banco, mas não impedem publicação nem estabelecem entrega ponta a ponta.
 
-[Marco 2.3](docs/pt-BR/architecture/milestone-2-3.md) implementa operações PostgreSQL com transações curtas e relógio pós-lock. Migração de posse continua pendente no desenvolvimento. Relatório de continuidade (relatório 2.5 ausente neste checkout); handoff atual (historical handoff unavailable in this checkout). 2.6 valida uma fundação pelo menos uma vez sob premissas explícitas, sem efeitos exactly-once.
+[Marco 2.3](docs/pt-BR/architecture/milestone-2-3.md) implementa operações PostgreSQL com transações curtas e relógio pós-lock. Migrations locais de ownership/retry instaladas explicitamente em 2026-10-13. Relatório de continuidade (relatório 2.5 ausente neste checkout); handoff atual (historical handoff unavailable in this checkout). 2.6 valida uma fundação pelo menos uma vez sob premissas explícitas, sem efeitos exactly-once.
 
 ## Arquitetura
 
@@ -43,11 +43,14 @@ cp .env.example .env
 # Linux: ajuste LOCAL_UID e LOCAL_GID no .env conforme id -u e id -g.
 # Defina credenciais RabbitMQ no .env antes de iniciar.
 docker compose build app
-docker compose run --rm --no-deps app cargo build --locked
+docker compose run --rm --no-deps app cargo build --locked --bins
+docker compose up -d --wait postgres rabbitmq
+# Inspecione SQL das migrations e dados atuais antes desta ação explícita:
+docker compose run --rm --no-deps app sqlx migrate run
 python3 scripts/start-local.py
 ```
 
-Em outro terminal: `curl --fail http://localhost:8080/health`. Supervisor gerencia `http` e `relay` opcional. Abra **http://localhost:15672/** e entre com `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` do `.env` ignorado. Veja [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md) para comandos coletivos/individuais/interativos, build/start e credenciais em volume existente. Mudanças exigem parar, compilar e iniciar; sem recarga automática.
+Em outro terminal: `curl --fail http://localhost:8080/health`. Supervisor inicia `http` e `relay` automaticamente; ambos mantêm controle manual. Abra **http://localhost:15672/** e entre com `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` do `.env` ignorado. Veja [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md) para comandos coletivos/individuais/interativos, build/start e credenciais em volume existente. Mudanças exigem parar, compilar e iniciar; sem recarga automática.
 
 ```bash
 docker compose exec app bash
@@ -129,3 +132,5 @@ Licença MIT; consulte [LICENSE](LICENSE).
 Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração implementada em 3.3; scanner geral fica em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Implementação e rollout](docs/pt-BR/architecture/milestone-3-2.md).
 
 [Marco 3.3 — integração atual](docs/pt-BR/architecture/milestone-3-3.md).
+
+[Startup local, pré-requisitos de migrations e controles Supervisor](docs/pt-BR/operations/local-relay-rollout.md).

@@ -11,6 +11,7 @@ from urllib.parse import quote
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--running-credentials", action="store_true", help="Use existing broker container initialization credentials without modifying .env")
+parser.add_argument("--require-topology", action="store_true", help="Require the configured durable publisher exchange, queue and binding")
 args = parser.parse_args()
 
 try:
@@ -50,9 +51,23 @@ try:
     own = next(p for p in permissions if p["vhost"] == env["RABBITMQ_DEFAULT_VHOST"])
     assert all(own[key] == "^relay[.].*" for key in ["configure", "write", "read"])
     vhost = quote(env["RABBITMQ_DEFAULT_VHOST"], safe="")
-    for resource in ["exchanges", "queues", "bindings"]:
-        assert isinstance(api(f"/api/{resource}/{vhost}"), list)
-    print("Authenticated topology listings verified; absent application topology is allowed before publisher connection.")
+    topology = {resource: api(f"/api/{resource}/{vhost}") for resource in ["exchanges", "queues", "bindings"]}
+    assert all(isinstance(items, list) for items in topology.values())
+    if args.require_topology:
+        app_env = config["services"]["app"]["environment"]
+        assert app_env["RABBITMQ_DEFAULT_VHOST"] == env["RABBITMQ_DEFAULT_VHOST"]
+        exchange = app_env["RABBITMQ_EXCHANGE"]
+        queue = app_env["RABBITMQ_QUEUE"]
+        routing_key = app_env["RABBITMQ_ROUTING_KEY"]
+        ex = next(e for e in topology["exchanges"] if e["name"] == exchange)
+        q = next(q for q in topology["queues"] if q["name"] == queue)
+        assert ex["durable"] and ex["type"] == "direct" and q["durable"]
+        assert any(b["source"] == exchange and b["destination"] == queue and b["destination_type"] == "queue" and b["routing_key"] == routing_key for b in topology["bindings"])
+        print("Configured durable direct exchange, durable queue and binding verified in the configured virtual host.")
+        if all(isinstance(q.get(key), int) for key in ["messages_ready", "messages_unacknowledged"]):
+            print(f"Observed queue counts: ready={q['messages_ready']}, unacknowledged={q['messages_unacknowledged']}; no messages consumed or published.")
+    else:
+        print("Authenticated topology listings verified; absent application topology is allowed before publisher connection.")
     print("Authenticated management identity, tag and scoped project-vhost permissions verified.")
     print("HTTP/API checks passed. Browser form login was not performed by this script.")
 except (AssertionError, KeyError, StopIteration, ValueError):

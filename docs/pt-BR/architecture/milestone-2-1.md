@@ -129,3 +129,7 @@ Execução real e limitações estão em [validação](../testing/validation-res
 ## Marco 2 adiado
 
 Transições/autoridade de estado, claims/leases/propriedade, reconciliação de resultados incertos, retry/backoff, dead-letter/quarentena/reparo, escrita do produtor, idempotência do consumidor, worker de polling, limites de bytes/concorrência e readiness operacional ficam adiados. Snapshot pending não autoriza entrega exclusiva. Broker aceita e transição no banco falha: janela de duplicação. Banco marca conclusão antes de publicar: janela de perda. Esses desenhos são pré-requisitos para a fundação de entrega pelo menos uma vez além deste adapter.
+
+## Rollout local autorizado — 2026-10-13
+
+[Operação local atual](../operations/local-relay-rollout.md): http/relay com autostart, migrations ownership/retry instaladas explicitamente, topologia autenticada e controles manuais/interativos verificados. Descrições pendentes/paradas anteriores permanecem históricas. Sem alegação de prontidão produtiva ou conclusão de 3.4–3.6.

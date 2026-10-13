@@ -807,3 +807,33 @@ python3 -B -m unittest discover -s ../engineering-library/tools -p 'test_check_d
 git diff --check
 git -C ../engineering-library diff --check
 ```
+
+## Rollout local autostart — 2026-10-13
+
+Bases Rust cae62cc654efc0b411408dd84a0b92a57738eb38 e Library c272476429fe4c9223f274d74293edeabb8c79b5, ambos limpos. Usuário autorizou migração/ativação locais explicitamente. Supervisor/Compose/adaptador/preflight e SQL das duas migrations aditivas revisados. Outbox compartilhado tinha zero linhas/esgotados; somente migrations iniciais instaladas. Management host autenticado com credenciais atuais sem divulgação.
+
+sqlx migrate run explícito aplicou 20261009000000 e 20261012000000; quatro migrations instaladas/bem-sucedidas, nove colunas retry presentes, outbox ainda vazio. Apenas app reconstruído/recriado por docker compose up -d --build --no-deps app; PostgreSQL/broker/frontend existentes, credenciais/storage preservados. Sem migrations automáticas, reset, exclusão de volumes, purge ou publicação de demonstração. Diff frontend vazio.
+
+Executado: startup automático http/relay RUNNING; página/API management autenticadas localhost:15672 e exchange/fila/binding duráveis configurados; controles diretos/interativos por supervisorctl/supervisor; stop relay manteve parado e preservou HTTP/management/metadados/contagens; start retomou; SIGKILL de cada filho ativo provocou recuperação de saída inesperada. Limites de shutdown preservados. Fila compartilhada observada com zero ready/unacknowledged; persistência de payload não vazio não foi testada inventando mensagens. Formulário login do navegador não operado.
+
+Clippy estrito em todos os targets e fmt check passaram; quatro worker_smoke isolados passaram, inclusive autostart pela configuração física e recursos reais próprios de banco/broker. Suite padrão: 60 passaram. Validador documental final somente leitura: 234 documentos, zero erros e 18 avisos existentes de fixtures restritos; git diff --check passou em ambos. Management/API e HTTP do host também reverificados durante stop intencional; relay restaurado para RUNNING. Execuções integradas anteriores de 3.3 mantêm escopo histórico próprio; CI remoto não executado. Sem staging/commit/push. [Instruções locais atuais](../operations/local-relay-rollout.md).
+
+Comandos executados:
+
+```bash
+python3 scripts/check-rabbitmq.py
+python3 scripts/check-rabbitmq.py --require-topology
+docker compose exec -T app sqlx migrate info
+docker compose exec -T app sqlx migrate run
+docker compose up -d --build --no-deps app
+docker compose exec -T app python3 /app/scripts/check-supervisor.py
+docker compose exec -T app supervisorctl stop relay
+docker compose exec -T app supervisorctl start relay
+docker compose exec -T app supervisor status
+docker compose exec -T app cargo clippy --locked --all-targets -- -D warnings
+docker compose exec -T app cargo test --locked --test worker_smoke -- --ignored --test-threads=4
+docker compose exec -T app cargo test --locked
+python3 -B ../engineering-library/tools/check_docs.py --workspace ..
+git diff --check
+git -C ../engineering-library diff --check
+```

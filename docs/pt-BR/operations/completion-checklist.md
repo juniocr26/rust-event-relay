@@ -66,3 +66,7 @@ Marco 3.1 define matriz de falhas, contratos de agenda/orçamento/isolamento/rep
 ## Marco 3.3 — integração atual
 
 Integração de entrega/worker implementada; seções anteriores mantêm seu escopo histórico datado. [Contratos atuais, jitter, matriz contextual, manutenção e cancelamento](../architecture/milestone-3-3.md). Scanning geral fica em 3.4, replay auditado em 3.5 e aceitação completa em 3.6; rollout compartilhado permanece pendente.
+
+## Rollout local autorizado — 2026-10-13
+
+[Operação local atual](local-relay-rollout.md): http/relay com autostart, migrations ownership/retry instaladas explicitamente, topologia autenticada e controles manuais/interativos verificados. Descrições pendentes/paradas anteriores permanecem históricas. Sem alegação de prontidão produtiva ou conclusão de 3.4–3.6.

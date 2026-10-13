@@ -129,3 +129,7 @@ Actual execution and remaining validation limits are recorded in [validation res
 ## Deferred Milestone 2 work
 
 Delivery-state transitions and authority, claims/leases/ownership, reconciliation of uncertain outcomes, retries/backoff, dead-letter/quarantine/repair, producer writes, consumer idempotency, polling workers, byte/concurrency bounds and operational readiness remain deferred. A pending read snapshot does not authorize exclusive delivery. Broker acceptance followed by a failed database transition creates a duplicate window; database completion before publication creates a loss window. These designs are prerequisites for an at-least-once delivery foundation beyond this adapter.
+
+## Authorized local rollout — 2026-10-13
+
+[Current local operation](../operations/local-relay-rollout.md): both http/relay autostart, ownership/retry migrations installed explicitly, authenticated broker topology and manual/interactive controls verified. Earlier pending/stopped descriptions retain historical scope. Production readiness and remaining 3.4–3.6 work are not claimed.

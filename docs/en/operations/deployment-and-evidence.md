@@ -26,3 +26,7 @@ Performance is currently constrained by bounded row counts and one-in-flight pub
 ## Milestone 2.6 — Current scope
 
 [Integrated experiments](../architecture/milestone-2-6.md) and [Milestone 2 review](../operations/milestone-2-review.md) update acceptance under explicit assumptions. Shared rollout remains pending; earlier records retain their historical context.
+
+## Authorized local rollout — 2026-10-13
+
+[Current local operation](local-relay-rollout.md): both http/relay autostart, ownership/retry migrations installed explicitly, authenticated broker topology and manual/interactive controls verified. Earlier pending/stopped descriptions retain historical scope. Production readiness and remaining 3.4–3.6 work are not claimed.

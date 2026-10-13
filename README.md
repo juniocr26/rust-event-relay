@@ -5,7 +5,7 @@
 [Frontend/backend preparation — current layout and commands](docs/en/guides/frontend-backend.md). Native Cargo commands run in `backend/`; frontend commands run in `frontend/`.
 
 
-[Milestone 2.6 — Integrated recovery](docs/en/architecture/milestone-2-6.md): real crash, uncertainty, concurrency and shutdown experiments completed. [Milestone 2 closed under explicit assumptions](docs/en/operations/milestone-2-review.md). Shared migration pending; relay STOPPED/autostart=false.
+[Milestone 2.6 — Integrated recovery](docs/en/architecture/milestone-2-6.md): real crash, uncertainty, concurrency and shutdown experiments completed. [Milestone 2 closed under explicit assumptions](docs/en/operations/milestone-2-review.md). Local ownership/retry migrations installed; http and relay autostart. [Current rollout](docs/en/operations/local-relay-rollout.md).
 
 A Rust service exploring reliable event delivery, retries, idempotency, backpressure, dead-letter handling, and failure recovery in distributed systems.
 
@@ -22,11 +22,11 @@ Read purpose/setup first, then architecture and contracts, security and failures
 
 **Implemented today:** a sequential relay worker with explicit pacing/reconnection and bounded shutdown, environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a PostgreSQL observation repository and production ownership operations, isolated opt-in PostgreSQL repository integration tests, a confirmed RabbitMQ publisher adapter, local broker management and Supervisor process control, validated delivery-state/ownership types and focused mutation contracts, a durable lease migration (not applied automatically), real ownership concurrency/expiration tests, CI checks and bilingual documentation.
 
-**Planned / future exploration:** producer outbox writes, retry orchestration, idempotency, dead-letter isolation, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
+**Planned / future exploration:** producer outbox writes, consumer idempotency, general poison scanning and audited replay, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
 
 [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements the ownership decision, models, contracts and schema only. Leased events remain pending; expired owners cannot complete/release. Tokens protect database transitions but do not fence publication or establish end-to-end delivery.
 
-[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. Development ownership migration remains pending. Continuity report (pt-BR) (2.5 report absent from this checkout); current handoff (historical handoff unavailable in this checkout). 2.6 validates an at-least-once foundation under explicit assumptions, without exactly-once consumer effects.
+[Milestone 2.3](docs/en/architecture/milestone-2-3.md) implements those PostgreSQL operations with short transactions and post-lock database time. The local ownership/retry migrations were explicitly installed on 2026-10-13. Continuity report (pt-BR) (2.5 report absent from this checkout); current handoff (historical handoff unavailable in this checkout). 2.6 validates an at-least-once foundation under explicit assumptions, without exactly-once consumer effects.
 
 ## Architecture
 
@@ -43,11 +43,14 @@ cp .env.example .env
 # Linux: edit LOCAL_UID and LOCAL_GID in .env to match id -u and id -g.
 # Set RabbitMQ credentials in .env before startup.
 docker compose build app
-docker compose run --rm --no-deps app cargo build --locked
+docker compose run --rm --no-deps app cargo build --locked --bins
+docker compose up -d --wait postgres rabbitmq
+# Inspect existing migration SQL and database state before this explicit action:
+docker compose run --rm --no-deps app sqlx migrate run
 python3 scripts/start-local.py
 ```
 
-In another terminal: `curl --fail http://localhost:8080/health`. Supervisor manages `http` and optional `relay`. Open **http://localhost:15672/** and log in with `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` from ignored `.env`. See [Milestone 2.1](docs/en/architecture/milestone-2-1.md) for exact collective/named/interactive commands, build/start workflow and existing-volume credential handling. Source changes require stop, build and start; there is no automatic reload.
+In another terminal: `curl --fail http://localhost:8080/health`. Supervisor automatically starts `http` and `relay`; both remain manually controllable. Open **http://localhost:15672/** and log in with `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` from ignored `.env`. See [Milestone 2.1](docs/en/architecture/milestone-2-1.md) for exact collective/named/interactive commands, build/start workflow and existing-volume credential handling. Source changes require stop, build and start; there is no automatic reload.
 
 ```bash
 docker compose exec app bash
@@ -129,3 +132,5 @@ MIT licensed; see [LICENSE](LICENSE).
 Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration is implemented in 3.3; general poison scanning remains 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Implementation and rollout](docs/en/architecture/milestone-3-2.md).
 
 [Milestone 3.3 — current integration](docs/en/architecture/milestone-3-3.md).
+
+[Local startup, migration prerequisites and Supervisor controls](docs/en/operations/local-relay-rollout.md).

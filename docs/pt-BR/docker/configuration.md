@@ -163,4 +163,8 @@ Sem novas variáveis, pools ou tuning de persistência. Novos testes Rust não c
 
 ## RabbitMQ e gestão de programas — Marco 2.1
 
-Abra **http://localhost:15672/** e digite os mesmos `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` do `.env` ignorado. RabbitMQ inicializa acesso management e permissões do vhost do projeto; variáveis iniciais não atualizam volume existente. Nunca resete broker para alterar credenciais. [Setup completo, prazos, topologia, comandos Supervisor e diagnóstico](../architecture/milestone-2-1.md) explica management loopback no host versus rabbitmq:5672 interno, volume persistente do broker e config física Supervisor. `all` controla só programas do app, hoje `http`; bancos ficam em serviços Compose separados.
+Abra **http://localhost:15672/** e digite os mesmos `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` do `.env` ignorado. RabbitMQ inicializa acesso management e permissões do vhost do projeto; variáveis iniciais não atualizam volume existente. Nunca resete broker para alterar credenciais. [Setup completo, prazos, topologia, comandos Supervisor e diagnóstico](../architecture/milestone-2-1.md) explica management loopback no host versus rabbitmq:5672 interno, volume persistente do broker e config física Supervisor. `all` controla `http` e `relay`; banco/broker ficam em serviços Compose separados.
+
+## Startup local atual — 2026-10-13
+
+Ambos os filhos usam autostart; migrations locais de ownership/retry aplicadas explicitamente. [Instalação, controles manuais/interativos, restart, topologia e rollout executado](../operations/local-relay-rollout.md). Sem migrations automáticas, reset, alteração de credenciais ou frontend.
