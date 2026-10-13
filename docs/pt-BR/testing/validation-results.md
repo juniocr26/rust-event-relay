@@ -859,3 +859,10 @@ Validador documental: 236 documentos, zero erros, 18 avisos anteriores de fixtur
 ## Aceitação atual do Marco 3.6 — 13/10/2026
 
 [Auditoria completa, matriz rastreável, contagens executadas, lacunas operacionais e leitura guiada](../operations/milestone-3-review.md). Marco 3 fechado com limitações explícitas não bloqueantes; rollout replay compartilhado, idempotência consumer, frontend/backend real e prontidão produtiva permanecem separados. Seções anteriores preservam o escopo histórico datado.
+
+
+## Marco 4.1 — 13/10/2026
+
+Container app existente, CARGO_TARGET_DIR separado em /tmp/relay-m41-target: cargo fmt --check; cargo clippy --locked --all-targets --all-features -- -D warnings; cargo test --locked (75 aprovados, 0 falhas, 88 ignorados, incluindo seis testes puros novos); cargo build --locked --bins; RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps. Validador documental bilíngue: 0 erros, 18 avisos de fixtures restritas do projeto Go. git diff --check passou nos dois repositórios.
+
+Testes cobrem limites de identificadores/quantidade/estoque, tipo/versão, identidade coerente, comparação imutável, política de ACK, limites corpo/propriedades e duplicação de quarentena após crash/ACK incerto simulados. Recorder é fake: não prova atomicidade PostgreSQL, preservação RabbitMQ, correlação return/confirm ou recuperação real de crash. Suítes de infraestrutura permanecem ignoradas, não executadas: sem alteração em adaptador/migration/runtime. Docker consultado/reutilizado sem restart, consumo compartilhado, topologia/credenciais ou migrations. Engineering Library somente documentação. [Contratos e experimentos reais planejados](../architecture/milestone-4-1.md).

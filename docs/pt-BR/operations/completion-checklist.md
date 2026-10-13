@@ -80,3 +80,8 @@ Descoberta limitada e isolamento com autoridade atual implementados; replay perm
 ## Aceitação atual do Marco 3.6 — 13/10/2026
 
 [Auditoria completa, matriz rastreável, contagens executadas, lacunas operacionais e leitura guiada](milestone-3-review.md). Marco 3 fechado com limitações explícitas não bloqueantes; rollout replay compartilhado, idempotência consumer, frontend/backend real e prontidão produtiva permanecem separados. Seções anteriores preservam o escopo histórico datado.
+
+
+## Marco 4.1 — contratos implementados; runtime planejado
+
+[Estoque, deduplicação, quarentena e 4.2–4.4](../architecture/milestone-4-1.md) | [ADR 010](../adr/010-atomic-consumer-and-quarantine.md).

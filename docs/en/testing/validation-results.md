@@ -880,3 +880,10 @@ git -C ../engineering-library diff --check
 ## Current Milestone 3.6 acceptance — 2026-10-13
 
 [Full-project audit, traceable acceptance matrix, actual validation counts, operational gaps and study path](../operations/milestone-3-review.md). Milestone 3 closed with explicit nonblocking limitations; shared replay rollout, consumer idempotency, live frontend integration and production readiness remain separate. Earlier sections retain their dated historical scope.
+
+
+## Milestone 4.1 — 2026-10-13
+
+Existing app container, separate CARGO_TARGET_DIR=/tmp/relay-m41-target: cargo fmt --check; cargo clippy --locked --all-targets --all-features -- -D warnings; cargo test --locked (75 passed, 0 failed, 88 ignored, including six new pure consumer tests); cargo build --locked --bins; RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps. Bilingual workspace documentation validator: 0 errors, 18 warnings restricted to unrelated Go image fixtures. git diff --check passed in both repositories.
+
+Consumer tests cover identifier/quantity/stock bounds, supported type/version, coherent identity, immutable comparisons, outcome ACK policy, body/property bounds and duplicate quarantine publication after simulated crash/uncertain source ACK. The recorder is a fake: no actual database atomicity, RabbitMQ preservation, return/confirm correlation or crash recovery evidence. Infrastructure regression suites remain ignored and were not invoked: no adapter, migration or runtime changed. Docker services were inspected/reused, without restart, shared message consumption, topology/credentials changes or migrations. Engineering Library is documentation-only. [Contracts and planned real experiments](../architecture/milestone-4-1.md).

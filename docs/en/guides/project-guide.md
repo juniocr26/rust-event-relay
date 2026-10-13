@@ -87,3 +87,8 @@ Milestone 3.1 selects the next schema and roadmap; all 3.2 migration/cycle/revis
 ## Current Milestone 3.6 acceptance — 2026-10-13
 
 [Full-project audit, traceable acceptance matrix, actual validation counts, operational gaps and study path](../operations/milestone-3-review.md). Milestone 3 closed with explicit nonblocking limitations; shared replay rollout, consumer idempotency, live frontend integration and production readiness remain separate. Earlier sections retain their dated historical scope.
+
+
+## Milestone 4.1 — contracts implemented; runtime planned
+
+[Inventory, deduplication, quarantine and 4.2–4.4](../architecture/milestone-4-1.md) | [ADR 010](../adr/010-atomic-consumer-and-quarantine.md).
