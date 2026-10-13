@@ -837,3 +837,16 @@ python3 -B ../engineering-library/tools/check_docs.py --workspace ..
 git diff --check
 git -C ../engineering-library diff --check
 ```
+
+
+## Marco 3.4 — validação local executada, 13/10/2026
+
+Bases Rust a756797bbdd64d50671d536ae7de697a3705ce8b e Library c272476429fe4c9223f274d74293edeabb8c79b5. Rust inicialmente limpo; oito arquivos documentais da Library já modificados, preservados. [Detecção, autoridade e limites](../architecture/milestone-3-4.md).
+
+Passaram: suíte padrão final all-targets com 65 testes, incluindo três de manutenção determinística e 14 do worker. PostgreSQL real isolado: descoberta 7, retry 18, ownership 12, reader 15 e migration de ownership 1. Smoke worker/Supervisor: 4. Target integrado: 15, incluindo casos auxiliares boundary-child/harness. Os dois casos novos de descoberta/publicação também foram reexecutados com os binários finais após refatoração equivalente da checagem de identidade e guarda de admissão na aplicação. Clippy estrito all-targets, rustdoc com -D warnings, build dos dois binários e formatação final passaram. Target novo incluído na configuração CI; CI remoto não executado. Comandos exatos disponíveis na [versão inglesa](../../en/testing/validation-results.md).
+
+Evidência nova: mistura de inválidos/orçamento/capacidade/válidos, conteúdo/histórico preservados, cursor/limite superior/retorno ao início, inserção/alteração concorrente, avanço após prefixo inseguro, aquisição por ID revalidada, salto de lock, isolamento concorrente, ciclo/revisão obsoletos, reparo válido sem incrementar revisão, dono final ativo/conclusão, dono expirado, schema/timestamp não suportados, revisão/ownership inseguros, pool fechado, rejeição diferida de commit, perda de acknowledgement e cancelamento pós-commit com observação durável independente. Testes determinísticos verificam ausência de mutação em observação/erro, consumo do cursor, manutenção durante outage do broker, pausas interrompíveis e ausência de rajada compensatória. Worker real deixa identidade nil pending/intacta, isola poison com espaços e entrega ID válido original; banco e mensagem do broker observados separadamente. Constraints removidas somente da fixture malformada no banco descartável exato; produção intacta.
+
+Checks operacionais somente leitura: Compose válido; http/relay ainda RUNNING; PostgreSQL saudável/autenticado e configuração em execução coincide com Compose. Quatro migrations existentes bem-sucedidas, inclusive 20261009000000 e 20261012000000. Sem migration nova/compartilhada, reinício, mudança de credenciais, reset de storage ou purge de fila compartilhada. Containers existentes reutilizados. Frontend e Viva Bem intactos. Sem stage/commit/push. Comportamento novo validado em workers isolados; relay compartilhado já em execução não foi reiniciado para carregá-lo.
+
+Validador documental: 236 documentos, zero erros, 18 avisos anteriores de fixtures restritas; seus 18 testes unitários passaram. git diff --check passou nos dois projetos. Schedules finitos não provam justiça/cobertura completa, limite de bytes, perda de energia, toda concorrência, exactly-once ou idempotência de consumidor. Replay auditado e fechamento continuam 3.5/3.6.

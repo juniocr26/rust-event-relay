@@ -837,3 +837,37 @@ python3 -B ../engineering-library/tools/check_docs.py --workspace ..
 git diff --check
 git -C ../engineering-library diff --check
 ```
+
+
+## Milestone 3.4 — executed local validation, 2026-10-13
+
+Base Rust a756797bbdd64d50671d536ae7de697a3705ce8b; Library c272476429fe4c9223f274d74293edeabb8c79b5. Rust initially clean; Library already contained eight modified documentation files, preserved. [Detection, authority and limits](../architecture/milestone-3-4.md).
+
+Passed: final standard all-target suite 65 tests; three deterministic maintenance tests and 14 worker tests are included in that count. Real isolated PostgreSQL: discovery 7, retry 18, ownership 12, reader 15 and ownership-schema migration 1. Worker/Supervisor smoke 4 passed in isolated resources. Full integrated recovery target 15 passed (including its boundary-child/harness cases); the two new discovery/publication cases were also rerun successfully against final binaries after the final equivalent identity-check refactor and application admission guard. Strict Clippy all targets, rustdoc with -D warnings, both binary builds and final formatting check passed. The new discovery target is added to CI configuration; remote CI was not executed.
+
+New evidence covers mixed invalid/budget/capacity/valid rows, raw-content/history preservation, continuation/high-watermark/wrap, concurrent insert/state change, unsafe-prefix traversal, exact selection revalidation, held-row skip, competing isolation, stale cycle/revision, unversioned valid envelope repair, live final owner/completion, expired ownership, unsupported schema/timestamp, unsafe revision/ownership, closed-pool failure, deferred commit rejection, lost commit acknowledgement and post-commit cancellation with separate durable observation. Deterministic tests cover no mutation on observation/error, cursor consumption, worker outage maintenance, interruptible pacing and no maintenance catch-up bursts. Real worker leaves nil identity pending/intact, isolates whitespace poison and delivers original valid ID; database processed state and broker message are observed separately. Test-owned schema constraints are dropped only in the explicit malformed fixture; production constraints are unchanged.
+
+Read-only operational checks: Compose configuration valid; http/relay still RUNNING, PostgreSQL healthy/authenticated and current running settings match Compose. Four existing SQLx migrations are successful, including 20261009000000 and 20261012000000. No new/shared migration, service restart, credential change, storage reset or shared queue purge. Existing containers reused. Frontend and Viva Bem untouched. No staging, commit or push. The new behavior is validated in isolated workers; the already-running shared relay was not restarted to load it.
+
+Documentation validator: 236 documents, zero errors, 18 existing restricted-fixture warnings; validator's 18 unit tests passed. git diff --check passed in both projects. These finite tests do not prove fairness/full backlog coverage, byte bounds, power-loss behavior, every concurrency schedule, exactly-once or consumer idempotency. Audited replay and full milestone closure remain 3.5/3.6.
+
+Executed commands (existing app container; each ignored suite explicitly opted in):
+
+```bash
+docker compose exec -T app cargo test --locked --all-targets --quiet
+docker compose exec -T app cargo test --locked --test postgres_discovery --test postgres_retry --test postgres_ownership --test postgres_repository --test delivery_ownership_schema --test worker_smoke -- --ignored --test-threads=1
+docker compose exec -T app cargo test --locked --test integrated_recovery -- --ignored --test-threads=1
+docker compose exec -T app cargo test --locked --test integrated_recovery discovered_poison -- --ignored --test-threads=1
+docker compose exec -T app cargo test --locked --test integrated_recovery real_worker_discovers -- --ignored --test-threads=1
+docker compose exec -T app cargo clippy --locked --all-targets -- -D warnings
+docker compose exec -T app sh -c 'RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps'
+docker compose exec -T app cargo build --locked --bins
+docker compose exec -T app cargo fmt --all -- --check
+docker compose config --quiet
+docker compose exec -T app supervisor status
+sh scripts/check-postgres.sh
+python3 -B ../engineering-library/tools/check_docs.py --workspace ..
+python3 -B -m unittest discover -s ../engineering-library/tools -p 'test_check_docs.py' -q
+git diff --check
+git -C ../engineering-library diff --check
+```

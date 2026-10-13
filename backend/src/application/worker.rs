@@ -6,7 +6,8 @@ use super::{
 use crate::{
     config::WorkerConfig,
     persistence::{
-        AcquireRequest, OutboxAcquirer, OutboxCompleter, OutboxExhaustedMaintainer,
+        AcquireRequest, DiscoveryCursor, OutboxAcquirer, OutboxCandidateDiscovery,
+        OutboxCandidateIsolator, OutboxCompleter, OutboxExhaustedMaintainer,
         OutboxFailurePreserver, OutboxReleaser, OutboxRetryScheduler, TransitionOutcome,
     },
 };
@@ -98,14 +99,63 @@ where
         + OutboxReleaser
         + OutboxRetryScheduler
         + OutboxFailurePreserver
-        + OutboxExhaustedMaintainer,
+        + OutboxExhaustedMaintainer
+        + OutboxCandidateDiscovery
+        + OutboxCandidateIsolator,
     L: PublisherLifecycle,
 {
     let mut publisher = None;
     let mut maintenance = config.maintenance().iter().copied();
+    let mut cursor = DiscoveryCursor::default();
+    let mut discovered_valid = None;
+    let mut next_maintenance = Instant::now();
     let deadline = 'worker: loop {
         // Poll signal before constructing/admitting any operation.
         tokio::select! { biased; () = &mut *shutdown => break Instant::now() + config.shutdown, _ = std::future::ready(()) => {} }
+        // Database-only maintenance is admitted before publisher connection.
+        // At most one observation + one isolation (or one configured exact ID)
+        // per second and per loop. No catch-up bursts after slow operations.
+        if Instant::now() >= next_maintenance {
+            let (result, stop) = if let Some(candidate) = maintenance.next() {
+                drain_on_shutdown(
+                    async {
+                        super::maintenance::MaintenanceOutcome::Isolation(
+                            repository.preserve_exhausted(candidate).await,
+                        )
+                    },
+                    &mut *shutdown,
+                    config.drain,
+                    config.shutdown,
+                )
+                .await
+            } else {
+                let (result, stop) = drain_on_shutdown(
+                    super::maintenance::maintain_once(repository, &mut cursor),
+                    &mut *shutdown,
+                    config.drain,
+                    config.shutdown,
+                )
+                .await;
+                if let Some(Err(error)) = &result {
+                    tracing::warn!(error = %error, "discovery failed; no isolation authorized");
+                }
+                (result.and_then(Result::ok), stop)
+            };
+            next_maintenance = Instant::now() + Duration::from_secs(1);
+            if let Some(result) = result {
+                if let super::maintenance::MaintenanceOutcome::Observed {
+                    cursor,
+                    evidence: crate::persistence::CandidateEvidence::Valid,
+                } = &result
+                {
+                    discovered_valid = cursor.after;
+                }
+                tracing::info!(outcome = ?result, "database maintenance outcome");
+            }
+            if let Some(deadline) = stop {
+                break deadline;
+            }
+        }
         if publisher.is_none() {
             tracing::info!("publisher connecting");
             let (result, stop) = drain_on_shutdown(
@@ -153,30 +203,17 @@ where
             }
             continue;
         }
-        // One configured observation consumed before each general delivery admission.
-        // Consume before awaiting: conflicts, errors, uncertainty and cancellation
-        // never automatically repeat a stale request in this run.
-        if let Some(candidate) = maintenance.next() {
-            let (result, stop) = drain_on_shutdown(
-                repository.preserve_exhausted(candidate),
-                &mut *shutdown,
-                config.drain,
-                config.shutdown,
-            )
-            .await;
-            if let Some(result) = result {
-                tracing::info!(candidate = ?candidate, outcome = ?result, "exact-ID maintenance outcome");
-            }
-            if let Some(deadline) = stop {
-                break deadline;
-            }
-            // Maintenance may have waited on storage. Recheck publisher health
-            // before admitting a claim; replacement stays in the existing loop.
-            if publisher.as_ref().is_some_and(|p| !lifecycle.usable(p)) {
-                continue;
-            }
-        }
         let request = AcquireRequest::new(config.lease);
+        let request = match discovered_valid.take() {
+            Some(id) => match request.targeting(id) {
+                Ok(request) => request,
+                Err(_) => {
+                    tracing::warn!("invalid discovered identity; no delivery admitted");
+                    continue;
+                }
+            },
+            None => request,
+        };
         let (outcome, stop) = drain_on_shutdown(
             deliver_once(
                 repository,

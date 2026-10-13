@@ -911,11 +911,11 @@ async fn configured_worker_maintenance_protects_live_final_owner_and_keeps_gener
         let configured=format!("{}:{}:{}",exhausted_id,owned.retry_state().cycle(),owned.retry_state().revision());
         let other=Uuid::now_v7();seed(&r.pool,other).await;
         let child=r.spawn_configured(None,None,&configured).await;
-        r.log_until(child,"exact-ID maintenance outcome").await;
+        r.log_until(child,"database maintenance outcome").await;
         r.log_until(child,"Conflict").await;
         message(&r.channel,&r.topology.queue,other).await;
-        until(&r.pool,"SELECT bool_and(clock_timestamp() >= expires_at) FROM relay.outbox_events WHERE ownership_token IS NOT NULL").await;
         r.stop(child,"-TERM").await;
+        until(&r.pool,"SELECT bool_and(clock_timestamp() >= expires_at) FROM relay.outbox_events WHERE ownership_token IS NOT NULL").await;
         let pending:bool=checked(sqlx::query_scalar("SELECT status='pending' AND attempt_count=10 AND processed_at IS NULL FROM relay.outbox_events WHERE id=$1").bind(exhausted_id).fetch_one(&r.pool).await,"live-owner preservation and no repeated maintenance");assert!(pending);
         // An independent observation supplies authority for a new explicitly
         // configured run; this is not automatic requeue inside the first worker.
@@ -925,6 +925,45 @@ async fn configured_worker_maintenance_protects_live_final_owner_and_keeps_gener
         r.log_until(child,"Applied").await;
         r.stop(child,"-TERM").await;
         let terminal:bool=checked(sqlx::query_scalar("SELECT status='dead_letter' AND processed_at IS NULL AND attempt_count=10 FROM relay.outbox_events WHERE id=$1").bind(exhausted_id).fetch_one(&r.pool).await,"expired owner maintenance");assert!(terminal);
+        empty(&r.channel,&r.topology.queue).await;
+    }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires PostgreSQL/RabbitMQ; isolated resources only"]
+async fn discovered_poison_isolated_before_independent_real_publication() {
+    experiment(|r|async move {
+        use reliable_event_relay::{application::maintenance::{maintain_once,MaintenanceOutcome},persistence::*,domain::retry::TerminalReason};
+        let poison=Uuid::from_u128(1);let valid=Uuid::from_u128(2);
+        seed(&r.pool,poison).await;seed(&r.pool,valid).await;
+        sql(&r.pool,"UPDATE relay.outbox_events SET event_type=' \t',available_at='2000-01-01' WHERE id='00000000-0000-0000-0000-000000000001'").await;
+        let repo=PostgresOutboxRepository::new(r.pool.clone());
+        let mut cursor=DiscoveryCursor::default();
+        assert!(matches!(maintain_once(&repo,&mut cursor).await.unwrap(),MaintenanceOutcome::Isolation(Ok(RetryTransition::Applied(PreservedFailure {reason:TerminalReason::InvalidStoredEnvelope,..})))));
+        let publisher=RabbitMqPublisher::connect(config(r.topology.clone())).await.expect("publisher");
+        assert!(matches!(deliver_once(&repo,&publisher,request(30_000)).await,DeliveryOutcome::Published {completion:Ok(TransitionOutcome::Applied),..}));
+        let durable=state(&r.pool).await;assert_eq!(durable[0]["status"],"dead_letter");assert!(durable[0]["processed"].is_null());assert_eq!(durable[1]["status"],"processed");
+        message(&r.channel,&r.topology.queue,valid).await;
+        assert!(r.channel.basic_get(r.topology.queue.clone().into(),BasicGetOptions::default()).await.expect("queue observation").is_none());
+        publisher.close().await.expect("close publisher");
+    }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires PostgreSQL/RabbitMQ; isolated resources only"]
+async fn real_worker_discovers_beyond_unsafe_prefix_and_publishes_valid_identity() {
+    experiment(|r|async move {
+        let unsafe_id=Uuid::nil();let poison=Uuid::from_u128(1);let valid=Uuid::from_u128(2);
+        for id in [unsafe_id,poison,valid] {seed(&r.pool,id).await;}
+        sql(&r.pool,"UPDATE relay.outbox_events SET available_at='2000-01-01'; UPDATE relay.outbox_events SET event_type=' ' WHERE id='00000000-0000-0000-0000-000000000001'").await;
+        let child=r.spawn_configured(None,None,"").await;
+        until(&r.pool,"SELECT status='processed' FROM relay.outbox_events WHERE id='00000000-0000-0000-0000-000000000002'").await;
+        message(&r.channel,&r.topology.queue,valid).await;
+        r.stop(child,"-TERM").await;
+        let durable=state(&r.pool).await;
+        assert_eq!(durable[0]["status"],"pending");assert_eq!(durable[0]["count"],0);assert!(durable[0]["token"].is_null());
+        assert_eq!(durable[1]["status"],"dead_letter");assert_eq!(durable[1]["count"],0);assert!(durable[1]["processed"].is_null());
+        assert_eq!(durable[2]["status"],"processed");assert_eq!(durable[2]["count"],1);
         empty(&r.channel,&r.topology.queue).await;
     }).await;
 }

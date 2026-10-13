@@ -1,4 +1,5 @@
 pub mod delivery;
+pub mod maintenance;
 pub mod publisher;
 pub mod retry_policy;
 pub mod worker;

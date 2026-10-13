@@ -94,7 +94,7 @@ impl OutboxRetryScheduler for PostgresOutboxRepository {
         }))
     }
 }
-async fn terminal(
+pub(super) async fn terminal(
     tx: &mut Transaction<'_, Postgres>,
     id: Uuid,
     now: DateTime<Utc>,
@@ -167,6 +167,10 @@ impl OutboxExhaustedMaintainer for PostgresOutboxRepository {
             || state.revision() != request.revision()
             || time(&row, "available_at")?.is_none_or(|t| t > now)
             || time(&row, "expires_at")?.is_some_and(|t| t > now)
+        {
+            return conflict(tx).await;
+        }
+        if super::discovery::maintenance_eligibility(&row, now, count)? != CandidateEvidence::Valid
         {
             return conflict(tx).await;
         }

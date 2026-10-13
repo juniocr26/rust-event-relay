@@ -70,3 +70,8 @@ Integração de entrega/worker implementada; seções anteriores mantêm seu esc
 ## Rollout local autorizado — 2026-10-13
 
 [Operação local atual](local-relay-rollout.md): http/relay com autostart, migrations ownership/retry instaladas explicitamente, topologia autenticada e controles manuais/interativos verificados. Descrições pendentes/paradas anteriores permanecem históricas. Sem alegação de prontidão produtiva ou conclusão de 3.4–3.6.
+
+
+## Marco 3.4 — descoberta/isolamento atuais
+
+Descoberta limitada e isolamento com autoridade atual implementados; replay permanece 3.5 e fechamento integrado 3.6. Rollout local preservado; esta alteração não tem migration ou reinício compartilhado. [Marco 3.4 — descoberta/isolamento atuais](../architecture/milestone-3-4.md).

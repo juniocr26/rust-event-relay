@@ -18,8 +18,8 @@ use sqlx::{Postgres, Row, Transaction};
 // sampled in another statement, after the selected row is locked.
 const SELECT_CANDIDATE: &str = "SELECT id, event_type, aggregate_type, aggregate_id, \
     schema_version, occurred_at, correlation_id, causation_id, payload, attempt_count, \
-    available_at, status, acquired_at, expires_at, retry_cycle, cycle_baseline, cycle_maximum, state_revision FROM relay.outbox_events \
-    WHERE status='pending' AND available_at <= $1 AND attempt_count < 2147483647 \
+    available_at, status, ownership_token, acquired_at, expires_at, retry_cycle, cycle_baseline, cycle_maximum, state_revision FROM relay.outbox_events \
+    WHERE status='pending' AND ($2::uuid IS NULL OR id=$2) AND available_at <= $1 AND attempt_count < 2147483647 \
     AND attempt_count - cycle_baseline < cycle_maximum AND state_revision < 9223372036854775807 \
     AND (expires_at IS NULL OR expires_at <= $1) \
     ORDER BY available_at, created_at, id LIMIT 1 FOR UPDATE SKIP LOCKED";
@@ -57,6 +57,7 @@ impl OutboxAcquirer for PostgresOutboxRepository {
         let cutoff = clock(&mut tx).await?;
         let row = sqlx::query(SELECT_CANDIDATE)
             .bind(cutoff)
+            .bind(request.event_id())
             .fetch_optional(&mut *tx)
             .await
             .map_err(map_driver_error)?;
@@ -69,6 +70,18 @@ impl OutboxAcquirer for PostgresOutboxRepository {
         let snapshot = StoredEvent::decode(&row)?.restore()?;
         let now = clock(&mut tx).await?;
         let retry = retry_state(&row, snapshot.attempt_count())?;
+        if snapshot.event().id().is_nil() {
+            return Err(invalid_data(
+                crate::domain::retry::RetryError::InvalidIdentity,
+            ));
+        }
+        if super::discovery::maintenance_eligibility(&row, now, snapshot.attempt_count())?
+            != crate::persistence::CandidateEvidence::Valid
+        {
+            tx.rollback().await.map_err(map_driver_error)?;
+            return Ok(None);
+        }
+
         let status: String = row.try_get("status").map_err(invalid_data)?;
         let expiry = row
             .try_get::<Option<StoredTimestamp>, _>("expires_at")

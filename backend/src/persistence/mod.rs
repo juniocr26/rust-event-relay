@@ -44,3 +44,6 @@ pub use ownership::{
 
 mod retry;
 pub use retry::*;
+
+mod discovery;
+pub use discovery::*;

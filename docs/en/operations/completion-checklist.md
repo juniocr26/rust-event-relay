@@ -70,3 +70,8 @@ Application delivery/worker integration is implemented; earlier sections retain 
 ## Authorized local rollout — 2026-10-13
 
 [Current local operation](local-relay-rollout.md): both http/relay autostart, ownership/retry migrations installed explicitly, authenticated broker topology and manual/interactive controls verified. Earlier pending/stopped descriptions retain historical scope. Production readiness and remaining 3.4–3.6 work are not claimed.
+
+
+## Milestone 3.4 — current discovery/isolation
+
+Bounded discovery and fresh-authority isolation are implemented; replay remains 3.5 and integrated closure 3.6. Current local rollout is preserved; this change has no migration or shared restart. [Milestone 3.4 — current discovery/isolation](../architecture/milestone-3-4.md).

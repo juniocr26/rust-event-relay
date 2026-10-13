@@ -10,13 +10,27 @@ use uuid::Uuid;
 pub struct AcquireRequest {
     token: OwnershipToken,
     duration: LeaseDuration,
+    event_id: Option<Uuid>,
 }
 impl AcquireRequest {
     pub fn new(duration: LeaseDuration) -> Self {
         Self {
             token: OwnershipToken::fresh(),
             duration,
+            event_id: None,
         }
+    }
+    /// Focus selection on a discovered identity; this conveys no claim or revision
+    /// authority. All current acquisition predicates still apply under the lock.
+    pub fn targeting(mut self, id: Uuid) -> Result<Self, DeliveryError> {
+        if id.is_nil() {
+            return Err(DeliveryError::InvalidState);
+        }
+        self.event_id = Some(id);
+        Ok(self)
+    }
+    pub fn event_id(&self) -> Option<Uuid> {
+        self.event_id
     }
     pub fn token(&self) -> OwnershipToken {
         self.token

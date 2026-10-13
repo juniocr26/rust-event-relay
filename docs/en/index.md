@@ -97,3 +97,8 @@ Category applicability and omissions are justified in the [completion checklist]
 [Milestone 3.3 — current integration](architecture/milestone-3-3.md).
 
 [Local relay rollout and automatic startup](operations/local-relay-rollout.md).
+
+
+## Milestone 3.4 — current discovery/isolation
+
+Bounded discovery and fresh-authority isolation are implemented; replay remains 3.5 and integrated closure 3.6. Current local rollout is preserved; this change has no migration or shared restart. [Milestone 3.4 — current discovery/isolation](architecture/milestone-3-4.md).

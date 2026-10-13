@@ -26,6 +26,7 @@ use tokio::{
 };
 
 struct Repo {
+    scans: AtomicUsize,
     tokens: Mutex<Vec<OwnershipToken>>,
     maintenance: Mutex<Vec<(ExhaustedEvent, usize)>>,
     maintenance_error: Option<PersistenceErrorKind>,
@@ -38,6 +39,7 @@ struct Repo {
 impl Repo {
     fn new() -> Self {
         Self {
+            scans: AtomicUsize::new(0),
             tokens: Mutex::new(vec![]),
             maintenance: Mutex::new(vec![]),
             maintenance_error: None,
@@ -571,4 +573,61 @@ async fn cancelled_maintenance_does_not_admit_delivery_or_followup() {
     task.await;
     assert!(repo.tokens.lock().unwrap().is_empty());
     assert_eq!(repo.maintenance.lock().unwrap().len(), 1);
+}
+
+impl OutboxCandidateDiscovery for Repo {
+    async fn discover_candidate(
+        &self,
+        _: DiscoveryCursor,
+    ) -> Result<Option<DiscoveryObservation>, PersistenceError> {
+        self.scans.fetch_add(1, Ordering::SeqCst);
+        Ok(None)
+    }
+}
+impl OutboxCandidateIsolator for Repo {
+    async fn isolate_candidate(
+        &self,
+        _: MaintenanceCandidate,
+    ) -> Result<RetryTransition<PreservedFailure>, PersistenceError> {
+        panic!("no candidate")
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn discovery_proceeds_during_broker_outage_and_has_no_catchup_burst() {
+    let repo = Repo::new();
+    let lifecycle = Lifecycle::new();
+    lifecycle.fail.store(true, Ordering::SeqCst);
+    let stop = Notify::new();
+    let mut signal = Box::pin(stop.notified());
+    let cfg = config();
+    let mut task = Box::pin(worker::run(&repo, &lifecycle, &cfg, &mut signal));
+    tokio::select! {_=&mut task=>panic!("stop"),()=lifecycle.connected.notified()=>{}}
+    assert_eq!(repo.scans.load(Ordering::SeqCst), 1);
+    assert!(repo.tokens.lock().unwrap().is_empty());
+    advance(cfg.reconnect * 3).await;
+    tokio::select! {_=&mut task=>panic!("stop"),()=lifecycle.connected.notified()=>{}}
+    assert_eq!(repo.scans.load(Ordering::SeqCst), 2); // no catchup of missed intervals
+    stop.notify_one();
+    task.await;
+    assert_eq!(repo.scans.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test(start_paused = true)]
+async fn rapid_delivery_admission_does_not_accelerate_discovery() {
+    let repo = Repo::new();
+    let lifecycle = Lifecycle::new();
+    let stop = Notify::new();
+    let cfg =
+        WorkerConfig::from_lookup(|key| (key == "RELAY_IDLE_MS").then(|| "20".into())).unwrap();
+    let mut signal = Box::pin(stop.notified());
+    let mut task = Box::pin(worker::run(&repo, &lifecycle, &cfg, &mut signal));
+    for _ in 0..10 {
+        tokio::select! {_=&mut task=>panic!("stop"),()=repo.admitted.notified()=>{}}
+        assert_eq!(repo.scans.load(Ordering::SeqCst), 1);
+        advance(cfg.idle).await;
+    }
+    assert_eq!(repo.tokens.lock().unwrap().len(), 10);
+    stop.notify_one();
+    task.await;
 }

@@ -19,6 +19,7 @@ const READ_ELIGIBLE: &str = "SELECT id, event_type, aggregate_type, aggregate_id
     FROM relay.outbox_events WHERE status = 'pending' AND available_at <= $1 \
     ORDER BY available_at, created_at, id LIMIT $2";
 
+mod discovery;
 mod ownership;
 mod retry;
 
