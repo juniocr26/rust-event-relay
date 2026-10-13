@@ -875,3 +875,8 @@ git -C ../engineering-library diff --check
 ## Milestone 3.5 — 2026-10-13
 
 [Executed replay checks and operational limits](../architecture/milestone-3-5.md#executed-validation). Migration 5/shared privileged activation remain pending; independent isolated database/broker tests do not prove consumer business effects or remote CI execution.
+
+
+## Current Milestone 3.6 acceptance — 2026-10-13
+
+[Full-project audit, traceable acceptance matrix, actual validation counts, operational gaps and study path](../operations/milestone-3-review.md). Milestone 3 closed with explicit nonblocking limitations; shared replay rollout, consumer idempotency, live frontend integration and production readiness remain separate. Earlier sections retain their dated historical scope.

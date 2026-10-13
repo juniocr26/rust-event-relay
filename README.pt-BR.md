@@ -2,6 +2,8 @@
 
 # Reliable Event Relay
 
+[Aceitação do Marco 3, lacunas operacionais e leitura guiada](docs/pt-BR/operations/milestone-3-review.md): fechado com limitações explícitas não bloqueantes. Rollout replay compartilhado pendente; frontend de apresentação é simulação local.
+
 [Preparação frontend/backend — estrutura e comandos atuais](docs/pt-BR/guides/frontend-backend.md). Comandos Cargo nativos rodam em `backend/`; comandos frontend em `frontend/`.
 
 
@@ -20,9 +22,9 @@ Leia propósito/setup, arquitetura e contratos, segurança/falhas, testes/evidê
 
 ## Estado atual e escopo
 
-**Implementado hoje:** worker relay sequencial com pacing/reconexão explícitos e shutdown limitado, configuração por ambiente e `.env` opcional, tracing estruturado em JSON, servidor HTTP Axum, `GET /health` retornando `200` e `ok`, encerramento por SIGINT/SIGTERM, testes de configuração e ciclo de vida, envelope canônico validado com UUID v7, timestamps UTC e testes de round-trip JSON, desenvolvimento Docker com infraestrutura PostgreSQL local e migrações SQL versionadas e schema outbox durável inicial e contratos de persistência da aplicação e repositório PostgreSQL de observação e operações produtivas de posse, testes opt-in isolados de integração PostgreSQL, adapter publisher RabbitMQ confirmado, management local do broker e gestão Supervisor, tipos validados de estado/posse e contratos focados de mutação, migração de lease durável (sem aplicação automática), testes reais de concorrência/expiração de posse, verificações de CI e documentação bilíngue.
+**Implementado hoje:** envelope canônico, schema outbox/posse/retry/replay PostgreSQL versionado, contratos/adapters focados de persistência, publicação RabbitMQ confirmada, relay sequencial com manutenção/reconexão/shutdown limitados, retry durável e preservação terminal, descoberta/isolamento de poison, replay autorizado idempotente opt-in com auditoria, HTTP liveness, Docker/Supervisor e frontend Vue de apresentação. A [matriz de aceitação](docs/pt-BR/operations/milestone-3-review.md) distingue verificação isolada, runtime compartilhado e garantias exatas.
 
-**Planejado / exploração futura:** gravações de produtor, orquestração de retries, idempotência, isolamento em dead-letter, pools de workers, concorrência limitada e contrapressão, webhooks HTTP, Redis Streams, readiness, métricas Prometheus e experimentos de falha. O binário HTTP não executa worker outbox; o publisher é chamável separadamente. O roteiro provisório está em [arquitetura](docs/pt-BR/architecture/overview.md).
+**Planejado / exploração futura:** gravações transacionais do produtor, idempotência do consumidor, integração frontend/backend real, reparo auditado, pools/backpressure, webhooks, Redis Streams, readiness/métricas, retenção, TLS/HA e backup/recuperação produtivos. HTTP não executa relay; HTTP com replay habilitado conecta ao PostgreSQL. Frontend executa somente cenários ilustrativos locais.
 
 [Marco 2.2](docs/pt-BR/architecture/milestone-2-2.md) implementa decisão de posse, modelos, contratos e schema. Eventos com lease permanecem pending; donos expirados não podem concluir/liberar. Tokens protegem transições no banco, mas não impedem publicação nem estabelecem entrega ponta a ponta.
 
@@ -32,7 +34,7 @@ Leia propósito/setup, arquitetura e contratos, segurança/falhas, testes/evidê
 
 A composição separada `relay` constrói pool/repositório PostgreSQL e lifecycle RabbitMQ; scheduling admite uma entrega por vez com pacing/reconexão explícitos e shutdown limitado. Veja [operação do worker](docs/pt-BR/architecture/milestone-2-5.md).
 
-Um `main.rs` pequeno carrega configuração, configura tracing, abre um socket e executa a aplicação. `application.rs` controla o ciclo de vida HTTP; `config.rs` interpreta configuração; `telemetry.rs` configura logs. `domain/event.rs` define o envelope canônico de eventos; o contrato publisher da aplicação é implementado pelo adapter RabbitMQ Lapin 4.12.0 da infraestrutura. SQLx 0.8.6 executa leituras e transações de posse PostgreSQL. Compose fornece PostgreSQL e RabbitMQ separados; o binário HTTP não se conecta a nenhum deles. O módulo persistence expõe snapshots pending limitados e erros classificados para futuros chamadores genéricos; `infrastructure/postgres` implementa OutboxReader e ports de aquisição/conclusão/liberação com PgPool injetado.
+Um `main.rs` pequeno carrega configuração, configura tracing, abre um socket e executa a aplicação. `application.rs` controla o ciclo de vida HTTP; `config.rs` interpreta configuração; `telemetry.rs` configura logs. `domain/event.rs` define o envelope canônico de eventos; o contrato publisher da aplicação é implementado pelo adapter RabbitMQ Lapin 4.12.0 da infraestrutura. SQLx 0.8.6 executa leituras e transações de posse PostgreSQL. Compose fornece PostgreSQL e RabbitMQ separados; HTTP somente liveness não se conecta a nenhum deles; HTTP replay opt-in conecta ao PostgreSQL após preflight do schema. O módulo persistence expõe snapshots pending limitados e erros classificados para futuros chamadores genéricos; `infrastructure/postgres` implementa OutboxReader e ports de aquisição/conclusão/liberação com PgPool injetado.
 
 ## Desenvolvimento
 
@@ -121,7 +123,7 @@ Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem ar
 
 ## Limites e filosofia
 
-`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Não há autenticação na aplicação HTTP, gravações do produtor, medição de desempenho ou imagem de produção. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
+`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Health não exige autenticação; rotas privilegiadas replay usam bearer confiável opt-in, desativadas por padrão. Gravações do produtor, idempotência de negócio do consumidor, medição de desempenho e imagem de produção continuam ausentes. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
 
 Licença MIT; consulte [LICENSE](LICENSE).
 

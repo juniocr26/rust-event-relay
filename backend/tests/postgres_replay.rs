@@ -272,3 +272,56 @@ async fn audit_terminal_evidence_canonical_fields_and_revision_limits() {
  }
  Ok(())}).await;
 }
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn replay_competes_with_stale_discovery_isolation_and_acquisition() {
+    isolated(|pool| async move {
+        setup(&pool).await;
+        let id = seed(&pool).await;
+        checked(sqlx::query("UPDATE relay.outbox_events SET status='pending',terminal_at=NULL,terminal_reason=NULL,attempt_count=10 WHERE id=$1").bind(id).execute(&pool).await, "exhausted discovery fixture");
+        let repo = PostgresOutboxRepository::new(pool.clone());
+        let candidate = repo.discover_candidate(DiscoveryCursor::default()).await?.unwrap().candidate.unwrap();
+        assert!(matches!(repo.isolate_candidate(candidate.clone()).await?, RetryTransition::Applied(_)));
+        let mut i = intent(id);
+        i.expected_revision = 5;
+        i.budget = 1;
+        let request = || AcquireRequest::new(reliable_event_relay::domain::delivery::LeaseDuration::from_micros(60_000_000).unwrap()).targeting(id).unwrap();
+        let (replayed, stale, acquired) = tokio::join!(apply(&repo, i.clone()), repo.isolate_candidate(candidate), repo.acquire(request()));
+        let ReplayOutcome::Reenabled(receipt) = replayed else { panic!("one replay cycle required") };
+        assert_eq!(stale?, RetryTransition::Conflict);
+        let owned = match acquired? {
+            Some(owned) => owned,
+            None => repo.acquire(request()).await?.unwrap(),
+        };
+        assert_eq!(owned.retry_state().cycle(), 2);
+        assert_eq!(owned.snapshot().attempt_count(), 11);
+        assert!(repo.acquire(request()).await?.is_none());
+        assert_eq!(repo.complete(owned.key()).await?, TransitionOutcome::Applied);
+        assert_eq!(apply(&repo, i).await, ReplayOutcome::Reenabled(receipt));
+        let counts: (i64, i32, i32) = checked(sqlx::query_as("SELECT (SELECT count(*) FROM relay.replay_requests),retry_cycle,attempt_count FROM relay.outbox_events WHERE id=$1").bind(id).fetch_one(&pool).await, "independent race observation");
+        assert_eq!(counts, (1, 2, 11));
+        Ok(())
+    }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn replay_down_removes_audit_metadata_without_reversing_reenabled_event() {
+    isolated(|pool| async move {
+        setup(&pool).await;
+        let id = seed(&pool).await;
+        let repo = PostgresOutboxRepository::new(pool.clone());
+        assert!(matches!(apply(&repo, intent(id)).await, ReplayOutcome::Reenabled(_)));
+        let before: serde_json::Value = checked(sqlx::query_scalar("SELECT to_jsonb(e) FROM relay.outbox_events e WHERE id=$1").bind(id).fetch_one(&pool).await, "before audit removal");
+        checked(sqlx::raw_sql(include_str!("../migrations/20261013000000_add_audited_replay.down.sql")).execute(&pool).await, "isolated replay down");
+        let after: serde_json::Value = checked(sqlx::query_scalar("SELECT to_jsonb(e) FROM relay.outbox_events e WHERE id=$1").bind(id).fetch_one(&pool).await, "down retains reenabled state");
+        assert_eq!(before, after);
+        let absent: bool = checked(sqlx::query_scalar("SELECT to_regclass('relay.replay_requests') IS NULL AND to_regprocedure('relay.reject_replay_audit_change()') IS NULL").fetch_one(&pool).await, "audit objects removed");
+        assert!(absent);
+        checked(sqlx::raw_sql(include_str!("../migrations/20261013000000_add_audited_replay.up.sql")).execute(&pool).await, "isolated replay re-up");
+        let count: i64 = checked(sqlx::query_scalar("SELECT count(*) FROM relay.replay_requests").fetch_one(&pool).await, "audit history cannot be restored by re-up");
+        assert_eq!(count, 0);
+        Ok(())
+    }).await;
+}

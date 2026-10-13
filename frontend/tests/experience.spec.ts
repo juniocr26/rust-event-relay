@@ -1,5 +1,34 @@
 import { test, expect } from '@playwright/test'
 
+test('presentation loads its resources and favicon without runtime errors or API calls', async ({ page }) => {
+  const errors: string[] = []
+  const apiCalls: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  page.on('requestfailed', request => errors.push(`failed resource: ${request.url()}`))
+  page.on('response', response => {
+    if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`)
+  })
+  page.on('request', request => {
+    if (['fetch', 'xhr'].includes(request.resourceType())) apiCalls.push(request.url())
+  })
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: 'Open experience' })).toBeVisible()
+  const favicon = page.locator('link[rel="icon"]')
+  await expect(favicon).toHaveAttribute('href', '/favicon.svg')
+  const response = await page.request.get((await favicon.getAttribute('href'))!)
+  expect(response.ok()).toBe(true)
+  expect(await response.text()).toContain('<svg')
+  await page.clock.install()
+  await page.getByRole('button', { name: 'Open experience' }).click()
+  await page.getByRole('button', { name: 'Run scenario' }).click()
+  await page.clock.runFor(14400)
+  await expect(page.locator('.result strong')).toHaveText('✓ Delivery recorded')
+  await page.keyboard.press('Escape')
+  expect(errors).toEqual([])
+  expect(apiCalls).toEqual([])
+})
+
 for (const width of [320, 375, 768, 1024, 1920]) {
   test(`viewport ${width}: full landing, readable modal, accessible controls`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
@@ -8,6 +37,7 @@ for (const width of [320, 375, 768, 1024, 1920]) {
     expect(landing?.width).toBe(width)
     expect(landing!.height).toBeGreaterThanOrEqual(900)
     await expect(page.locator('body')).toHaveCSS('margin', '0px')
+    await page.screenshot({ path: `/tmp/relay-landing-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: 'Open experience' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
@@ -15,6 +45,8 @@ for (const width of [320, 375, 768, 1024, 1920]) {
       true,
     )
     await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused()
+    await expect(page.getByRole('heading', { name: 'Deliver a message' })).toBeInViewport()
+    await page.screenshot({ path: `/tmp/relay-modal-top-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: 'Run scenario' }).scrollIntoViewIfNeeded()
     await expect(page.getByRole('button', { name: 'Run scenario' })).toBeInViewport()
     await page.screenshot({ path: `/tmp/relay-${width}.png`, fullPage: true })

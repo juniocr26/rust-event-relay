@@ -179,3 +179,8 @@ Veja [consulta, restauração, limites e erros](../database/postgres-repository.
 ## Marco 3.2 — persistência atual
 
 Schema durável de retry, agenda/preservação terminal protegidas por dono/ciclo/revisão, orçamento de aquisição e manutenção exata de esgotados estão implementados. Integração fica em 3.3, scanner geral em 3.4, replay em 3.5 e fechamento integrado em 3.6. Seções anteriores preservam contexto histórico de cada marco. [Contratos, migration, falhas e rollout](milestone-3-2.md).
+
+
+## Aceitação atual do Marco 3.6 — 13/10/2026
+
+[Auditoria completa, matriz rastreável, contagens executadas, lacunas operacionais e leitura guiada](../operations/milestone-3-review.md). Marco 3 fechado com limitações explícitas não bloqueantes; rollout replay compartilhado, idempotência consumer, frontend/backend real e prontidão produtiva permanecem separados. Seções anteriores preservam o escopo histórico datado.

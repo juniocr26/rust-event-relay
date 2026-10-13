@@ -75,3 +75,8 @@ Integração de entrega/worker implementada; seções anteriores mantêm seu esc
 ## Marco 3.4 — descoberta/isolamento atuais
 
 Descoberta limitada e isolamento com autoridade atual implementados; replay permanece 3.5 e fechamento integrado 3.6. Rollout local preservado; esta alteração não tem migration ou reinício compartilhado. [Marco 3.4 — descoberta/isolamento atuais](../architecture/milestone-3-4.md).
+
+
+## Aceitação atual do Marco 3.6 — 13/10/2026
+
+[Auditoria completa, matriz rastreável, contagens executadas, lacunas operacionais e leitura guiada](milestone-3-review.md). Marco 3 fechado com limitações explícitas não bloqueantes; rollout replay compartilhado, idempotência consumer, frontend/backend real e prontidão produtiva permanecem separados. Seções anteriores preservam o escopo histórico datado.

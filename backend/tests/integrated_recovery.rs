@@ -402,6 +402,92 @@ async fn boundary_child() {
         RabbitMqPublisher::connect(RabbitMqConfig::from_lookup(|k| std::env::var(k).ok()).unwrap())
             .await
             .expect("child publisher");
+    if matches!(mode.as_str(), "scheduled" | "terminal" | "replayed") {
+        use reliable_event_relay::{
+            application::{
+                delivery::deliver_once_with_delay,
+                replay::{self, ReplayPrincipal},
+            },
+            domain::retry::RetryDelay,
+            persistence::{ReplayIntent, ReplayOutcome, RetryTransition},
+        };
+        let repository = PostgresOutboxRepository::new(pool.clone());
+        let token = if mode == "replayed" {
+            let id = checked(
+                sqlx::query_scalar("SELECT id FROM relay.outbox_events")
+                    .fetch_one(&pool)
+                    .await,
+                "child identity",
+            );
+            let intent = ReplayIntent {
+                request_id: Uuid::now_v7(),
+                event_id: id,
+                expected_revision: 4,
+                expected_cycle: 1,
+                reason: "isolated restart acceptance".into(),
+                budget: 1,
+                delay_ms: 0,
+                ticket: None,
+            };
+            assert!(matches!(
+                replay::replay(
+                    &repository,
+                    &ReplayPrincipal::authenticated("fixture-operator".into(), true, 1),
+                    intent
+                )
+                .await
+                .unwrap(),
+                ReplayOutcome::Reenabled(_)
+            ));
+            Uuid::nil()
+        } else {
+            let connection = Connection::connect(&faults::uri(), ConnectionProperties::default())
+                .await
+                .unwrap();
+            let channel = connection.create_channel().await.unwrap();
+            channel
+                .queue_unbind(
+                    std::env::var("RABBITMQ_QUEUE").unwrap().into(),
+                    std::env::var("RABBITMQ_EXCHANGE").unwrap().into(),
+                    std::env::var("RABBITMQ_ROUTING_KEY").unwrap().into(),
+                    Default::default(),
+                )
+                .await
+                .unwrap();
+            let outcome = deliver_once_with_delay(&repository, &publisher, request(8000), |_| {
+                Ok(RetryDelay::from_micros(2_000_000).unwrap())
+            })
+            .await;
+            let DeliveryOutcome::PublicationFailed {
+                claim,
+                error,
+                handling,
+            } = outcome
+            else {
+                panic!("definitive failure required")
+            };
+            assert_eq!(error.kind(), PublishErrorKind::Unroutable);
+            if mode == "scheduled" {
+                assert!(matches!(
+                    handling,
+                    FailureHandling::Scheduled(Ok(RetryTransition::Applied(_)))
+                ));
+            } else {
+                assert!(matches!(
+                    handling,
+                    FailureHandling::Terminal(Ok(RetryTransition::Applied(_)))
+                ));
+            }
+            connection
+                .close(200, "boundary observer close".into())
+                .await
+                .unwrap();
+            claim.key.token().get()
+        };
+        std::fs::write(std::env::var("RECOVERY_READY").unwrap(), token.to_string()).unwrap();
+        std::future::pending::<()>().await;
+        unreachable!();
+    }
     let barrier = BarrierPublisher {
         inner: publisher,
         after: mode == "after",
@@ -995,4 +1081,69 @@ async fn authorized_http_replay_new_cycle_confirmed_publication_and_completion()
         let completed:bool=checked(sqlx::query_scalar("SELECT status='processed' AND attempt_count=8 AND retry_cycle=2 AND cycle_baseline=7 AND state_revision=7 AND ownership_token IS NULL FROM relay.outbox_events WHERE id=$1").bind(id).fetch_one(&r.pool).await,"independent completion observation");assert!(completed);
         empty(&r.channel,&r.topology.queue).await;publisher.close().await.unwrap();
     }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires PostgreSQL/RabbitMQ; isolated resources only"]
+async fn committed_schedule_terminal_and_replay_survive_process_kill_with_final_budget_success() {
+    for mode in ["scheduled", "terminal", "replayed"] {
+        experiment(move |r| async move {
+            use reliable_event_relay::{application::replay::{self, ReplayPrincipal}, persistence::*};
+            sql(&r.pool, include_str!("../migrations/20261013000000_add_audited_replay.up.sql")).await;
+            let id = Uuid::now_v7();
+            seed(&r.pool, id).await;
+            let fixture = match mode {
+                "scheduled" => "UPDATE relay.outbox_events SET attempt_count=8",
+                "terminal" => "UPDATE relay.outbox_events SET attempt_count=9",
+                _ => "UPDATE relay.outbox_events SET status='dead_letter',attempt_count=9,state_revision=4,terminal_at=clock_timestamp(),terminal_reason='legacy_dead_letter'",
+            };
+            sql(&r.pool, fixture).await;
+            let original: serde_json::Value = checked(sqlx::query_scalar("SELECT to_jsonb(e)-ARRAY['status','attempt_count','available_at','state_revision','ownership_token','acquired_at','expires_at','processed_at','retry_cycle','cycle_baseline','cycle_maximum','terminal_at','terminal_reason','diagnostic_code','diagnostic_at','failure_evidence','last_error'] FROM relay.outbox_events e").fetch_one(&r.pool).await, "original content");
+            r.spawn(Some(mode), None).await;
+            r.ready().await;
+            let previous_token: Uuid = std::fs::read_to_string(r.temp.join("ready")).unwrap().parse().unwrap();
+            let durable: serde_json::Value = checked(sqlx::query_scalar("SELECT to_jsonb(e) FROM relay.outbox_events e").fetch_one(&r.pool).await, "committed boundary");
+            assert_eq!(durable["status"], if mode == "terminal" { "dead_letter" } else { "pending" });
+            assert!(durable["processed_at"].is_null());
+            assert!(durable["ownership_token"].is_null());
+            empty(&r.channel, &r.topology.queue).await;
+            r.stop(0, "-KILL").await;
+            let after: serde_json::Value = checked(sqlx::query_scalar("SELECT to_jsonb(e) FROM relay.outbox_events e").fetch_one(&r.pool).await, "post-kill boundary");
+            assert_eq!(after, durable);
+            if mode == "terminal" {
+                r.spawn(None, None).await;
+                r.log_until(0, "publisher connected").await;
+                assert_eq!(state(&r.pool).await[0]["count"], 10);
+                assert_eq!(state(&r.pool).await[0]["status"], "dead_letter");
+            } else {
+                // Hold completion to observe the final live owner independently.
+                sql(&r.pool, "CREATE FUNCTION relay.hold_final() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.status='processed' THEN PERFORM pg_advisory_xact_lock(36); END IF; RETURN NEW; END $$; CREATE TRIGGER hold_final BEFORE UPDATE ON relay.outbox_events FOR EACH ROW EXECUTE FUNCTION relay.hold_final()").await;
+                let mut lock = checked(r.pool.acquire().await, "final owner barrier");
+                checked(sqlx::query("SELECT pg_advisory_lock(36)").execute(&mut *lock).await, "hold final completion");
+                r.spawn(None, None).await;
+                until(&r.pool, "SELECT status='pending' AND attempt_count=10 AND ownership_token IS NOT NULL FROM relay.outbox_events").await;
+                let fresh: Uuid = checked(sqlx::query_scalar("SELECT ownership_token FROM relay.outbox_events").fetch_one(&r.pool).await, "fresh owner");
+                assert_ne!(fresh, previous_token);
+                message(&r.channel, &r.topology.queue, id).await;
+                checked(sqlx::query("SELECT pg_advisory_unlock(36)").execute(&mut *lock).await, "allow final completion");
+                drop(lock);
+                until(&r.pool, "SELECT status='processed' AND attempt_count=10 AND ownership_token IS NULL FROM relay.outbox_events").await;
+                let repository = PostgresOutboxRepository::new(r.pool.clone());
+                assert!(repository.acquire(request(8000)).await.unwrap().is_none());
+                if mode == "replayed" {
+                    let intent: serde_json::Value = checked(sqlx::query_scalar("SELECT intent FROM relay.replay_requests").fetch_one(&r.pool).await, "replay intent after restart");
+                    let intent: ReplayIntent = serde_json::from_value(intent).unwrap();
+                    let principal = ReplayPrincipal::authenticated("fixture-operator".into(), true, 1);
+                    let receipt = replay::outcome(&repository, &principal, intent.request_id).await.unwrap().unwrap();
+                    assert_eq!(replay::replay(&repository, &principal, intent).await.unwrap(), ReplayOutcome::Reenabled(receipt));
+                    let count: i64 = checked(sqlx::query_scalar("SELECT count(*) FROM relay.replay_requests").fetch_one(&r.pool).await, "one durable replay receipt");
+                    assert_eq!(count, 1);
+                }
+            }
+            r.stop(0, "-TERM").await;
+            let preserved: serde_json::Value = checked(sqlx::query_scalar("SELECT to_jsonb(e)-ARRAY['status','attempt_count','available_at','state_revision','ownership_token','acquired_at','expires_at','processed_at','retry_cycle','cycle_baseline','cycle_maximum','terminal_at','terminal_reason','diagnostic_code','diagnostic_at','failure_evidence','last_error'] FROM relay.outbox_events e").fetch_one(&r.pool).await, "preserved content after restart");
+            assert_eq!(original, preserved);
+            empty(&r.channel, &r.topology.queue).await;
+        }).await;
+    }
 }

@@ -82,3 +82,8 @@ To regenerate the PDF, install ReportLab in a separate Python environment and ru
 ## Milestone 3 roadmap
 
 Milestone 3.1 selects the next schema and roadmap; all 3.2 migration/cycle/revision/scheduling changes remain planned. Applied migrations are unchanged. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).
+
+
+## Current Milestone 3.6 acceptance — 2026-10-13
+
+[Full-project audit, traceable acceptance matrix, actual validation counts, operational gaps and study path](../operations/milestone-3-review.md). Milestone 3 closed with explicit nonblocking limitations; shared replay rollout, consumer idempotency, live frontend integration and production readiness remain separate. Earlier sections retain their dated historical scope.

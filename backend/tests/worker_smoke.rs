@@ -8,13 +8,45 @@ use tokio::time::timeout;
 #[tokio::test]
 #[ignore = "requires PostgreSQL CREATE DATABASE and RabbitMQ"]
 async fn compiled_worker_confirms_and_completes_then_sigterm_exits() {
-    smoke(false).await;
+    smoke(false, false).await;
 }
 
 #[tokio::test]
 #[ignore = "requires PostgreSQL CREATE DATABASE, RabbitMQ and Supervisor in app"]
 async fn isolated_supervisor_named_and_collective_program_operation() {
-    smoke(true).await;
+    smoke(true, false).await;
+}
+
+#[tokio::test]
+#[ignore = "requires PostgreSQL CREATE DATABASE, RabbitMQ and Supervisor in app"]
+async fn isolated_supervisor_interactive_control_intentional_stop_and_unexpected_exit() {
+    smoke(true, true).await;
+}
+
+async fn console(config: &std::path::Path, alias: &str) {
+    use tokio::io::AsyncWriteExt;
+    let mut child = tokio::process::Command::new(alias)
+        .arg("-c")
+        .arg(config)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true)
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(b"status\nstop http\nstatus\nstart http\nrestart http\nstop relay\nstatus\nstart relay\nrestart relay\nstatus\nquit\n").await.unwrap();
+    let output = timeout(Duration::from_secs(12), child.wait_with_output())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(output.status.success());
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains("STOPPED") && text.contains("RUNNING"));
+    assert!(
+        !["ERROR", "unknown", "no such"]
+            .iter()
+            .any(|marker| text.contains(marker))
+    );
 }
 
 async fn ctl(config: &std::path::Path, alias: &str, args: &[&str]) -> String {
@@ -31,7 +63,7 @@ async fn ctl(config: &std::path::Path, alias: &str, args: &[&str]) -> String {
     String::from_utf8(output.stdout).unwrap()
 }
 
-async fn smoke(supervised: bool) {
+async fn smoke(supervised: bool, interactive: bool) {
     isolated(move |pool| async move {
         checked(sqlx::raw_sql(include_str!("../migrations/20261009000000_add_delivery_ownership.up.sql")).execute(&pool).await,"ownership migration");
         checked(sqlx::raw_sql(include_str!("../migrations/20261012000000_add_durable_retry.up.sql")).execute(&pool).await,"retry migration");
@@ -82,7 +114,32 @@ async fn smoke(supervised: bool) {
             assert_eq!(envelope.id(),event_id); assert_eq!(envelope.payload(),&serde_json::json!({"smoke":true}));
             assert_eq!(message.properties.message_id().as_ref().unwrap().as_str(),event_id.to_string());
             message.ack(BasicAckOptions::default()).await.unwrap();
-            if supervised {
+            if supervised && interactive {
+                for alias in ["supervisorctl", "supervisor"] {
+                    console(&case_config, alias).await;
+                }
+                for target in ["http", "relay"] {
+                    ctl(&case_config, "supervisorctl", &["stop", target]).await;
+                    tokio::time::sleep(Duration::from_secs(2)).await;
+                    assert!(ctl(&case_config, "supervisorctl", &["status", target]).await.contains("STOPPED"));
+                    ctl(&case_config, "supervisorctl", &["start", target]).await;
+                    let old: u32 = ctl(&case_config, "supervisorctl", &["pid", target]).await.trim().parse().unwrap();
+                    assert!(old > 0);
+                    let killed = tokio::process::Command::new("kill").args(["-KILL", &old.to_string()]).status().await.unwrap();
+                    assert!(killed.success());
+                    timeout(Duration::from_secs(8), async {
+                        loop {
+                            let status = ctl(&case_config, "supervisorctl", &["status", target]).await;
+                            let new: u32 = ctl(&case_config, "supervisorctl", &["pid", target]).await.trim().parse().unwrap();
+                            if status.contains("RUNNING") && new > 0 && new != old { break; }
+                            tokio::time::sleep(Duration::from_millis(50)).await;
+                        }
+                    }).await.expect("isolated unexpected child exit must restart");
+                }
+                let status = ctl(&case_config, "supervisorctl", &["status"]).await;
+                assert_eq!(status.lines().filter(|line| line.contains("RUNNING")).count(), 2);
+                assert!(case_channel.basic_get(case_queue.clone().into(), BasicGetOptions::default()).await.unwrap().is_none());
+            } else if supervised {
                 for alias in ["supervisorctl","supervisor"] {
                     for target in ["relay","http","all"] {
                         ctl(&case_config,alias,&["stop",target]).await;

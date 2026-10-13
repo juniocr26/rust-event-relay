@@ -179,3 +179,8 @@ See [query, restoration, bounds and errors](../database/postgres-repository.md),
 ## Milestone 3.2 — current persistence scope
 
 Durable retry schema, ownership/cycle/revision-protected scheduling and terminal preservation, acquisition budgets and exact-row exhausted maintenance are implemented. Application integration remains 3.3, general poison scanning 3.4, replay 3.5 and integrated closure 3.6. Earlier sections retain their milestone-specific historical scope. [Contracts, migration, failure semantics and rollout](milestone-3-2.md).
+
+
+## Current Milestone 3.6 acceptance — 2026-10-13
+
+[Full-project audit, traceable acceptance matrix, actual validation counts, operational gaps and study path](../operations/milestone-3-review.md). Milestone 3 closed with explicit nonblocking limitations; shared replay rollout, consumer idempotency, live frontend integration and production readiness remain separate. Earlier sections retain their dated historical scope.

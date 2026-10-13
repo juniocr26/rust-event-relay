@@ -2,6 +2,8 @@
 
 # Reliable Event Relay
 
+[Milestone 3 acceptance, operational gaps and study path](docs/en/operations/milestone-3-review.md): closed with explicit nonblocking limitations. Shared replay rollout remains pending; presentation is local simulation.
+
 [Frontend/backend preparation — current layout and commands](docs/en/guides/frontend-backend.md). Native Cargo commands run in `backend/`; frontend commands run in `frontend/`.
 
 
@@ -20,9 +22,9 @@ Read purpose/setup first, then architecture and contracts, security and failures
 
 ## Current status and scope
 
-**Implemented today:** a sequential relay worker with explicit pacing/reconnection and bounded shutdown, environment and optional `.env` configuration, structured JSON tracing, an Axum HTTP server, `GET /health` returning `200` and `ok`, SIGINT/SIGTERM shutdown, configuration and lifecycle tests, a validated canonical event envelope with UUID v7, UTC timestamps and JSON round-trip tests, Docker development with local PostgreSQL and versioned SQL migration infrastructure and the initial durable outbox schema and application-level persistence contracts and a PostgreSQL observation repository and production ownership operations, isolated opt-in PostgreSQL repository integration tests, a confirmed RabbitMQ publisher adapter, local broker management and Supervisor process control, validated delivery-state/ownership types and focused mutation contracts, a durable lease migration (not applied automatically), real ownership concurrency/expiration tests, CI checks and bilingual documentation.
+**Implemented today:** canonical event envelope, versioned PostgreSQL outbox/ownership/retry/replay schema, focused persistence contracts and adapters, confirmed RabbitMQ publication, sequential relay with bounded maintenance/reconnection/shutdown, durable retry and terminal preservation, poison discovery/isolation, opt-in authorized idempotent replay with audit, HTTP liveness, Docker/Supervisor operation and a Vue presentation frontend. The [acceptance matrix](docs/en/operations/milestone-3-review.md) separates isolated verification from shared running state and exact guarantees.
 
-**Planned / future exploration:** producer outbox writes, consumer idempotency, general poison scanning and audited replay, worker pools, bounded concurrency and backpressure, HTTP webhooks, Redis Streams, readiness, Prometheus metrics and failure experiments. The HTTP binary does not run an outbox worker; the publisher is callable separately. The provisional roadmap is in [architecture](docs/en/architecture/overview.md).
+**Planned / future exploration:** transactional producer writes, consumer idempotency, live frontend/backend integration, audited repair, worker pools/backpressure, webhooks, Redis Streams, readiness/metrics, retention, production TLS/HA and backup/recovery. The HTTP binary does not run the relay; replay-enabled HTTP connects to PostgreSQL. The frontend runs local illustrative scenarios only.
 
 [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements the ownership decision, models, contracts and schema only. Leased events remain pending; expired owners cannot complete/release. Tokens protect database transitions but do not fence publication or establish end-to-end delivery.
 
@@ -32,7 +34,7 @@ Read purpose/setup first, then architecture and contracts, security and failures
 
 The separate `relay` composition constructs the database pool/repository and RabbitMQ lifecycle; application scheduling admits one delivery at a time with explicit pacing/reconnection and bounded shutdown. See [worker operation](docs/en/architecture/milestone-2-5.md).
 
-A thin `main.rs` loads configuration, configures tracing, binds a socket and runs the application. `application.rs` owns HTTP lifecycle; `config.rs` owns parsing; `telemetry.rs` owns logging. `domain/event.rs` defines the canonical event envelope; the application publisher contract is implemented by the Lapin 4.12.0 RabbitMQ infrastructure adapter. SQLx 0.8.6 backs PostgreSQL reads and ownership transactions. Compose provides PostgreSQL and RabbitMQ separately; the HTTP binary connects to neither service. The persistence module exposes bounded pending snapshots and classified errors for future generic callers; `infrastructure/postgres` implements OutboxReader and the acquisition/completion/release ports with an injected PgPool.
+A thin `main.rs` loads configuration, configures tracing, binds a socket and runs the application. `application.rs` owns HTTP lifecycle; `config.rs` owns parsing; `telemetry.rs` owns logging. `domain/event.rs` defines the canonical event envelope; the application publisher contract is implemented by the Lapin 4.12.0 RabbitMQ infrastructure adapter. SQLx 0.8.6 backs PostgreSQL reads and ownership transactions. Compose provides PostgreSQL and RabbitMQ separately; liveness-only HTTP connects to neither service; opt-in replay HTTP connects to PostgreSQL after schema preflight. The persistence module exposes bounded pending snapshots and classified errors for future generic callers; `infrastructure/postgres` implements OutboxReader and the acquisition/completion/release ports with an injected PgPool.
 
 ## Development
 
@@ -121,7 +123,7 @@ The same arguments work with `supervisor`; run either command without arguments 
 
 ## Limits and philosophy
 
-`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. The binary has graceful HTTP shutdown; Supervisor bounds child shutdown to 30 seconds. There is no HTTP application authentication, producer writes, performance measurement or production deployment image. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
+`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. The binary has graceful HTTP shutdown; Supervisor bounds child shutdown to 30 seconds. The health route is unauthenticated; privileged replay routes use opt-in trusted bearer configuration and are disabled by default. Producer writes, consumer business idempotency, performance measurement and a production deployment image remain absent. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
 
 MIT licensed; see [LICENSE](LICENSE).
 

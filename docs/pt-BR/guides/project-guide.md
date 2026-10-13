@@ -84,3 +84,8 @@ Para regenerar PDF, instale ReportLab em ambiente Python separado e execute `pyt
 ## Roadmap do Marco 3
 
 Marco 3.1 define próximo schema e roadmap; migration/ciclo/revisão/agenda de 3.2 permanecem planejados. Migrations aplicadas não foram alteradas. [Policy and 3.2–3.6 acceptance](../architecture/milestone-3-1.md).
+
+
+## Aceitação atual do Marco 3.6 — 13/10/2026
+
+[Auditoria completa, matriz rastreável, contagens executadas, lacunas operacionais e leitura guiada](../operations/milestone-3-review.md). Marco 3 fechado com limitações explícitas não bloqueantes; rollout replay compartilhado, idempotência consumer, frontend/backend real e prontidão produtiva permanecem separados. Seções anteriores preservam o escopo histórico datado.

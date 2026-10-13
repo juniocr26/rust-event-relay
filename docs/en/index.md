@@ -104,3 +104,8 @@ Category applicability and omissions are justified in the [completion checklist]
 Bounded discovery and fresh-authority isolation are implemented; replay remains 3.5 and integrated closure 3.6. Current local rollout is preserved; this change has no migration or shared restart. [Milestone 3.4 — current discovery/isolation](architecture/milestone-3-4.md).
 
 [Milestone 3.5 — replay](architecture/milestone-3-5.md) | [ADR 009](adr/009-authorized-idempotent-replay.md) | [Operator replay](operations/replay.md)
+
+
+## Current Milestone 3.6 acceptance — 2026-10-13
+
+[Full-project audit, traceable acceptance matrix, actual validation counts, operational gaps and study path](operations/milestone-3-review.md). Milestone 3 closed with explicit nonblocking limitations; shared replay rollout, consumer idempotency, live frontend integration and production readiness remain separate. Earlier sections retain their dated historical scope.

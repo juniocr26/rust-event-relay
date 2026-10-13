@@ -854,3 +854,8 @@ Validador documental: 236 documentos, zero erros, 18 avisos anteriores de fixtur
 ## Marco 3.5 — 13/10/2026
 
 [Checks executados e limites operacionais](../architecture/milestone-3-5.md#validação-executada). Migration 5/ativação privilegiada compartilhada pendentes; testes isolados de banco/broker não provam efeito de negócio de consumidor nem execução remota de CI.
+
+
+## Aceitação atual do Marco 3.6 — 13/10/2026
+
+[Auditoria completa, matriz rastreável, contagens executadas, lacunas operacionais e leitura guiada](../operations/milestone-3-review.md). Marco 3 fechado com limitações explícitas não bloqueantes; rollout replay compartilhado, idempotência consumer, frontend/backend real e prontidão produtiva permanecem separados. Seções anteriores preservam o escopo histórico datado.
