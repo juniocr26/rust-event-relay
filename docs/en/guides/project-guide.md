@@ -92,3 +92,5 @@ Milestone 3.1 selects the next schema and roadmap; all 3.2 migration/cycle/revis
 ## Milestone 4.1 — contracts implemented; runtime planned
 
 [Inventory, deduplication, quarantine and 4.2–4.4](../architecture/milestone-4-1.md) | [ADR 010](../adr/010-atomic-consumer-and-quarantine.md).
+
+[Milestone 4.3 — real consumer flow, ACK/quarantine matrix, topology, shutdown and pending rollout](../architecture/milestone-4-3.md). Atomic effects and runtime are implemented; full crash/redelivery acceptance remains 4.4.

@@ -238,6 +238,23 @@ impl EventPublisher for RabbitMqPublisher {
     async fn publish(&self, event: &EventEnvelope) -> Result<(), PublishError> {
         let body = serde_json::to_vec(event)
             .map_err(|e| PublishError::with_source(Kind::Serialization, e))?;
+        self.publish_raw(
+            &body,
+            BasicProperties::default()
+                .with_content_type("application/json".into())
+                .with_delivery_mode(2)
+                .with_message_id(event.id().to_string().into()),
+        )
+        .await
+    }
+}
+impl RabbitMqPublisher {
+    // Shared confirmed transport, not the envelope-only EventPublisher contract.
+    async fn publish_raw(
+        &self,
+        body: &[u8],
+        properties: BasicProperties,
+    ) -> Result<(), PublishError> {
         let _gate = timeout(self.config.publish_timeout, self.gate.lock())
             .await
             .map_err(|e| PublishError::with_source(Kind::Unavailable, e))?;
@@ -258,11 +275,8 @@ impl EventPublisher for RabbitMqPublisher {
                         mandatory: true,
                         ..Default::default()
                     },
-                    &body,
-                    BasicProperties::default()
-                        .with_content_type("application/json".into())
-                        .with_delivery_mode(2)
-                        .with_message_id(event.id().to_string().into()),
+                    body,
+                    properties,
                 )
                 .await?
                 .await
@@ -423,3 +437,11 @@ mod tests {
         assert!(!format!("{c:?}").contains("secret"));
     }
 }
+
+mod consumer;
+mod properties;
+pub use consumer::{
+    RabbitConsumerConfig, RabbitConsumerSession, RabbitDelivery, RabbitQuarantinePublisher,
+    run_consumer,
+};
+pub use properties::{decode_properties, encode_properties};

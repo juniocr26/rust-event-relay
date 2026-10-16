@@ -1,7 +1,9 @@
-//! Future atomic processing and quarantine boundaries, with manual ACK policy.
+//! Atomic processing and future quarantine boundaries, with manual ACK policy.
+//! Processamento atômico e fronteiras futuras de quarentena, com política de ACK manual.
 use super::publisher::PublishError;
 use crate::domain::consumer::{ConsumerName, InvalidEvent, InventoryEvent, Stock};
-use std::future::Future;
+use crate::persistence::{PersistenceError, PersistenceErrorKind};
+use std::{error::Error, fmt, future::Future};
 
 /// Historical effect receipt; duplicate stock is the original post-effect value,
 /// not a current stock observation. Returned only after acknowledged commit.
@@ -16,12 +18,69 @@ pub enum ProcessingOutcome {
     IdentityConflict,
     Invalid(InvalidEvent),
 }
+/// Sanitized processing classification; no automatic retry policy.
+/// Classificação sanitizada; não define repetição automática.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ProcessingFailure {
+pub enum ProcessingFailureKind {
+    /// Failure before COMMIT, or known COMMIT rejection; no committed effect.
+    /// Falha anterior ao COMMIT ou rejeição conhecida dele; sem efeito commitado.
     PreCommit,
+    /// Connection, pool or infrastructure unavailable before COMMIT.
+    /// Conexão, pool ou infraestrutura indisponível antes do COMMIT.
+    Unavailable,
     /// Persisted content or receipt cannot be faithfully restored.
+    /// Conteúdo ou recibo persistido não pode ser restaurado fielmente.
     InvalidStoredData,
+    /// COMMIT may have succeeded; preserve identity during recovery.
+    /// COMMIT pode ter ocorrido; preserve a identidade na recuperação.
     CommitUncertain,
+}
+/// Reuses persistence diagnostics without exposing driver or content in formatting.
+/// Reutiliza diagnósticos sem expor driver ou conteúdo na formatação.
+#[derive(Debug)]
+pub struct ProcessingFailure(PersistenceError);
+impl ProcessingFailure {
+    /// Creates a source-free failure, useful at application boundaries.
+    /// Cria uma falha sem causa para fronteiras da aplicação.
+    pub fn new(kind: ProcessingFailureKind) -> Self {
+        Self(PersistenceError::new(match kind {
+            ProcessingFailureKind::PreCommit => PersistenceErrorKind::OperationFailed,
+            ProcessingFailureKind::Unavailable => PersistenceErrorKind::Unavailable,
+            ProcessingFailureKind::InvalidStoredData => PersistenceErrorKind::InvalidStoredData,
+            ProcessingFailureKind::CommitUncertain => PersistenceErrorKind::CommitUncertain,
+        }))
+    }
+    /// Stable classification independent of SQLx.
+    /// Classificação estável independente de SQLx.
+    pub fn kind(&self) -> ProcessingFailureKind {
+        match self.0.kind() {
+            PersistenceErrorKind::OperationFailed => ProcessingFailureKind::PreCommit,
+            PersistenceErrorKind::Unavailable => ProcessingFailureKind::Unavailable,
+            PersistenceErrorKind::InvalidStoredData => ProcessingFailureKind::InvalidStoredData,
+            PersistenceErrorKind::CommitUncertain => ProcessingFailureKind::CommitUncertain,
+        }
+    }
+}
+impl From<PersistenceError> for ProcessingFailure {
+    fn from(error: PersistenceError) -> Self {
+        Self(error)
+    }
+}
+impl fmt::Display for ProcessingFailure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self.kind() {
+            ProcessingFailureKind::PreCommit => "consumer transaction rejected",
+            ProcessingFailureKind::Unavailable => "consumer persistence unavailable",
+            ProcessingFailureKind::InvalidStoredData => "invalid stored consumer data",
+            ProcessingFailureKind::CommitUncertain => "consumer commit uncertain",
+        })
+    }
+}
+impl Error for ProcessingFailure {
+    // Typed sources are for controlled diagnostics; redact before logging.
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        self.0.source()
+    }
 }
 /// One transaction owns (consumer,event), increments stock and stores the receipt.
 /// Cancellation never proves rollback. No external side effects are covered.
@@ -48,8 +107,9 @@ pub fn delivery_action(result: Result<ProcessingOutcome, ProcessingFailure>) -> 
     }
 }
 /// Closed diagnostic vocabulary: bounded, no raw errors or user content.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum QuarantineReason {
+    MalformedJson,
     InvalidIdentity,
     InvalidContent,
     Unsupported,

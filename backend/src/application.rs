@@ -44,3 +44,5 @@ pub async fn shutdown_signal() {
 pub mod replay;
 
 pub mod consumer;
+
+pub mod consume;

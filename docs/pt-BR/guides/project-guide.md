@@ -94,3 +94,5 @@ Marco 3.1 define próximo schema e roadmap; migration/ciclo/revisão/agenda de 3
 ## Marco 4.1 — contratos implementados; runtime planejado
 
 [Estoque, deduplicação, quarentena e 4.2–4.4](../architecture/milestone-4-1.md) | [ADR 010](../adr/010-atomic-consumer-and-quarantine.md).
+
+[Marco 4.3 — fluxo consumidor real, matriz ACK/quarentena, topologia, shutdown e rollout pendente](../architecture/milestone-4-3.md). Efeito atômico/runtime implementados; aceitação completa de crash/redelivery permanece 4.4.

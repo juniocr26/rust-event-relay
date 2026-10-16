@@ -68,14 +68,14 @@ docker compose exec app bash
 # Direct, inside app:
 supervisorctl status
 supervisorctl stop all
-supervisorctl start all
+supervisorctl start http relay
 supervisorctl stop http
 supervisorctl start http
 supervisorctl restart http
 # Alias forwards every argument:
 supervisor status
 supervisor stop all
-supervisor start all
+supervisor start http relay
 supervisor stop http
 supervisor start http
 supervisor restart http
@@ -85,7 +85,7 @@ supervisorctl
 # At the supervisor> prompt:
 status
 stop all
-start all
+start http relay
 stop http
 start http
 restart http
@@ -133,3 +133,7 @@ Delivery-state transitions and authority, claims/leases/ownership, reconciliatio
 ## Authorized local rollout — 2026-10-13
 
 [Current local operation](../operations/local-relay-rollout.md): both http/relay autostart, ownership/retry migrations installed explicitly, authenticated broker topology and manual/interactive controls verified. Earlier pending/stopped descriptions retain historical scope. Production readiness and remaining 3.4–3.6 work are not claimed.
+
+## Consumer opt-in — 2026-10-16
+
+The source configuration now has three programs: HTTP/relay keep autostart=true; consumer has autostart=false. start all/restart all explicitly starts consumer too. Use named commands; the new program is not installed in the current running manager. Compose grace is 95s for three bounded children. [Consumer configuration, topology, schema prerequisites and authorized rollout procedure](milestone-4-3.md#supervisor-and-pending-shared-rollout). Historical rollout results above retain their dates.

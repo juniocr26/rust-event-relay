@@ -1670,8 +1670,10 @@ name = "reliable-event-relay"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64",
  "chrono",
  "dotenvy",
+ "futures-util",
  "lapin",
  "rand 0.8.8",
  "serde",

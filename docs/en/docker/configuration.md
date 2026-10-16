@@ -168,3 +168,7 @@ Open **http://localhost:15672/** and enter the same `RABBITMQ_DEFAULT_USER` / `R
 ## Current local startup — 2026-10-13
 
 Both children autostart; local ownership/retry migrations were explicitly applied. [Installation, manual/interactive controls, restart behavior, topology and executed rollout](../operations/local-relay-rollout.md). No automatic migrations, data reset, credential change or frontend change.
+
+## Consumer opt-in — 2026-10-16
+
+The source configuration now has three programs: HTTP/relay keep autostart=true; consumer has autostart=false. start all/restart all explicitly starts consumer too. Use named commands; the new program is not installed in the current running manager. Compose grace is 95s for three bounded children. [Consumer configuration, topology, schema prerequisites and authorized rollout procedure](../architecture/milestone-4-3.md#supervisor-and-pending-shared-rollout). Historical rollout results above retain their dates.

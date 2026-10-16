@@ -9,6 +9,19 @@ use reliable_event_relay::{
 use sqlx::PgPool;
 use std::time::Duration;
 use support::{checked, isolated};
+// Assertions compare stable classifications, while dedicated diagnostics tests inspect sources.
+trait ClassifiedProcess: AtomicInventoryProcessor {
+    async fn process_kind(
+        &self,
+        consumer: &ConsumerName,
+        event: &InventoryEvent,
+    ) -> Result<ProcessingOutcome, ProcessingFailureKind> {
+        self.process(consumer, event)
+            .await
+            .map_err(|error| error.kind())
+    }
+}
+impl ClassifiedProcess for PostgresInventoryProcessor {}
 const UP: &str = include_str!("../migrations/20261014000000_add_atomic_consumer.up.sql");
 const DOWN: &str = include_str!("../migrations/20261014000000_add_atomic_consumer.down.sql");
 fn name() -> ConsumerName {
@@ -98,17 +111,18 @@ async fn atomic_effect_history_conflict_scopes_and_overflow() {
         let p = PostgresInventoryProcessor::new(pool.clone());
         let a = event(5);
         let b = event(5);
-        assert_eq!(p.process(&name(), &a).await, Ok(applied(15)));
-        assert_eq!(p.process(&name(), &a).await, Ok(duplicate(15)));
-        assert_eq!(p.process(&name(), &b).await, Ok(applied(20)));
-        assert_eq!(p.process(&name(), &a).await, Ok(duplicate(15)));
+        assert_eq!(p.process_kind(&name(), &a).await, Ok(applied(15)));
+        assert_eq!(p.process_kind(&name(), &a).await, Ok(duplicate(15)));
+        assert_eq!(p.process_kind(&name(), &b).await, Ok(applied(20)));
+        assert_eq!(p.process_kind(&name(), &a).await, Ok(duplicate(15)));
         assert_eq!(
-            p.process(&name(), &changed(&a)).await,
+            p.process_kind(&name(), &changed(&a)).await,
             Ok(ProcessingOutcome::IdentityConflict)
         );
         assert_eq!(units(&pool).await, 20);
         assert_eq!(
-            p.process(&ConsumerName::new("other").unwrap(), &a).await,
+            p.process_kind(&ConsumerName::new("other").unwrap(), &a)
+                .await,
             Ok(applied(25))
         );
         checked(
@@ -119,7 +133,7 @@ async fn atomic_effect_history_conflict_scopes_and_overflow() {
             "overflow fixture",
         );
         assert_eq!(
-            p.process(&name(), &event(1)).await,
+            p.process_kind(&name(), &event(1)).await,
             Ok(ProcessingOutcome::Invalid(InvalidEvent::Overflow))
         );
         assert_eq!(count(&pool).await, 3);
@@ -143,7 +157,7 @@ async fn concurrent_identical_conflicting_and_distinct_deliveries() {
         let p = PostgresInventoryProcessor::new(pool.clone());
         let a = event(5);
         let n = name();
-        let (x, y) = tokio::join!(p.process(&n, &a), p.process(&n, &a));
+        let (x, y) = tokio::join!(p.process_kind(&n, &a), p.process_kind(&n, &a));
         assert!(matches!(
             (x, y),
             (
@@ -156,7 +170,7 @@ async fn concurrent_identical_conflicting_and_distinct_deliveries() {
         ));
         let b = event(5);
         let c = changed(&b);
-        let (x, y) = tokio::join!(p.process(&n, &b), p.process(&n, &c));
+        let (x, y) = tokio::join!(p.process_kind(&n, &b), p.process_kind(&n, &c));
         assert!(matches!(
             (x, y),
             (
@@ -169,7 +183,7 @@ async fn concurrent_identical_conflicting_and_distinct_deliveries() {
         ));
         let d = event(5);
         let e = event(5);
-        let (x, y) = tokio::join!(p.process(&n, &d), p.process(&n, &e));
+        let (x, y) = tokio::join!(p.process_kind(&n, &d), p.process_kind(&n, &e));
         let mut receipts = vec![x.unwrap(), y.unwrap()];
         receipts.sort_by_key(|r| match r {
             ProcessingOutcome::Applied(r) => r.stock_after.units(),
@@ -205,15 +219,27 @@ async fn schema_constraints_completeness_immutability_and_down_up() {
             assert!(sqlx::query("INSERT INTO consumer.receipts(consumer_name,event_id,representation_version,immutable_content,warehouse_id,sku,quantity) VALUES($1,$2,$3,$4,'local','SKU-1',$5)")
             .bind(consumer).bind(id).bind(version).bind(content).bind(quantity).execute(&pool).await.is_err());
         }
+        // Satisfy the FK first: rejection must prove receipt completeness itself.
+        checked(
+            sqlx::query("INSERT INTO consumer.stock VALUES('local','SKU-1',0)")
+                .execute(&pool)
+                .await,
+            "existing stock for completeness",
+        );
         let a = event(5);
         let tx = placeholder(&pool, &a).await;
-        assert!(tx.commit().await.is_err());
+        let error = tx.commit().await.unwrap_err();
+        let database = error.as_database_error().expect("server rejection");
+        assert_eq!(database.code().as_deref(), Some("23514"));
+        assert_eq!(database.message(), "consumer receipt incomplete");
         assert_eq!(count(&pool).await, 0);
         let mut tx = placeholder(&pool, &a).await;
         checked(
-            sqlx::query("INSERT INTO consumer.stock VALUES('local','SKU-1',5)")
-                .execute(&mut *tx)
-                .await,
+            sqlx::query(
+                "UPDATE consumer.stock SET units=5 WHERE warehouse_id='local' AND sku='SKU-1'",
+            )
+            .execute(&mut *tx)
+            .await,
             "stock write",
         );
         checked(sqlx::query("UPDATE consumer.receipts SET stock_before=0,stock_after=5,completed_at=clock_timestamp()").execute(&mut *tx).await,"receipt completion");
@@ -232,7 +258,7 @@ async fn schema_constraints_completeness_immutability_and_down_up() {
         assert_eq!(count(&pool).await, 0);
         assert_eq!(
             PostgresInventoryProcessor::new(pool.clone())
-                .process(&name(), &a)
+                .process_kind(&name(), &a)
                 .await,
             Ok(applied(5))
         );
@@ -248,17 +274,35 @@ async fn statement_and_deferred_rejections_rollback_both_writes() {
         let p = PostgresInventoryProcessor::new(pool.clone());
         let a = event(5);
         checked(sqlx::raw_sql("CREATE FUNCTION consumer.test_reject() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test rejection' USING ERRCODE='23514'; END $$; CREATE TRIGGER test_reject BEFORE UPDATE ON consumer.receipts FOR EACH ROW EXECUTE FUNCTION consumer.test_reject();").execute(&pool).await,"test-only rejection");
+        let error = p.process(&name(), &a).await.unwrap_err();
+        assert_eq!(error.kind(), ProcessingFailureKind::PreCommit);
+        let source = std::error::Error::source(&error)
+            .and_then(|source| source.downcast_ref::<sqlx::Error>())
+            .expect("typed SQLx rejection source");
         assert_eq!(
-            p.process(&name(), &a).await,
-            Err(ProcessingFailure::PreCommit)
+            source
+                .as_database_error()
+                .and_then(|db| db.code())
+                .as_deref(),
+            Some("23514")
         );
+        assert!(!format!("{error} {error:?}").contains("test rejection"));
         assert_eq!(count(&pool).await, 0);
         assert_eq!(units(&pool).await, 0);
         checked(sqlx::raw_sql("DROP TRIGGER test_reject ON consumer.receipts; CREATE CONSTRAINT TRIGGER test_reject AFTER INSERT ON consumer.receipts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION consumer.test_reject();").execute(&pool).await,"test-only commit rejection");
+        let error = p.process(&name(), &a).await.unwrap_err();
+        assert_eq!(error.kind(), ProcessingFailureKind::PreCommit);
+        let source = std::error::Error::source(&error)
+            .and_then(|source| source.downcast_ref::<sqlx::Error>())
+            .expect("typed SQLx rejection source");
         assert_eq!(
-            p.process(&name(), &a).await,
-            Err(ProcessingFailure::PreCommit)
+            source
+                .as_database_error()
+                .and_then(|db| db.code())
+                .as_deref(),
+            Some("23514")
         );
+        assert!(!format!("{error} {error:?}").contains("test rejection"));
         assert_eq!(count(&pool).await, 0);
         assert_eq!(units(&pool).await, 0);
         Ok(())
@@ -274,10 +318,10 @@ async fn stored_representation_validation_and_exact_roundtrip() {
         let mut nanos = serde_json::to_value(event(5).envelope())?;
         nanos["occurred_at"] = serde_json::json!("2026-10-13T12:00:00.123456789Z");
         let a = validate(serde_json::from_value(nanos.clone())?);
-        assert_eq!(p.process(&name(), &a).await, Ok(applied(5)));
+        assert_eq!(p.process_kind(&name(), &a).await, Ok(applied(5)));
         nanos["occurred_at"] = serde_json::json!("2026-10-13T09:00:00.123456789-03:00");
         assert_eq!(
-            p.process(&name(), &validate(serde_json::from_value(nanos)?))
+            p.process_kind(&name(), &validate(serde_json::from_value(nanos)?))
                 .await,
             Ok(duplicate(5))
         );
@@ -295,7 +339,7 @@ async fn stored_representation_validation_and_exact_roundtrip() {
             "\"warehouse_id\":\"local\",\"sku\":\"SKU-1\",\"quantity\":5",
         );
         assert_eq!(
-            p.process(&name(), &validate(serde_json::from_str(&text)?))
+            p.process_kind(&name(), &validate(serde_json::from_str(&text)?))
                 .await,
             Ok(duplicate(5))
         );
@@ -323,8 +367,8 @@ async fn stored_representation_validation_and_exact_roundtrip() {
                 "corrupt stored content",
             );
             assert_eq!(
-                p.process(&name(), &a).await,
-                Err(ProcessingFailure::InvalidStoredData)
+                p.process_kind(&name(), &a).await,
+                Err(ProcessingFailureKind::InvalidStoredData)
             );
             assert_eq!(units(&pool).await, 5);
         }
@@ -369,7 +413,7 @@ async fn waiting_writer_rollback_and_lock_deadline() {
         let tx = placeholder(&pool, &a).await;
         let p = PostgresInventoryProcessor::new(pool.clone());
         let copy = a.clone();
-        let task = tokio::spawn(async move { p.process(&name(), &copy).await });
+        let task = tokio::spawn(async move { p.process_kind(&name(), &copy).await });
         wait_for_lock(&observer).await;
         checked(tx.rollback().await, "first writer rollback");
         assert_eq!(
@@ -388,8 +432,8 @@ async fn waiting_writer_rollback_and_lock_deadline() {
             .await?;
         let p = PostgresInventoryProcessor::new(deadline_pool.clone());
         assert_eq!(
-            tokio::time::timeout(Duration::from_secs(2), p.process(&name(), &b)).await?,
-            Err(ProcessingFailure::PreCommit)
+            tokio::time::timeout(Duration::from_secs(2), p.process_kind(&name(), &b)).await?,
+            Err(ProcessingFailureKind::PreCommit)
         );
         checked(tx.rollback().await, "deadline holder rollback");
         assert_eq!(count(&pool).await, 1);
@@ -409,20 +453,20 @@ async fn lost_ack_and_cancellation_after_observed_commit() {
         let (proxy, server) = faults::lost_commit_ack_pool(&pool).await;
         let p = PostgresInventoryProcessor::new(proxy.clone());
         assert_eq!(
-            tokio::time::timeout(Duration::from_secs(5), p.process(&name(), &a)).await?,
-            Err(ProcessingFailure::CommitUncertain)
+            tokio::time::timeout(Duration::from_secs(5), p.process_kind(&name(), &a)).await?,
+            Err(ProcessingFailureKind::CommitUncertain)
         );
         assert!(tokio::time::timeout(Duration::from_secs(5), server).await??);
         assert_eq!(units(&pool).await, 5);
         assert_eq!(count(&pool).await, 1);
         let p = PostgresInventoryProcessor::new(pool.clone());
-        assert_eq!(p.process(&name(), &a).await, Ok(duplicate(5)));
+        assert_eq!(p.process_kind(&name(), &a).await, Ok(duplicate(5)));
         proxy.close().await;
         let b = event(5);
         let (proxy, server, observed) = faults::withheld_commit_ack_pool(&pool).await;
         let p = PostgresInventoryProcessor::new(proxy.clone());
         let copy = b.clone();
-        let task = tokio::spawn(async move { p.process(&name(), &copy).await });
+        let task = tokio::spawn(async move { p.process_kind(&name(), &copy).await });
         tokio::time::timeout(Duration::from_secs(5), observed).await??;
         assert_eq!(units(&pool).await, 10);
         assert_eq!(count(&pool).await, 2);
@@ -433,7 +477,7 @@ async fn lost_ack_and_cancellation_after_observed_commit() {
         proxy.close().await;
         assert_eq!(
             PostgresInventoryProcessor::new(pool.clone())
-                .process(&name(), &b)
+                .process_kind(&name(), &b)
                 .await,
             Ok(duplicate(10))
         );
@@ -449,7 +493,7 @@ async fn cancellation_before_admission_and_while_waiting_leaves_no_effect() {
         let p = PostgresInventoryProcessor::new(pool.clone());
         let a = event(5);
         let n = name();
-        let future = p.process(&n, &a);
+        let future = p.process_kind(&n, &a);
         drop(future);
         assert_eq!(count(&pool).await, 0);
         let observer = sqlx::postgres::PgPoolOptions::new()
@@ -458,7 +502,7 @@ async fn cancellation_before_admission_and_while_waiting_leaves_no_effect() {
             .await?;
         let tx = placeholder(&pool, &a).await;
         let copy = a.clone();
-        let task = tokio::spawn(async move { p.process(&name(), &copy).await });
+        let task = tokio::spawn(async move { p.process_kind(&name(), &copy).await });
         wait_for_lock(&observer).await;
         task.abort();
         assert!(task.await.unwrap_err().is_cancelled());
@@ -466,7 +510,7 @@ async fn cancellation_before_admission_and_while_waiting_leaves_no_effect() {
         // A new successful call also waits for SQLx's queued rollback/connection recovery.
         assert_eq!(
             PostgresInventoryProcessor::new(pool.clone())
-                .process(&name(), &a)
+                .process_kind(&name(), &a)
                 .await,
             Ok(applied(5))
         );
@@ -502,11 +546,11 @@ async fn concurrent_loser_reads_winners_completed_receipt_after_wait() {
         let a = event(5);
         let p = PostgresInventoryProcessor::new(concurrent.clone());
         let copy = a.clone();
-        let first = tokio::spawn(async move { p.process(&name(), &copy).await });
+        let first = tokio::spawn(async move { p.process_kind(&name(), &copy).await });
         wait_for_lock(&concurrent).await;
         let p = PostgresInventoryProcessor::new(concurrent.clone());
         let copy = a.clone();
-        let second = tokio::spawn(async move { p.process(&name(), &copy).await });
+        let second = tokio::spawn(async move { p.process_kind(&name(), &copy).await });
         tokio::time::timeout(Duration::from_secs(2),async {
             loop {
                 let waits:i64=checked(sqlx::query_scalar("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock'").fetch_one(&concurrent).await,"observe both writers");
@@ -548,4 +592,27 @@ async fn consumer_upgrade_preserves_existing_relay_envelope_and_history() {
         assert_eq!(units(&pool).await, 0);
         Ok(())
     }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn unavailable_pool_retains_typed_diagnostics_without_mutation() {
+    isolated(|pool| async move {
+        setup(&pool).await;
+        let closed = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy_with((*pool.connect_options()).clone());
+        closed.close().await;
+        let p = PostgresInventoryProcessor::new(closed);
+        let error = p.process(&name(), &event(5)).await.unwrap_err();
+        assert_eq!(error.kind(), ProcessingFailureKind::Unavailable);
+        assert!(matches!(
+            std::error::Error::source(&error)
+                .and_then(|source| source.downcast_ref::<sqlx::Error>()),
+            Some(sqlx::Error::PoolClosed)
+        ));
+        assert_eq!(count(&pool).await, 0);
+        assert_eq!(units(&pool).await, 0);
+        Ok(())
+    })
+    .await;
 }

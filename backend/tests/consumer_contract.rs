@@ -164,12 +164,13 @@ fn ack_requires_commit_or_verified_duplicate() {
         assert_eq!(delivery_action(Ok(outcome)), DeliveryAction::Preserve);
     }
     for error in [
-        ProcessingFailure::PreCommit,
-        ProcessingFailure::InvalidStoredData,
-        ProcessingFailure::CommitUncertain,
+        ProcessingFailureKind::PreCommit,
+        ProcessingFailureKind::Unavailable,
+        ProcessingFailureKind::InvalidStoredData,
+        ProcessingFailureKind::CommitUncertain,
     ] {
         assert_eq!(
-            delivery_action(Err(error)),
+            delivery_action(Err(ProcessingFailure::new(error))),
             DeliveryAction::RecoverWithPacing
         );
     }

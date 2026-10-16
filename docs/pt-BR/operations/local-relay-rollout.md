@@ -66,3 +66,7 @@ Rollout inspecionou zero linhas outbox, inclusive zero esgotados, e duas migrati
 Somente app reconstruído/recriado. Banco/broker/frontend permaneceram ativos, com dados/credenciais preservados. Ambos os filhos iniciaram automaticamente. Management autenticado confirmou topologia; controles diretos/interativos e stop intencional passaram; HTTP saudável durante relay parado; falhas inesperadas reiniciaram ambos. Contagens compartilhadas permaneceram zero. Isso comprova disponibilidade de fila/topologia/controle, não persistência de payload não vazio: nenhuma mensagem compartilhada estava disponível ou foi inventada. Formulário de login no navegador não foi operado; página host/autenticação API verificadas. [Validação executada](../testing/validation-results.md#rollout-local-autostart--2026-10-13).
 
 Descoberta geral de poison/esgotados permanece 3.4, replay autenticado/auditado 3.5 e aceitação/fechamento 3.6. Simulações frontend inalteradas, sem integração de dashboard vivo.
+
+## Consumidor opt-in — 16/10/2026
+
+Configuração fonte agora contém três programas: HTTP/relay mantêm autostart=true; consumer usa autostart=false. start all/restart all inicia consumer também. Use comandos nomeados; o programa novo não está instalado no manager vivo. Grace Compose é 95s para três filhos limitados. [Configuração, topologia, pré-requisitos de schema e procedimento de rollout autorizado](../architecture/milestone-4-3.md#supervisor-e-rollout-compartilhado-pendente). Resultados históricos acima mantêm suas datas.

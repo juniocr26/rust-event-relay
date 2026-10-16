@@ -30,7 +30,7 @@ Fixture 10 + evento A de 5 = estoque 15 e recibo A(15). A duplicado mantém 15. 
 
 ## Prazos, falhas e cancelamento
 
-SQLx 0.8.6 foi inspecionado: commit aguarda o transaction manager; Drop de transação aberta enfileira rollback. Cancelamento não desfaz COMMIT já recebido pelo servidor. Reutilizamos map_commit_error: rejeição conhecida vira PreCommit; resposta perdida/desconhecida vira CommitUncertain. Erros de comando, aquisição/locks/deadlines, deadlock 40P01 e serialização são PreCommit sanitizado. InvalidStoredData é categoria explícita nova; nenhuma falha autoriza ACK. Sem retry oculto ou lookup adicional.
+SQLx 0.8.6 foi inspecionado: commit aguarda o transaction manager; Drop de transação aberta enfileira rollback. Cancelamento não desfaz COMMIT já recebido pelo servidor. Reutilizamos map_commit_error: rejeição conhecida vira PreCommit; resposta perdida/desconhecida vira CommitUncertain. Rejeições de comando, deadlines de locks/statements, deadlock 40P01 e serialização são PreCommit sanitizado. Falhas de pool/aquisição/conexão retornam Unavailable; decode verificado retorna InvalidStoredData. Causas tipadas são preservadas com Display/Debug sanitizados e exigem redação antes de logging. InvalidStoredData é categoria explícita nova; nenhuma falha autoriza ACK. Sem retry oculto ou lookup adicional.
 
 Chamador configura acquire_timeout, statement_timeout, lock_timeout e prazo global/admissão/shutdown. Adaptador não substitui deadlines da sessão. Harness usa aquisição 10s, locks 3s, comandos 5s, observações/proxy limitados; fixture verifica lock_timeout 100ms. Não há garantia de fairness/throughput.
 
@@ -40,8 +40,28 @@ Política futura permite ACK para Applied/Duplicate. Conflito/inválido precisa 
 
 ## Evidência e próximo marco
 
-[Dez testes PostgreSQL isolados](../../../backend/tests/postgres_consumer.rs) cobrem preservação de envelope/histórico relay durante upgrade; estoque/histórico/scopes/overflow; concorrência igual/conflitante/distinta; constraints/completude/imutabilidade/down-up; rejeição de comando/commit; round-trip/ordem/números/corrupção; espera observada/visibilidade do recibo vencedor/rollback do primeiro writer/deadline; perda de resposta e cancelamento após COMMIT; cancelamento antes da admissão/durante espera. Harness verifica remoção dos bancos exatos. Proxies são próprios do teste, sem sleeps frágeis. [Checker de migrações](../../../scripts/check-migrations.py) verifica seis upgrades/checksums SQLx, no-op e down/re-up. [Validação datada](../testing/validation-results.md) separa execução local de configuração CI.
+[Onze testes PostgreSQL isolados](../../../backend/tests/postgres_consumer.rs) cobrem preservação de envelope/histórico relay durante upgrade; estoque/histórico/scopes/overflow; concorrência igual/conflitante/distinta; constraints/completude/imutabilidade/down-up; rejeição de comando/commit; round-trip/ordem/números/corrupção; espera observada/visibilidade do recibo vencedor/rollback do primeiro writer/deadline; perda de resposta e cancelamento após COMMIT; cancelamento antes da admissão/durante espera. Harness verifica remoção dos bancos exatos. Proxies são próprios do teste, sem sleeps frágeis. [Checker de migrações](../../../scripts/check-migrations.py) verifica seis upgrades/checksums SQLx, no-op e down/re-up. [Validação datada](../testing/validation-results.md) separa execução local de configuração CI.
 
 Pré-requisitos exatos de 4.3: runtime próprio de ACK manual individual; prefetch/admissão/shutdown limitados e recuperação pausada; provisionamento/verificação da topologia durável exata de quarentena e permissões; sidecar AMQP lossless versionado com tags de tipo e bytes originais; publicação persistent/mandatory com confirms/returns correspondentes; limites de mensagens/memória/disco e protocolo de oversize; testes isolados de destino ausente/indisponível/cheio e ausência de ACK antecipado. Preservar relay.local classic; rollout compartilhado de migrações/topologia/runtime depende de autorização separada. Sem consumo compartilhado, replay/purge de quarentena, TTL/descarte automático ou efeitos externos. 4.4 cobre crash/redelivery/ACK incerto e fechamento integrado.
 
 Referências primárias consultadas em 13/10/2026: [INSERT](https://www.postgresql.org/docs/18/sql-insert.html), [isolamento](https://www.postgresql.org/docs/18/transaction-iso.html), [constraints](https://www.postgresql.org/docs/18/ddl-constraints.html), [triggers diferidos](https://www.postgresql.org/docs/18/sql-createtrigger.html), [SQLx 0.8.6](https://docs.rs/sqlx-core/0.8.6/src/sqlx_core/transaction.rs.html).
+
+## Revalidação e correção dos diagnósticos — 16/10/2026
+
+A implementação da 4.2 já estava commitada em `652bbd21e1cac5dbd4fe587fcf03dcd73a906625`. Schema, representação e protocolo foram reutilizados; nenhuma migration foi criada ou editada. A lacuna confirmada era o descarte das causas dos erros: `ProcessingFailure` agora encapsula o `PersistenceError` sanitizado existente, expõe `ProcessingFailureKind` e preserva causas tipadas SQLx/JSON/modelo. Chamadores usam `error.kind()` em vez do enum de erros unitários; a porta mantém futures Send nativas e não depende de SQLx. `Unavailable` separa indisponibilidade anterior ao COMMIT de rejeição `PreCommit`. Todos os erros continuam exigindo recuperação com pacing na futura política de ACK. Causas podem conter segredos; Display/Debug não exibem seu texto. Rejeição conhecida no COMMIT preserva a causa SQLx; perda de transporte durante COMMIT continua CommitUncertain.
+
+O teste de completude agora cria primeiro o estoque referenciado e exige SQLSTATE 23514 e a mensagem fixa do trigger. Uma falha de FK isolada não demonstraria esse trigger. Testes de rejeição de statement e COMMIT diferido inspecionam causas tipadas; o novo teste de pool fechado verifica Unavailable e ausência de mutação. Testes privados de decode rejeitam versão desconhecida e conteúdo vazio/malformado sem enfraquecer constraints.
+
+Observações duráveis do teste existente de efeito/histórico:
+
+| Após operação confirmada | consumer.stock(local, SKU-1).units | Recibos de inventory.stock.v1 |
+| --- | ---: | --- |
+| Fixture inicial | 10 | nenhum |
+| A, quantidade 5 | 15 | A: antes 10, depois 15, completed_at preenchido |
+| A idêntico | 15 | mesmo recibo A |
+| B, quantidade 5 | 20 | A: depois 15; B: antes 15, depois 20 |
+| A novamente ou A conflitante | 20 | inalterados; duplicata retorna 15, conflito não aplica efeito |
+
+Somente dentro da transação de A, a reserva possui campos de conclusão NULL antes do bloqueio e incremento do estoque. A validação diferida impede commit dessa reserva incompleta. Antes do COMMIT, falha de statement desfaz efeito e recibo; após COMMIT no servidor, perda de resposta ou cancelamento podem ocultar sucesso. Trigger ou recibo isolados não provam que qualquer escritor SQL seguiu o protocolo de estoque. FK, resultado verificado e transação fornecem o vínculo sob as premissas documentadas de escritores restritos. `processed` do relay continua registrando publicação, independentemente destas tabelas do consumidor.
+
+[A 4.3 conecta esta persistência ao consumo real com ACK manual e quarentena confirmada](milestone-4-3.md); ativação compartilhada continua pendente.

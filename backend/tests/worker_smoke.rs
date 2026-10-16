@@ -13,7 +13,7 @@ async fn compiled_worker_confirms_and_completes_then_sigterm_exits() {
 
 #[tokio::test]
 #[ignore = "requires PostgreSQL CREATE DATABASE, RabbitMQ and Supervisor in app"]
-async fn isolated_supervisor_named_and_collective_program_operation() {
+async fn isolated_supervisor_named_program_operation() {
     smoke(true, false).await;
 }
 
@@ -141,7 +141,7 @@ async fn smoke(supervised: bool, interactive: bool) {
                 assert!(case_channel.basic_get(case_queue.clone().into(), BasicGetOptions::default()).await.unwrap().is_none());
             } else if supervised {
                 for alias in ["supervisorctl","supervisor"] {
-                    for target in ["relay","http","all"] {
+                    for target in ["relay","http"] {
                         ctl(&case_config,alias,&["stop",target]).await;
                         ctl(&case_config,alias,&["start",target]).await;
                         ctl(&case_config,alias,&["restart",target]).await;

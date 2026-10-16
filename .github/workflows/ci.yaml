@@ -127,6 +127,7 @@ jobs:
           rustup default 1.95.0
       - run: cargo test --locked --test worker_smoke compiled_worker_confirms -- --ignored
       - run: cargo test --locked --test integrated_recovery -- --ignored --test-threads=1
+      - run: cargo test --locked --test consumer_runtime -- --ignored --test-threads=1 --skip isolated_supervisor_consumer
   frontend:
     runs-on: ubuntu-latest
     defaults:

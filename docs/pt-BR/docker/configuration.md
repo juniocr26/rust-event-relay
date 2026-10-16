@@ -168,3 +168,7 @@ Abra **http://localhost:15672/** e digite os mesmos `RABBITMQ_DEFAULT_USER` / `R
 ## Startup local atual — 2026-10-13
 
 Ambos os filhos usam autostart; migrations locais de ownership/retry aplicadas explicitamente. [Instalação, controles manuais/interativos, restart, topologia e rollout executado](../operations/local-relay-rollout.md). Sem migrations automáticas, reset, alteração de credenciais ou frontend.
+
+## Consumidor opt-in — 16/10/2026
+
+Configuração fonte agora contém três programas: HTTP/relay mantêm autostart=true; consumer usa autostart=false. start all/restart all inicia consumer também. Use comandos nomeados; o programa novo não está instalado no manager vivo. Grace Compose é 95s para três filhos limitados. [Configuração, topologia, pré-requisitos de schema e procedimento de rollout autorizado](../architecture/milestone-4-3.md#supervisor-e-rollout-compartilhado-pendente). Resultados históricos acima mantêm suas datas.

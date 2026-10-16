@@ -156,3 +156,56 @@ impl WorkerConfig {
         Ok(config)
     }
 }
+
+/// Validated sequential consumer limits; milliseconds, no unlimited prefetch.
+/// Limites validados do consumidor sequencial; milissegundos, sem prefetch ilimitado.
+#[derive(Debug, Clone)]
+pub struct ConsumerRuntimeConfig {
+    pub name: crate::domain::consumer::ConsumerName,
+    pub prefetch: u16,
+    pub operation: std::time::Duration,
+    pub reconnect: std::time::Duration,
+    pub drain: std::time::Duration,
+    pub shutdown: std::time::Duration,
+    pub pool_max: u32,
+    pub pool_acquire: std::time::Duration,
+    pub statement_ms: u64,
+    pub lock_ms: u64,
+}
+impl ConsumerRuntimeConfig {
+    pub fn from_lookup(get: impl Fn(&str) -> Option<String>) -> Result<Self, ConfigError> {
+        let number = |key: &str, default, max| {
+            let n = get(key)
+                .map_or(Ok(default), |v| v.parse::<u64>())
+                .map_err(|_| ConfigError(format!("invalid {key}")))?;
+            if n == 0 || n > max {
+                Err(ConfigError(format!("{key} must be in 1..={max}")))
+            } else {
+                Ok(n)
+            }
+        };
+        let duration =
+            |key, default, max| number(key, default, max).map(std::time::Duration::from_millis);
+        let result = Self {
+            name: crate::domain::consumer::ConsumerName::new(
+                get("CONSUMER_NAME").unwrap_or_else(|| "inventory.stock.v1".into()),
+            )
+            .map_err(|_| ConfigError("invalid CONSUMER_NAME".into()))?,
+            prefetch: number("CONSUMER_PREFETCH", 1, 32)? as u16,
+            operation: duration("CONSUMER_OPERATION_MS", 10000, 60000)?,
+            reconnect: duration("CONSUMER_RECONNECT_MS", 5000, 60000)?,
+            drain: duration("CONSUMER_DRAIN_MS", 15000, 20000)?,
+            shutdown: duration("CONSUMER_SHUTDOWN_MS", 25000, 25000)?,
+            pool_max: number("CONSUMER_POOL_MAX", 2, 16)? as u32,
+            pool_acquire: duration("CONSUMER_POOL_ACQUIRE_MS", 5000, 60000)?,
+            statement_ms: number("CONSUMER_STATEMENT_MS", 5000, 60000)?,
+            lock_ms: number("CONSUMER_LOCK_MS", 3000, 60000)?,
+        };
+        if result.drain >= result.shutdown {
+            return Err(ConfigError(
+                "consumer drain must be less than shutdown".into(),
+            ));
+        }
+        Ok(result)
+    }
+}

@@ -1,0 +1,76 @@
+//! Dedicated consumer composition; never runs migrations or changes credentials.
+//! Composição dedicada; nunca executa migrations ou altera credenciais.
+use reliable_event_relay::{
+    application,
+    config::{Config, ConsumerRuntimeConfig},
+    infrastructure::{
+        postgres::PostgresInventoryProcessor,
+        rabbitmq::{RabbitConsumerConfig, run_consumer},
+    },
+    telemetry,
+};
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use tokio::time::{Instant, timeout_at};
+#[tokio::main]
+async fn main() -> Result<(), &'static str> {
+    let app = Config::load().map_err(|_| "invalid application configuration (source redacted)")?;
+    telemetry::init(&app.log_filter).map_err(|_| "invalid telemetry configuration")?;
+    let config = ConsumerRuntimeConfig::from_lookup(|key| std::env::var(key).ok())
+        .map_err(|_| "invalid consumer configuration")?;
+    let rabbit = RabbitConsumerConfig::from_lookup(|key| std::env::var(key).ok(), config.prefetch)
+        .map_err(|_| "invalid source/quarantine configuration")?;
+    let required = |key| {
+        std::env::var(key)
+            .ok()
+            .filter(|s| !s.is_empty())
+            .ok_or("missing PostgreSQL configuration")
+    };
+    let port = std::env::var("POSTGRES_PORT")
+        .unwrap_or_else(|_| "5432".into())
+        .parse::<u16>()
+        .ok()
+        .filter(|p| *p != 0)
+        .ok_or("invalid PostgreSQL port")?;
+    let options = PgConnectOptions::new()
+        .host(&std::env::var("POSTGRES_HOST").unwrap_or_else(|_| "postgres".into()))
+        .port(port)
+        .username(&required("POSTGRES_USER")?)
+        .password(&required("POSTGRES_PASSWORD")?)
+        .database(&required("POSTGRES_DB")?)
+        .options([
+            ("statement_timeout", config.statement_ms.to_string()),
+            ("lock_timeout", config.lock_ms.to_string()),
+        ]);
+    let mut shutdown = std::pin::pin!(application::shutdown_signal());
+    let pool = tokio::select! {biased; ()=&mut shutdown=>return Ok(()),result=PgPoolOptions::new().max_connections(config.pool_max).acquire_timeout(config.pool_acquire).connect_with(options)=>result.map_err(|_|"consumer PostgreSQL unavailable (source redacted)")?};
+    let schema = tokio::select! {biased; ()=&mut shutdown=>None,result=async {
+        sqlx::query("SELECT warehouse_id,sku,units FROM consumer.stock LIMIT 0").execute(&pool).await?;
+        sqlx::query("SELECT consumer_name,event_id,representation_version,immutable_content,warehouse_id,sku,quantity,stock_before,stock_after,completed_at FROM consumer.receipts LIMIT 0").execute(&pool).await
+    }=>Some(result)};
+    let failed = schema.as_ref().is_some_and(Result::is_err);
+    let deadline = if matches!(schema, Some(Ok(_))) {
+        tracing::info!(
+            prefetch = config.prefetch,
+            "consumer starting; sequential admission; sources redacted"
+        );
+        run_consumer(
+            &PostgresInventoryProcessor::new(pool.clone()),
+            &config,
+            &rabbit,
+            &mut shutdown,
+        )
+        .await
+    } else {
+        Instant::now() + config.shutdown
+    };
+    if timeout_at(deadline, pool.close()).await.is_err() {
+        tracing::warn!("consumer pool cleanup deadline exhausted");
+    }
+    if failed {
+        return Err(
+            "consumer schema unavailable; apply migration 20261014000000 and verify privileges before rollout (source redacted)",
+        );
+    }
+    tracing::info!("consumer stopped; unacknowledged deliveries remain recoverable");
+    Ok(())
+}

@@ -13,6 +13,13 @@ pub enum InvalidEvent {
     Overflow,
 }
 
+impl std::fmt::Display for InvalidEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "invalid inventory event: {self:?}")
+    }
+}
+impl std::error::Error for InvalidEvent {}
+
 /// Stable logical responsibility; replicas must use the same name.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConsumerName(String);

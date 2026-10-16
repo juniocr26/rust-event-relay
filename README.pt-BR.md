@@ -24,7 +24,7 @@ Leia propósito/setup, arquitetura e contratos, segurança/falhas, testes/evidê
 
 **Implementado hoje:** envelope canônico, schema outbox/posse/retry/replay PostgreSQL versionado, contratos/adapters focados de persistência, publicação RabbitMQ confirmada, relay sequencial com manutenção/reconexão/shutdown limitados, retry durável e preservação terminal, descoberta/isolamento de poison, replay autorizado idempotente opt-in com auditoria, efeito/deduplicação PostgreSQL de estoque com recibos históricos, HTTP liveness, Docker/Supervisor e frontend Vue de apresentação. A [matriz de aceitação](docs/pt-BR/operations/milestone-3-review.md) distingue verificação isolada, runtime compartilhado e garantias exatas.
 
-**Planejado / exploração futura:** gravações transacionais do produtor, runtime RabbitMQ de consumidor/quarentena, integração frontend/backend real, reparo auditado, pools/backpressure, webhooks, Redis Streams, readiness/métricas, retenção, TLS/HA e backup/recuperação produtivos. HTTP não executa relay; HTTP com replay habilitado conecta ao PostgreSQL. Frontend executa somente cenários ilustrativos locais.
+**Planejado / exploração futura:** gravações transacionais do produtor, aceitação completa de crash/redelivery do consumidor (4.4), integração frontend/backend real, reparo auditado, pools/backpressure, webhooks, Redis Streams, readiness/métricas, retenção, TLS/HA e backup/recuperação produtivos. HTTP não executa relay; HTTP com replay habilitado conecta ao PostgreSQL. Frontend executa somente cenários ilustrativos locais.
 
 [Marco 2.2](docs/pt-BR/architecture/milestone-2-2.md) implementa decisão de posse, modelos, contratos e schema. Eventos com lease permanecem pending; donos expirados não podem concluir/liberar. Tokens protegem transições no banco, mas não impedem publicação nem estabelecem entrega ponta a ponta.
 
@@ -92,13 +92,13 @@ supervisorctl stop http
 supervisorctl start http
 supervisorctl restart http
 # Após rollout de schema autorizado:
-# supervisorctl start all
+# supervisorctl start http relay
 supervisorctl start relay
 supervisorctl stop relay
 supervisorctl restart relay
 ```
 
-Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem argumentos para console interativo. `all` controla só programas do app, `http` e `relay` (start all inicia relay; confira o pré-requisito de schema). Login e inicialização estão no [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md).
+Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem argumentos para console interativo. `all` inclui `http`, `relay` e o `consumer` opt-in após instalação. **Não usar start all/restart all: iniciam consumer apesar de autostart=false e consomem mensagens reais.** Use controles nomeados; rollout do consumidor continua pendente. Login e inicialização estão no [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md).
 
 ## Documentação
 
@@ -123,7 +123,7 @@ Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem ar
 
 ## Limites e filosofia
 
-`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Health não exige autenticação; rotas privilegiadas replay usam bearer confiável opt-in, desativadas por padrão. Gravações do produtor, runtime RabbitMQ do consumidor, medição de desempenho e imagem de produção continuam ausentes. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
+`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Health não exige autenticação; rotas privilegiadas replay usam bearer confiável opt-in, desativadas por padrão. Gravações do produtor, medição de desempenho e imagem de produção continuam ausentes. Runtime consumidor e quarentena confirmada estão implementados; ativação compartilhada e aceitação completa do Marco 4 continuam pendentes. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
 
 Licença MIT; consulte [LICENSE](LICENSE).
 
@@ -144,4 +144,6 @@ Descoberta limitada e isolamento com autoridade atual implementados; replay perm
 
 [Marco 3.5 — replay autorizado](docs/pt-BR/architecture/milestone-3-5.md) | [API operacional](docs/pt-BR/operations/replay.md). Fonte implementada; migration 5 e ativação da API privilegiada continuam pendentes no ambiente compartilhado.
 
-[Marco 4.2 — persistência atômica PostgreSQL de estoque](docs/pt-BR/architecture/milestone-4-2.md): adaptador/migração implementados com evidência em bancos isolados; runtime RabbitMQ de consumidor/quarentena permanece em 4.3.
+[Marco 4.2 — persistência atômica PostgreSQL de estoque](docs/pt-BR/architecture/milestone-4-2.md): adaptador/migração implementados com evidência em bancos isolados; runtime RabbitMQ de consumidor/quarentena implementado na 4.3, com ativação compartilhada pendente.
+
+[Marco 4.3 — ACK manual, quarentena confirmada, configuração e rollout explícito](docs/pt-BR/architecture/milestone-4-3.md). Novo programa Supervisor consumer com autostart=false.

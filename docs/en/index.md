@@ -116,3 +116,5 @@ Bounded discovery and fresh-authority isolation are implemented; replay remains 
 [Inventory, deduplication, quarantine and 4.2–4.4](architecture/milestone-4-1.md) | [ADR 010](adr/010-atomic-consumer-and-quarantine.md).
 
 [Milestone 4.2 — PostgreSQL](architecture/milestone-4-2.md).
+
+[Milestone 4.3 — consumer runtime and confirmed quarantine](architecture/milestone-4-3.md).

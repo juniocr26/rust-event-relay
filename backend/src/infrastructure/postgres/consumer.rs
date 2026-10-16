@@ -1,15 +1,15 @@
 //! Atomic inventory persistence / Persistência atômica de estoque.
 //! READ COMMITTED; identity insertion precedes stock locking. No retries or broker I/O.
-use super::{StoredTimestamp, ownership::map_commit_error};
+use super::{StoredTimestamp, invalid_data, map_driver_error, ownership::map_commit_error};
 use crate::{
     application::consumer::{
-        AtomicInventoryProcessor, EffectReceipt, ProcessingFailure, ProcessingOutcome,
+        AtomicInventoryProcessor, EffectReceipt, ProcessingFailure, ProcessingFailureKind,
+        ProcessingOutcome,
     },
     domain::{
         consumer::{ConsumerName, ContentMatch, InvalidEvent, InventoryEvent, Stock},
         event::EventEnvelope,
     },
-    persistence::PersistenceErrorKind,
 };
 use sqlx::{PgPool, Row, postgres::PgRow};
 
@@ -28,11 +28,11 @@ impl PostgresInventoryProcessor {
         Self { pool }
     }
 }
-fn precommit(_: sqlx::Error) -> ProcessingFailure {
-    ProcessingFailure::PreCommit
+fn precommit(error: sqlx::Error) -> ProcessingFailure {
+    map_driver_error(error).into()
 }
-fn stored(_: impl std::fmt::Debug) -> ProcessingFailure {
-    ProcessingFailure::InvalidStoredData
+fn stored(error: impl std::error::Error + Send + Sync + 'static) -> ProcessingFailure {
+    invalid_data(error).into()
 }
 
 // BYTEA avoids JSONB number normalization and timestamp microsecond truncation.
@@ -50,7 +50,9 @@ fn encode(event: &InventoryEvent) -> Result<Vec<u8>, InvalidEvent> {
 }
 fn decode(version: i16, bytes: &[u8]) -> Result<InventoryEvent, ProcessingFailure> {
     if version != 1 || bytes.is_empty() || bytes.len() > MAX_CONTENT {
-        return Err(ProcessingFailure::InvalidStoredData);
+        return Err(ProcessingFailure::new(
+            ProcessingFailureKind::InvalidStoredData,
+        ));
     }
     let envelope: EventEnvelope = serde_json::from_slice(bytes).map_err(stored)?;
     let id = envelope.id().to_string();
@@ -77,7 +79,9 @@ fn receipt(
         || event.quantity() != quantity
         || before.receive(&event).map_err(stored)? != after
     {
-        return Err(ProcessingFailure::InvalidStoredData);
+        return Err(ProcessingFailure::new(
+            ProcessingFailureKind::InvalidStoredData,
+        ));
     }
     Ok((event, EffectReceipt { stock_after: after }))
 }
@@ -143,15 +147,39 @@ impl AtomicInventoryProcessor for PostgresInventoryProcessor {
             .map_err(precommit)?;
         sqlx::query("UPDATE consumer.receipts SET stock_before=$3,stock_after=$4,completed_at=clock_timestamp() WHERE consumer_name=$1 AND event_id=$2")
             .bind(consumer.as_str()).bind(event.event_id()).bind(before.units()).bind(after.units()).execute(&mut *tx).await.map_err(precommit)?;
-        tx.commit().await.map_err(|error| {
-            if map_commit_error(error).kind() == PersistenceErrorKind::CommitUncertain {
-                ProcessingFailure::CommitUncertain
-            } else {
-                ProcessingFailure::PreCommit
-            }
-        })?;
+        tx.commit()
+            .await
+            .map_err(|error| ProcessingFailure::from(map_commit_error(error)))?;
         Ok(ProcessingOutcome::Applied(EffectReceipt {
             stock_after: after,
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::error::Error;
+
+    #[test]
+    fn failure_sources_are_typed_and_public_formatting_is_sanitized() {
+        let secret = "private payload and connection details";
+        let error = precommit(sqlx::Error::Io(std::io::Error::other(secret)));
+        assert_eq!(error.kind(), ProcessingFailureKind::Unavailable);
+        assert!(error.source().unwrap().is::<sqlx::Error>());
+        assert!(!format!("{error} {error:?}").contains(secret));
+        let error = stored(serde_json::from_slice::<EventEnvelope>(b"invalid").unwrap_err());
+        assert_eq!(error.kind(), ProcessingFailureKind::InvalidStoredData);
+        assert!(error.source().unwrap().is::<serde_json::Error>());
+        for (version, bytes) in [(2, b"{}".as_slice()), (1, b""), (1, b"invalid")] {
+            assert_eq!(
+                decode(version, bytes).unwrap_err().kind(),
+                ProcessingFailureKind::InvalidStoredData
+            );
+        }
+        let error = ProcessingFailure::from(map_commit_error(sqlx::Error::Protocol(secret.into())));
+        assert_eq!(error.kind(), ProcessingFailureKind::CommitUncertain);
+        assert!(error.source().unwrap().is::<sqlx::Error>());
+        assert!(!format!("{error} {error:?}").contains(secret));
     }
 }

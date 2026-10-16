@@ -68,14 +68,14 @@ docker compose exec app bash
 # Diretos dentro do app:
 supervisorctl status
 supervisorctl stop all
-supervisorctl start all
+supervisorctl start http relay
 supervisorctl stop http
 supervisorctl start http
 supervisorctl restart http
 # Alias encaminha todos os argumentos:
 supervisor status
 supervisor stop all
-supervisor start all
+supervisor start http relay
 supervisor stop http
 supervisor start http
 supervisor restart http
@@ -85,7 +85,7 @@ supervisorctl
 # No prompt supervisor>:
 status
 stop all
-start all
+start http relay
 stop http
 start http
 restart http
@@ -133,3 +133,7 @@ Transições/autoridade de estado, claims/leases/propriedade, reconciliação de
 ## Rollout local autorizado — 2026-10-13
 
 [Operação local atual](../operations/local-relay-rollout.md): http/relay com autostart, migrations ownership/retry instaladas explicitamente, topologia autenticada e controles manuais/interativos verificados. Descrições pendentes/paradas anteriores permanecem históricas. Sem alegação de prontidão produtiva ou conclusão de 3.4–3.6.
+
+## Consumidor opt-in — 16/10/2026
+
+Configuração fonte agora contém três programas: HTTP/relay mantêm autostart=true; consumer usa autostart=false. start all/restart all inicia consumer também. Use comandos nomeados; o programa novo não está instalado no manager vivo. Grace Compose é 95s para três filhos limitados. [Configuração, topologia, pré-requisitos de schema e procedimento de rollout autorizado](milestone-4-3.md#supervisor-e-rollout-compartilhado-pendente). Resultados históricos acima mantêm suas datas.
