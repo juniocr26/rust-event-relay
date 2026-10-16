@@ -9,6 +9,11 @@ Current native Cargo commands run in `backend/`; Docker app commands inherit `/a
 
 # Database migrations — Milestone 1.3
 
+## Milestone 4.4 — current verification and closure — 2026-10-16
+
+Milestone 4 is closed with explicit nonblocking limitations. Real inventory/deduplication, ACK/quarantine and recovery evidence is separate from pending shared rollout. Presentation frontend verified; live backend integration is not implemented. Earlier dated sections retain their historical scope. [Verification matrix](../operations/milestone-4-4-review.md) | [Environment inventory](../docker/environment-inventory.md).
+
+
 ## Current extension — Milestone 2.3
 
 [PostgreSQL ownership operations](../architecture/milestone-2-3.md) implement the existing 2.2 ports with short Read Committed transactions, post-lock database time and stale-owner rejection. Read-only snapshots still include leased pending rows. The original milestone sections below retain their historical scope; current behavior, uncertainty/cancellation limits and next 2.4 orchestration are detailed in the linked milestone.

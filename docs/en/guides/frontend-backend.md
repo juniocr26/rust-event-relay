@@ -1,5 +1,10 @@
 # Frontend/backend preparation — 2026-10-12
 
+## Milestone 4.4 — current verification and closure — 2026-10-16
+
+Milestone 4 is closed with explicit nonblocking limitations. Real inventory/deduplication, ACK/quarantine and recovery evidence is separate from pending shared rollout. Presentation frontend verified; live backend integration is not implemented. Earlier dated sections retain their historical scope. [Verification matrix](../operations/milestone-4-4-review.md) | [Environment inventory](../docker/environment-inventory.md).
+
+
 The repository now separates `frontend/` (Vue presentation) and `backend/` (Rust ownership, delivery and persistence). The presentation prototype is now implemented; Milestone 3 remains separate work.
 
 ## Organization and responsibilities

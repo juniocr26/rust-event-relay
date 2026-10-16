@@ -22,7 +22,7 @@ defineProps<{ steps: Step[]; index: number; running: boolean }>()
               interrupted: '! Interrupted',
               uncertain: '? Uncertain',
               skipped: '− Skipped',
-              preview: '◇ Future preview',
+              preview: '◇ Illustrated step',
               pending: 'Pending',
               active: 'Running',
             }[step.state]

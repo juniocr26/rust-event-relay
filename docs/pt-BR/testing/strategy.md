@@ -5,6 +5,11 @@ Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/ba
 
 # Testes
 
+## Marco 4.4 — verificação e fechamento atuais — 16/10/2026
+
+Marco 4 fechado com limitações não bloqueantes explícitas. Evidência real de estoque/deduplicação, ACK/quarentena e recuperação é separada do rollout compartilhado pendente. Frontend de apresentação verificado; integração ao vivo com backend não implementada. Seções históricas abaixo mantêm o escopo das respectivas datas. [Matriz de verificação](../operations/milestone-4-4-review.md) | [Inventário de ambiente](../docker/environment-inventory.md).
+
+
 Worker atual, configuração, cancelamento e rollout autorizado: [Marco 2.5](../architecture/milestone-2-5.md). Seções anteriores mantêm escopo histórico.
 
 

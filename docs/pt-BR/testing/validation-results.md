@@ -2,6 +2,11 @@
 
 # Resultados de validação
 
+## Marco 4.4 — verificação e fechamento atuais — 16/10/2026
+
+Marco 4 fechado com limitações não bloqueantes explícitas. Evidência real de estoque/deduplicação, ACK/quarentena e recuperação é separada do rollout compartilhado pendente. Frontend de apresentação verificado; integração ao vivo com backend não implementada. Seções históricas abaixo mantêm o escopo das respectivas datas. [Matriz de verificação](../operations/milestone-4-4-review.md) | [Inventário de ambiente](../docker/environment-inventory.md).
+
+
 ## Marco 1.5 — Validação da abstração de persistência
 
 Data: 2026-10-07. Container Docker de desenvolvimento, Rust 1.95.0. Novos testes Rust não usam banco, driver, configuração de ambiente, pools ou SQL. Sem migrações/alterações de schema ou chamadas PostgreSQL neste marco. Validação anterior de schema/credenciais permanece abaixo.
@@ -629,7 +634,7 @@ Extensão final de cobertura diagnóstica: `cargo test --locked --test persisten
 
 Revisados composição HTTP, SQL de leitura, confirmações/incerteza do publisher, modelos/portas de ownership, migração lease e CI. Corrigidas afirmações atuais de dependência de broker ausente/Marco 2 não iniciado; navegação ADR 006/007 e escopo bilíngue alinhados. Mutações SQL, orquestração/polling adiados; sem garantia ponta a ponta. Não executados testes padrão/opt-in, CI, migrações, Cargo, broker ou PostgreSQL. Resultados históricos dos marcos preservados.
 
-Checagens estáticas de links/âncoras, fences, pares de idioma e SHA-256 para alterações somente documentais estão na [revisão de entrevista](../../../../engineering-library/docs/pt-BR/testing/verification.md). Arquivos reais de ambiente e backups sensíveis não foram lidos/alterados.
+Checagens estáticas de links/âncoras, fences, pares de idioma e SHA-256 para alterações somente documentais estão na revisão de entrevista (`engineering-library/docs/pt-BR/testing/verification.md`, external repository). Arquivos reais de ambiente e backups sensíveis não foram lidos/alterados.
 
 ## Marco 2.3 — 2026-10-12
 

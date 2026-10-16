@@ -616,3 +616,48 @@ async fn unavailable_pool_retains_typed_diagnostics_without_mutation() {
     })
     .await;
 }
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and test-owned NOLOGIN role creation"]
+async fn restricted_consumer_grants_allow_atomic_adapter_without_receipt_removal() {
+    isolated(|pool| async move {
+        setup(&pool).await;
+        // A NOLOGIN UUID role has no password and is never attached to shared data.
+        let role = format!("relay_it_role_{}", uuid::Uuid::now_v7().simple());
+        checked(sqlx::raw_sql(&format!("CREATE ROLE {role} NOLOGIN; GRANT USAGE ON SCHEMA consumer TO {role}; GRANT SELECT,INSERT,UPDATE(units) ON consumer.stock TO {role}; GRANT SELECT,INSERT,UPDATE(stock_before,stock_after,completed_at) ON consumer.receipts TO {role};")).execute(&pool).await, "test role grants");
+        let role_for_connect = role.clone();
+        let restricted = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(2)
+            .acquire_timeout(Duration::from_secs(5))
+            .after_connect(move |connection, _| {
+                let command = format!("SET ROLE {role_for_connect}");
+                Box::pin(async move { sqlx::query(&command).execute(connection).await?; Ok(()) })
+            })
+            .connect_with((*pool.connect_options()).clone()).await;
+        let result = if let Ok(restricted) = &restricted {
+            let restricted = restricted.clone();
+            Some(tokio::spawn(async move {
+                let p = PostgresInventoryProcessor::new(restricted.clone());
+                let a = event(5);
+                assert_eq!(p.process_kind(&name(), &a).await, Ok(applied(5)));
+                assert_eq!(p.process_kind(&name(), &a).await, Ok(duplicate(5)));
+                for command in ["DELETE FROM consumer.receipts", "TRUNCATE consumer.receipts", "UPDATE consumer.receipts SET immutable_content=immutable_content", "DROP TABLE consumer.stock"] {
+                    let error = sqlx::query(command).execute(&restricted).await.expect_err("restricted authority");
+                    assert_eq!(error.as_database_error().and_then(|e|e.code()).as_deref(),Some("42501"));
+                }
+                assert_eq!(units(&restricted).await,5);assert_eq!(count(&restricted).await,1);
+            }).await)
+        } else { None };
+        // Revoke only this exact role's grants before dropping it, even after panic.
+        if let Ok(restricted) = restricted { restricted.close().await; }
+        checked(sqlx::raw_sql(&format!("DROP OWNED BY {role}; DROP ROLE {role};")).execute(&pool).await,"test role cleanup");
+        let remains:bool=checked(sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=$1)").bind(&role).fetch_one(&pool).await,"role cleanup observation");
+        assert!(!remains);
+        match result {
+            Some(Ok(()))=>{},
+            Some(Err(error)) if error.is_panic()=>std::panic::resume_unwind(error.into_panic()),
+            _=>panic!("restricted role setup/task failed (source redacted)"),
+        }
+        Ok(())
+    }).await;
+}

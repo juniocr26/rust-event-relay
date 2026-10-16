@@ -4,6 +4,12 @@
 
 Reading path: purpose/setup → architecture/contracts → security/failures → testing/evidence → operations. For the library, use catalog/dossier → project interview → foundations → failure follow-ups. Historical milestone/refactor/handoff records describe their original dates; current review/checklist explains present scope.
 
+## Current Milestone 4 closure
+
+- [Milestone 4.4 — verification, acceptance matrix and rollout](operations/milestone-4-4-review.md)
+- [Environment inventory and effective configuration](docker/environment-inventory.md)
+
+
 ## architecture
 
 - [Milestone 2.6 — Integrated recovery](architecture/milestone-2-6.md)

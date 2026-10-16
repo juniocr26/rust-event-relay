@@ -160,3 +160,56 @@ pub async fn proxy() -> (
     });
     (url.into(), hold, task)
 }
+
+/// Drop precisely basic.ack (class 60, method 80) on a test-owned connection.
+/// Forward handshake and every other frame; signal only after parsing the ACK.
+pub async fn dropped_source_ack_proxy() -> (
+    String,
+    tokio::sync::oneshot::Receiver<()>,
+    tokio::task::JoinHandle<()>,
+) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let mut url = url::Url::parse(&uri()).unwrap();
+    let target = format!("{}:{}", url.host_str().unwrap(), url.port().unwrap_or(5672));
+    url.set_host(Some("127.0.0.1")).unwrap();
+    url.set_port(Some(listener.local_addr().unwrap().port()))
+        .unwrap();
+    let (signal, observed) = tokio::sync::oneshot::channel();
+    let task = tokio::spawn(async move {
+        let (mut client, _) = listener.accept().await.unwrap();
+        let mut server = tokio::net::TcpStream::connect(target).await.unwrap();
+        let mut protocol = [0u8; 8];
+        client.read_exact(&mut protocol).await.unwrap();
+        assert_eq!(&protocol, b"AMQP\0\0\x09\x01");
+        server.write_all(&protocol).await.unwrap();
+        let (mut cr, mut cw) = client.into_split();
+        let (mut sr, mut sw) = server.into_split();
+        let outgoing = async {
+            loop {
+                let mut header = [0u8; 7];
+                if cr.read_exact(&mut header).await.is_err() {
+                    return;
+                }
+                let size = u32::from_be_bytes(header[3..7].try_into().unwrap()) as usize;
+                assert!(size <= 16_777_216);
+                let mut payload = vec![0u8; size + 1];
+                if cr.read_exact(&mut payload).await.is_err() {
+                    return;
+                }
+                assert_eq!(payload[size], 0xce);
+                if header[0] == 1 && payload.get(..4) == Some(&[0, 60, 0, 80]) {
+                    let _ = signal.send(());
+                    // ACK never reaches broker; retain connection until test retires it.
+                    std::future::pending::<()>().await;
+                    return;
+                }
+                if sw.write_all(&header).await.is_err() || sw.write_all(&payload).await.is_err() {
+                    return;
+                }
+            }
+        };
+        tokio::select! {()=outgoing=>{},_=tokio::io::copy(&mut sr,&mut cw)=>{}}
+    });
+    (url.into(), observed, task)
+}

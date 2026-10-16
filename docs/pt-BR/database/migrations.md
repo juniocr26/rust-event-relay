@@ -9,6 +9,11 @@ Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/ba
 
 # Migrações de banco — Marco 1.3
 
+## Marco 4.4 — verificação e fechamento atuais — 16/10/2026
+
+Marco 4 fechado com limitações não bloqueantes explícitas. Evidência real de estoque/deduplicação, ACK/quarentena e recuperação é separada do rollout compartilhado pendente. Frontend de apresentação verificado; integração ao vivo com backend não implementada. Seções históricas abaixo mantêm o escopo das respectivas datas. [Matriz de verificação](../operations/milestone-4-4-review.md) | [Inventário de ambiente](../docker/environment-inventory.md).
+
+
 ## Extensão atual — Marco 2.3
 
 [Operações PostgreSQL de posse](../architecture/milestone-2-3.md) implementam ports de 2.2 com transações Read Committed curtas, tempo do banco pós-lock e rejeição de owners antigos. Snapshots continuam incluindo pending com lease. Seções originais abaixo conservam escopo histórico; comportamento atual, incerteza/cancelamento e próximo 2.4 estão no marco vinculado.

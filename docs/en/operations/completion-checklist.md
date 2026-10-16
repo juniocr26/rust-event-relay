@@ -1,3 +1,7 @@
+## Milestone 4.4 — current verification and closure — 2026-10-16
+
+Milestone 4 is closed with explicit nonblocking limitations. Real inventory/deduplication, ACK/quarantine and recovery evidence is separate from pending shared rollout. Presentation frontend verified; live backend integration is not implemented. Earlier dated sections retain their historical scope. [Verification matrix](../operations/milestone-4-4-review.md) | [Environment inventory](../docker/environment-inventory.md).
+
 #
 Current worker behavior, configuration, cancellation and authorized rollout: [Milestone 2.5](../architecture/milestone-2-5.md). Earlier sections retain their historical scope.
 
@@ -35,7 +39,7 @@ Static review on 2026-10-10; no runtime execution. Checked items describe comple
 
 HTTP liveness; envelopes/UUID/JSON/timestamp restoration; outbox transactions/snapshots; leases/authority/expiry; broker confirms/uncertainty; static dispatch, isolated tests and recovery limits.
 
-[Self-contained dossier / Dossiê](../../../../engineering-library/docs/en/architecture/rust-event-relay.md) | [Interview / Entrevista](../../../../engineering-library/docs/en/interviews/rust-event-relay.md)
+Self-contained dossier / Dossiê (`engineering-library/docs/en/architecture/rust-event-relay.md`, external repository) | Interview / Entrevista (`engineering-library/docs/en/interviews/rust-event-relay.md`, external repository)
 
 ## Category applicability
 

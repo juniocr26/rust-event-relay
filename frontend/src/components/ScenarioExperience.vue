@@ -21,11 +21,12 @@ const { index, running, current, entries, finished, run } = usePlayback(props.sc
       :preview="scenario.id === 'dedupe'"
     /><EnvelopePreview
       :broker="
-        current?.broker ?? (scenario.id === 'dedupe' ? 'Future model · waiting' : 'Not sent')
+        current?.broker ?? (scenario.id === 'dedupe' ? 'Illustration · waiting' : 'Not sent')
       "
       :durable="
-        current?.durable ?? (scenario.id === 'dedupe' ? 'Future model · waiting' : 'Pending')
+        current?.durable ?? (scenario.id === 'dedupe' ? 'Illustration · waiting' : 'Pending')
       "
+      :inventory="scenario.id === 'dedupe'"
       :output="current?.output ?? 'Waiting for playback'"
     /><EventOutput :entries="entries" />
     <footer class="experience-footer">

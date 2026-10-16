@@ -1,5 +1,10 @@
 # Preparação frontend/backend — 2026-10-12
 
+## Marco 4.4 — verificação e fechamento atuais — 16/10/2026
+
+Marco 4 fechado com limitações não bloqueantes explícitas. Evidência real de estoque/deduplicação, ACK/quarentena e recuperação é separada do rollout compartilhado pendente. Frontend de apresentação verificado; integração ao vivo com backend não implementada. Seções históricas abaixo mantêm o escopo das respectivas datas. [Matriz de verificação](../operations/milestone-4-4-review.md) | [Inventário de ambiente](../docker/environment-inventory.md).
+
+
 O projeto separa `frontend/` (apresentação Vue) e `backend/` (Rust, entrega, ownership e persistência). A preparação não implementa dashboard nem Marco 3.
 
 ## Estrutura e responsabilidades

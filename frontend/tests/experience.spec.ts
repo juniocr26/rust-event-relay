@@ -99,7 +99,7 @@ for (const [id, count, outcome] of [
   ['crash', 5, '↻ Recovered with duplicate publication'],
   ['race', 5, '✓ One live owner in this schedule'],
   ['ack', 4, '? Uncertain response · committed outcome observed'],
-  ['dedupe', 4, '◇ Future-only consumer behavior'],
+  ['dedupe', 4, '◇ Illustrated inventory deduplication'],
 ] as const) {
   test(`${id}: coherent states, output and replay`, async ({ page }) => {
     const calls: string[] = []
@@ -121,6 +121,9 @@ for (const [id, count, outcome] of [
     if (id === 'race') await expect(page.locator('.stage.skipped')).toHaveCount(1)
     if (id === 'ack') await expect(page.locator('.stage.uncertain')).toHaveCount(1)
     if (id === 'dedupe') {
+      await expect(page.getByRole('dialog')).not.toContainText(/future|not implemented/i)
+      await expect(page.locator('.envelope')).toContainText('quantity: 5')
+      await expect(page.locator('.output-line')).toContainText(['SKU-1', '10 + 5 = 15', 'duplicate effect is skipped', 'one atomic local effect'])
       await expect(page.locator('.stage.preview')).toHaveCount(4)
       await expect(page.locator('.output-line').nth(2)).toContainText('[2 ms]')
     }

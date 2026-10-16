@@ -1,3 +1,7 @@
+## Marco 4.4 — verificação e fechamento atuais — 16/10/2026
+
+Marco 4 fechado com limitações não bloqueantes explícitas. Evidência real de estoque/deduplicação, ACK/quarentena e recuperação é separada do rollout compartilhado pendente. Frontend de apresentação verificado; integração ao vivo com backend não implementada. Seções históricas abaixo mantêm o escopo das respectivas datas. [Matriz de verificação](../operations/milestone-4-4-review.md) | [Inventário de ambiente](../docker/environment-inventory.md).
+
 #
 Worker atual, configuração, cancelamento e rollout autorizado: [Marco 2.5](../architecture/milestone-2-5.md). Seções anteriores mantêm escopo histórico.
 
@@ -35,7 +39,7 @@ Revisão estática em 2026-10-10; sem execução runtime. Itens marcados indicam
 
 Liveness HTTP; envelope/UUID/JSON/timestamps; transação outbox/snapshots; lease/autoridade/expiração; confirms/incerteza; dispatch estático, testes isolados e recuperação.
 
-[Self-contained dossier / Dossiê](../../../../engineering-library/docs/pt-BR/architecture/rust-event-relay.md) | [Interview / Entrevista](../../../../engineering-library/docs/pt-BR/interviews/rust-event-relay.md)
+Self-contained dossier / Dossiê (`engineering-library/docs/pt-BR/architecture/rust-event-relay.md`, external repository) | Interview / Entrevista (`engineering-library/docs/pt-BR/interviews/rust-event-relay.md`, external repository)
 
 ## Aplicabilidade das categorias
 

@@ -4,6 +4,12 @@
 
 Percurso: propósito/setup → arquitetura/contratos → segurança/falhas → testes/evidência → operações. Na biblioteca: catálogo/dossiê → entrevista por projeto → fundamentos → falhas. Marcos/refactors/handoff históricos descrevem datas originais; revisão/checklist explica escopo atual.
 
+## Fechamento atual do Marco 4
+
+- [Marco 4.4 — verificação, matriz de aceitação e rollout](operations/milestone-4-4-review.md)
+- [Inventário de ambiente e configuração efetiva](docker/environment-inventory.md)
+
+
 ## architecture
 
 - [Marco 2.6 — Recuperação integrada](architecture/milestone-2-6.md)

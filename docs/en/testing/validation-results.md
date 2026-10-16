@@ -2,6 +2,11 @@
 
 # Validation results
 
+## Milestone 4.4 — current verification and closure — 2026-10-16
+
+Milestone 4 is closed with explicit nonblocking limitations. Real inventory/deduplication, ACK/quarantine and recovery evidence is separate from pending shared rollout. Presentation frontend verified; live backend integration is not implemented. Earlier dated sections retain their historical scope. [Verification matrix](../operations/milestone-4-4-review.md) | [Environment inventory](../docker/environment-inventory.md).
+
+
 ## Milestone 1.5 — Persistence abstraction validation
 
 Date: 2026-10-07. Docker development container, Rust 1.95.0. New Rust-level tests use no database, driver, environment configuration, pools or SQL. No migrations/schema changes or PostgreSQL calls were made for this milestone. Prior schema/credential validation remains preserved below.
@@ -629,7 +634,7 @@ Final diagnostic coverage extension: `cargo test --locked --test persistence_con
 
 Rechecked HTTP composition, read-only SQL, publisher confirmation/uncertainty, pure ownership models/ports, lease migration and CI definitions. Removed stale current claims about absent broker dependencies or unstarted Milestone 2, added ADR 006/007 navigation and aligned bilingual current scope. Ownership SQL mutations, orchestration and polling remain deferred; no end-to-end delivery guarantee is established. Default/opt-in tests, CI jobs, migrations, Cargo commands, broker and PostgreSQL were not executed. Historical milestone results remain unchanged.
 
-Static local-link/anchor, fence, language-pair and documentation-only SHA-256 checks are recorded in the shared [interview review](../../../../engineering-library/docs/en/testing/verification.md). Runtime environment files and secret-bearing backups were not read or modified.
+Static local-link/anchor, fence, language-pair and documentation-only SHA-256 checks are recorded in the shared interview review (`engineering-library/docs/en/testing/verification.md`, external repository). Runtime environment files and secret-bearing backups were not read or modified.
 
 ## Milestone 2.3 — 2026-10-12
 

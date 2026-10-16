@@ -395,8 +395,8 @@ async fn lost_database_commit_ack_redelivery_has_one_effect() {
 }
 
 // Synchronous abort guard owns only this test's proxy task; no asynchronous Drop cleanup.
-struct ProxyTask(tokio::task::JoinHandle<()>);
-impl Drop for ProxyTask {
+struct ProxyTask<T = ()>(tokio::task::JoinHandle<T>);
+impl<T> Drop for ProxyTask<T> {
     fn drop(&mut self) {
         self.0.abort();
     }
@@ -729,7 +729,11 @@ async fn isolated_supervisor_consumer_is_opt_in_and_named_start_stop_works() {
                     "command=/usr/local/bin/relay-consumer",
                     &format!("command={}", env!("CARGO_BIN_EXE_consumer")),
                 )
-                .replace("autostart=true", "autostart=false");
+                .replace("autostart=true", "autostart=false")
+                .replace(
+                    "directory=/app/backend",
+                    &format!("directory={}", env!("CARGO_MANIFEST_DIR")),
+                );
             std::fs::write(&path, physical)?;
             let child = command(&b, &database); // Reuse the exact isolated environment, never shared defaults.
             let environment: Vec<_> = child
@@ -830,6 +834,550 @@ async fn missing_consumer_schema_fails_before_subscription() {
             assert!(text.contains("20261014000000"));
             assert!(!text.contains(&std::env::var("POSTGRES_PASSWORD").unwrap()));
             consumers(&b, 0).await;
+            Ok(())
+        })
+        .await;
+        Ok(())
+    })
+    .await;
+}
+
+// Test-only ACK barrier: the production handler and real adapters finish their
+// durable phase before this wrapper pauses. No production fault switch exists.
+struct AckBoundary(RabbitDelivery);
+impl IncomingDelivery for AckBoundary {
+    fn body(&self) -> &[u8] {
+        self.0.body()
+    }
+    fn message_id(&self) -> Option<&str> {
+        self.0.message_id()
+    }
+    fn preservation(
+        &self,
+        consumer: &ConsumerName,
+        reason: QuarantineReason,
+    ) -> Option<QuarantineMessage> {
+        self.0.preservation(consumer, reason)
+    }
+    async fn ack(&self) -> Result<(), reliable_event_relay::application::publisher::PublishError> {
+        std::fs::write(
+            std::env::var("CONSUMER_BOUNDARY_FILE").unwrap(),
+            b"durable phase completed",
+        )
+        .unwrap();
+        std::future::pending().await
+    }
+}
+
+#[tokio::test]
+#[ignore = "internal child entry; no-op without CONSUMER_BOUNDARY_FILE"]
+async fn milestone44_boundary_child() {
+    if std::env::var("CONSUMER_BOUNDARY_FILE").is_err() {
+        return;
+    }
+    let options = sqlx::postgres::PgConnectOptions::new()
+        .host(&std::env::var("POSTGRES_HOST").unwrap())
+        .port(std::env::var("POSTGRES_PORT").unwrap().parse().unwrap())
+        .username(&std::env::var("POSTGRES_USER").unwrap())
+        .password(&std::env::var("POSTGRES_PASSWORD").unwrap())
+        .database(&std::env::var("POSTGRES_DB").unwrap());
+    let pool = checked(
+        sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await,
+        "boundary pool",
+    );
+    let rabbit = RabbitConsumerConfig::from_lookup(|k| std::env::var(k).ok(), 1).unwrap();
+    let mut session = RabbitConsumerSession::connect(rabbit).await.unwrap();
+    let delivery = session.next().await.unwrap().unwrap();
+    handle_delivery(
+        &AckBoundary(delivery),
+        &PostgresInventoryProcessor::new(pool),
+        &session.quarantine,
+        &name(),
+        Duration::from_secs(20),
+    )
+    .await;
+    panic!("boundary must not return");
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone44_kill_after_commit_and_quarantine_before_ack() {
+    isolated(|pool| async move {
+        schema(&pool).await;
+        checked(
+            sqlx::query("INSERT INTO consumer.stock VALUES('local','SKU-1',10)")
+                .execute(&pool)
+                .await,
+            "initial stock",
+        );
+        broker(move |b| async move {
+            let database: String = checked(
+                sqlx::query_scalar("SELECT current_database()")
+                    .fetch_one(&pool)
+                    .await,
+                "database",
+            );
+            let e = event();
+            for invalid in [false, true] {
+                let ready = std::env::temp_dir().join(format!(
+                    "relay_consumer_boundary_{}",
+                    uuid::Uuid::now_v7().simple()
+                ));
+                let mut spec = command(&b, &database);
+                // Reuse only test-owned configuration, with secrets inherited in environment.
+                let env: Vec<_> = spec
+                    .as_std_mut()
+                    .get_envs()
+                    .filter_map(|(k, v)| v.map(|v| (k.to_owned(), v.to_owned())))
+                    .collect();
+                let mut child = tokio::process::Command::new(std::env::current_exe()?)
+                    .args(["--ignored", "--exact", "milestone44_boundary_child"])
+                    .envs(env)
+                    .env("CONSUMER_BOUNDARY_FILE", &ready)
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .kill_on_drop(true)
+                    .spawn()?;
+                consumers(&b, 1).await;
+                if invalid {
+                    b.send(b"invalid", BasicProperties::default()).await;
+                } else {
+                    b.send_event(&e).await;
+                }
+                let reached = timeout(WAIT, async {
+                    while !ready.exists() {
+                        tokio::task::yield_now().await;
+                    }
+                })
+                .await;
+                // Kill and reap only the Child handle spawned here, even if barrier fails.
+                child.kill().await?;
+                consumers(&b, 0).await;
+                if ready.exists() {
+                    std::fs::remove_file(&ready)?;
+                }
+                reached?;
+                assert_eq!(units(&pool).await, 15);
+                assert_eq!(receipts(&pool).await, 1);
+                let mut session = RabbitConsumerSession::connect(b.consumer(1)).await?;
+                let d = timeout(WAIT, session.next()).await??.unwrap();
+                let out = handle_delivery(
+                    &d,
+                    &PostgresInventoryProcessor::new(pool.clone()),
+                    &session.quarantine,
+                    &name(),
+                    WAIT,
+                )
+                .await;
+                assert!(!out.recover());
+                if invalid {
+                    for _ in 0..2 {
+                        let q = b.get(&b.quarantine.queue).await;
+                        assert_eq!(q.data, b"invalid");
+                        assert_eq!(record(&q)["reason"], "MalformedJson");
+                        assert!(q.ack(BasicAckOptions::default()).await?);
+                    }
+                } else {
+                    assert!(matches!(
+                        out.primary,
+                        PrimaryOutcome::Processing(Ok(ProcessingOutcome::Duplicate(_)))
+                    ));
+                }
+                session.close().await?;
+                assert_eq!(units(&pool).await, 15);
+                b.empty(&b.source.queue).await;
+                b.empty(&b.quarantine.queue).await;
+            }
+            Ok(())
+        })
+        .await;
+        Ok(())
+    })
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone44_concurrent_deliveries_keep_one_effect_per_identity() {
+    isolated(|pool| async move {
+        schema(&pool).await;
+        checked(
+            sqlx::query("INSERT INTO consumer.stock VALUES('local','SKU-1',10)")
+                .execute(&pool)
+                .await,
+            "initial stock",
+        );
+        broker(move |b| async move {
+            let p = PostgresInventoryProcessor::new(pool.clone());
+            let mut a = RabbitConsumerSession::connect(b.consumer(1)).await?;
+            let mut c = RabbitConsumerSession::connect(b.consumer(1)).await?;
+            let e = event();
+            for same in [true, false] {
+                b.send_event(&e).await;
+                b.send_event(&if same { e.clone() } else { event() }).await;
+                let da = timeout(WAIT, a.next()).await??.unwrap();
+                let dc = timeout(WAIT, c.next()).await??.unwrap();
+                let n = name();
+                let (oa, oc) = tokio::join!(
+                    handle_delivery(&da, &p, &a.quarantine, &n, WAIT),
+                    handle_delivery(&dc, &p, &c.quarantine, &n, WAIT)
+                );
+                assert!(!oa.recover() && !oc.recover());
+                assert_eq!(units(&pool).await, if same { 15 } else { 20 });
+                assert_eq!(receipts(&pool).await, if same { 1 } else { 2 });
+            }
+            // Two fresh identities contend for the same stock row.
+            b.send_event(&event()).await;
+            b.send_event(&event()).await;
+            let da = timeout(WAIT, a.next()).await??.unwrap();
+            let dc = timeout(WAIT, c.next()).await??.unwrap();
+            let n = name();
+            let (oa, oc) = tokio::join!(
+                handle_delivery(&da, &p, &a.quarantine, &n, WAIT),
+                handle_delivery(&dc, &p, &c.quarantine, &n, WAIT)
+            );
+            assert!(!oa.recover() && !oc.recover());
+            assert_eq!(units(&pool).await, 30);
+            assert_eq!(receipts(&pool).await, 4);
+            a.close().await?;
+            c.close().await?;
+            b.empty(&b.source.queue).await;
+            Ok(())
+        })
+        .await;
+        Ok(())
+    })
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone44_kill_before_commit_rolls_back_and_restart_applies() {
+    isolated(|pool|async move {schema(&pool).await;
+        checked(sqlx::query("INSERT INTO consumer.stock VALUES('local','SKU-1',10)").execute(&pool).await,"initial stock");
+        broker(move |b|async move {
+            let database:String=checked(sqlx::query_scalar("SELECT current_database()").fetch_one(&pool).await,"database");
+            let mut lock=pool.begin().await?;
+            sqlx::query("SELECT units FROM consumer.stock FOR UPDATE").execute(&mut *lock).await?;
+            let observer=sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_with((*pool.connect_options()).clone()).await?;
+            let mut child=command(&b,&database).spawn()?;consumers(&b,1).await;b.send_event(&event()).await;
+            let reached=timeout(WAIT,async {loop {
+                let waiting:bool=checked(sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock')").fetch_one(&observer).await,"precommit barrier");
+                if waiting {break;}tokio::task::yield_now().await;
+            }}).await;
+            child.kill().await?;consumers(&b,0).await;lock.rollback().await?;observer.close().await;reached?;
+            assert_eq!(units(&pool).await,10);assert_eq!(receipts(&pool).await,0);
+            let mut session=RabbitConsumerSession::connect(b.consumer(1)).await?;
+            let d=timeout(WAIT,session.next()).await??.unwrap();
+            let out=handle_delivery(&d,&PostgresInventoryProcessor::new(pool.clone()),&session.quarantine,&name(),WAIT).await;
+            assert!(matches!(out.primary,PrimaryOutcome::Processing(Ok(ProcessingOutcome::Applied(_)))));assert!(!out.recover());
+            session.close().await?;assert_eq!(units(&pool).await,15);assert_eq!(receipts(&pool).await,1);b.empty(&b.source.queue).await;Ok(())
+        }).await;Ok(())
+    }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone44_lost_source_ack_redelivers_committed_duplicate() {
+    isolated(|pool| async move {
+        schema(&pool).await;
+        broker(move |b| async move {
+            let p = PostgresInventoryProcessor::new(pool.clone());
+            let (uri, observed, task) = faults::dropped_source_ack_proxy().await;
+            let mut proxy = ProxyTask(task);
+            // Session connects its quarantine publisher first: keep that connection
+            // direct, and proxy only source through a manually subscribed channel.
+            let conn = Connection::connect(&uri, ConnectionProperties::default()).await?;
+            let ch = conn.create_channel().await?;
+            ch.basic_qos(1, BasicQosOptions::default()).await?;
+            let mut source = ch
+                .basic_consume(
+                    b.source.queue.clone().into(),
+                    "".into(),
+                    BasicConsumeOptions::default(),
+                    FieldTable::default(),
+                )
+                .await?;
+            let q = RabbitQuarantinePublisher::connect(config(b.uri.clone(), b.quarantine.clone()))
+                .await?;
+            let e = event();
+            b.send_event(&e).await;
+            use futures_util::StreamExt;
+            let d = RabbitDelivery::from_delivery(
+                timeout(WAIT, source.next()).await.unwrap().unwrap()?,
+            );
+            let out = handle_delivery(&d, &p, &q, &name(), WAIT).await;
+            assert!(!out.recover()); // Client send success does not acknowledge the ACK.
+            timeout(WAIT, observed).await??;
+            assert_eq!(units(&pool).await, 5);
+            assert_eq!(receipts(&pool).await, 1);
+            proxy.0.abort();
+            let _ = (&mut proxy.0).await;
+            drop(conn);
+            drop(source);
+            q.close().await?;
+            consumers(&b, 0).await;
+            let mut session = RabbitConsumerSession::connect(b.consumer(1)).await?;
+            let d = timeout(WAIT, session.next()).await??.unwrap();
+            let out = handle_delivery(&d, &p, &session.quarantine, &name(), WAIT).await;
+            assert!(matches!(
+                out.primary,
+                PrimaryOutcome::Processing(Ok(ProcessingOutcome::Duplicate(_)))
+            ));
+            assert!(!out.recover());
+            assert_eq!(units(&pool).await, 5);
+            assert_eq!(receipts(&pool).await, 1);
+            session.close().await?;
+            b.empty(&b.source.queue).await;
+            Ok(())
+        })
+        .await;
+        Ok(())
+    })
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone44_full_quarantine_rejects_without_source_ack() {
+    isolated(|pool| async move {
+        schema(&pool).await;
+        broker(move |b| async move {
+            let mut session = RabbitConsumerSession::connect(b.consumer(1)).await?;
+            // Replace only the UUID test-owned queue, after publisher setup.
+            b.channel
+                .queue_delete(
+                    b.quarantine.queue.clone().into(),
+                    QueueDeleteOptions::default(),
+                )
+                .await?;
+            let mut args = FieldTable::default();
+            args.insert("x-max-length".into(), AMQPValue::LongInt(1));
+            args.insert(
+                "x-overflow".into(),
+                AMQPValue::LongString("reject-publish".into()),
+            );
+            b.channel
+                .queue_declare(
+                    b.quarantine.queue.clone().into(),
+                    QueueDeclareOptions {
+                        durable: true,
+                        ..Default::default()
+                    },
+                    args,
+                )
+                .await?;
+            b.channel
+                .queue_bind(
+                    b.quarantine.queue.clone().into(),
+                    b.quarantine.exchange.clone().into(),
+                    b.quarantine.routing_key.clone().into(),
+                    QueueBindOptions::default(),
+                    FieldTable::default(),
+                )
+                .await?;
+            let confirm = b
+                .channel
+                .basic_publish(
+                    b.quarantine.exchange.clone().into(),
+                    b.quarantine.routing_key.clone().into(),
+                    BasicPublishOptions {
+                        mandatory: true,
+                        ..Default::default()
+                    },
+                    b"capacity fixture",
+                    BasicProperties::default().with_delivery_mode(2),
+                )
+                .await?
+                .await?;
+            assert!(matches!(confirm, Confirmation::Ack(None)));
+            b.send(b"invalid", BasicProperties::default()).await;
+            let d = timeout(WAIT, session.next()).await??.unwrap();
+            let out = handle_delivery(
+                &d,
+                &PostgresInventoryProcessor::new(pool.clone()),
+                &session.quarantine,
+                &name(),
+                WAIT,
+            )
+            .await;
+            assert!(
+                matches!(out.preservation,Some(Err(ref e)) if e.kind()==PublishErrorKind::Rejected)
+            );
+            assert!(out.acknowledgement.is_none());
+            session.close().await?;
+            let retained = b.get(&b.source.queue).await;
+            assert_eq!(retained.data, b"invalid");
+            assert!(retained.ack(BasicAckOptions::default()).await?);
+            let q = b.get(&b.quarantine.queue).await;
+            assert_eq!(q.data, b"capacity fixture");
+            assert!(q.ack(BasicAckOptions::default()).await?);
+            assert_eq!(receipts(&pool).await, 0);
+            b.empty(&b.source.queue).await;
+            b.empty(&b.quarantine.queue).await;
+            Ok(())
+        })
+        .await;
+        Ok(())
+    })
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone44_oversize_stops_for_operator_without_source_ack() {
+    isolated(|pool| async move {
+        schema(&pool).await;
+        broker(move |b| async move {
+            let database: String = checked(
+                sqlx::query_scalar("SELECT current_database()")
+                    .fetch_one(&pool)
+                    .await,
+                "database",
+            );
+            let mut child = command(&b, &database).spawn()?;
+            consumers(&b, 1).await;
+            let body = vec![b'x'; QuarantineMessage::MAX_BODY_BYTES + 1];
+            b.send(&body, BasicProperties::default()).await;
+            assert!(timeout(WAIT, child.wait()).await??.success());
+            consumers(&b, 0).await;
+            let retained = b.get(&b.source.queue).await;
+            assert_eq!(retained.data, body);
+            assert!(retained.ack(BasicAckOptions::default()).await?);
+            assert_eq!(receipts(&pool).await, 0);
+            b.empty(&b.quarantine.queue).await;
+            Ok(())
+        })
+        .await;
+        Ok(())
+    })
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone44_sql_replay_preserves_identity_and_consumer_effect() {
+    use reliable_event_relay::{
+        application::{
+            delivery::{DeliveryOutcome, deliver_once},
+            publisher::EventPublisher,
+        },
+        domain::delivery::LeaseDuration,
+        infrastructure::postgres::PostgresOutboxRepository,
+        persistence::{
+            AcquireRequest, AuthorizedReplay, OutboxReplay, ReplayIntent, ReplayOutcome,
+        },
+    };
+    isolated(|pool|async move {
+        for sql in [include_str!("../migrations/20261009000000_add_delivery_ownership.up.sql"),include_str!("../migrations/20261012000000_add_durable_retry.up.sql"),include_str!("../migrations/20261013000000_add_audited_replay.up.sql")] {checked(sqlx::raw_sql(sql).execute(&pool).await,"relay upgrade");}
+        schema(&pool).await;
+        broker(move |b|async move {
+            let mut stored=serde_json::to_value(event())?;stored["occurred_at"]=serde_json::json!("2026-10-16T12:00:00.123456Z");let e:EventEnvelope=serde_json::from_value(stored)?;let repo=PostgresOutboxRepository::new(pool.clone());let p=PostgresInventoryProcessor::new(pool.clone());
+            let publisher=RabbitMqPublisher::connect(config(b.uri.clone(),b.source.clone())).await?;
+            publisher.publish(&e).await?;
+            let mut session=RabbitConsumerSession::connect(b.consumer(1)).await?;
+            let d=timeout(WAIT,session.next()).await??.unwrap();assert!(!handle_delivery(&d,&p,&session.quarantine,&name(),WAIT).await.recover());
+            // Lost completion followed by a terminal relay record can coexist with
+            // an already committed consumer effect. Replay must retain identity.
+            checked(sqlx::query("INSERT INTO relay.outbox_events(id,event_type,aggregate_type,aggregate_id,schema_version,occurred_at,payload,status,terminal_at,terminal_reason) VALUES($1,$2,$3,$4,$5,$6,$7,'dead_letter',clock_timestamp(),'legacy_dead_letter')")
+                .bind(e.id()).bind(e.event_type().as_str()).bind(e.aggregate_type()).bind(e.aggregate_id()).bind(e.schema_version() as i64).bind(e.occurred_at()).bind(e.payload()).execute(&pool).await,"terminal original envelope");
+            let result=repo.replay(AuthorizedReplay{actor:"fixture-operator".into(),scope:"outbox:replay".into(),intent:ReplayIntent{request_id:uuid::Uuid::now_v7(),event_id:e.id(),expected_revision:0,expected_cycle:1,reason:"isolated retry".into(),budget:2,delay_ms:0,ticket:None}}).await?;
+            assert!(matches!(result,ReplayOutcome::Reenabled(_)));
+            let result=deliver_once(&repo,&publisher,AcquireRequest::new(LeaseDuration::from_micros(8_000_000).unwrap())).await;
+            assert!(matches!(result,DeliveryOutcome::Published{..}));
+            let d=timeout(WAIT,session.next()).await??.unwrap();
+            let out=handle_delivery(&d,&p,&session.quarantine,&name(),WAIT).await;
+            assert!(matches!(out.primary,PrimaryOutcome::Processing(Ok(ProcessingOutcome::Duplicate(_)))));assert!(!out.recover());
+            assert_eq!(units(&pool).await,5);assert_eq!(receipts(&pool).await,1);
+            let audited:i64=checked(sqlx::query_scalar("SELECT count(*) FROM relay.replay_requests").fetch_one(&pool).await,"replay audit");assert_eq!(audited,1);
+            session.close().await?;publisher.close().await?;b.empty(&b.source.queue).await;Ok(())
+        }).await;Ok(())
+    }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone44_cancel_after_observed_commit_retains_source() {
+    isolated(|pool| async move {
+        schema(&pool).await;
+        broker(move |b| async move {
+            let (proxy, server, observed) = faults::withheld_commit_ack_pool(&pool).await;
+            let mut guard = ProxyTask(server);
+            let processor = PostgresInventoryProcessor::new(proxy.clone());
+            let mut session = RabbitConsumerSession::connect(b.consumer(1)).await?;
+            b.send_event(&event()).await;
+            let d = timeout(WAIT, session.next()).await??.unwrap();
+            {
+                let n = name();
+                let operation = handle_delivery(&d, &processor, &session.quarantine, &n, WAIT);
+                tokio::pin!(operation);
+                tokio::select! {
+                    result = observed => { result?; },
+                    _ = &mut operation => panic!("withheld commit response must prevent completion"),
+                    () = tokio::time::sleep(WAIT) => panic!("commit barrier deadline"),
+                }
+                // Dropping the admitted future cannot undo the independently observed commit.
+            }
+            assert_eq!(units(&pool).await, 5);
+            assert_eq!(receipts(&pool).await, 1);
+            guard.0.abort();
+            let _ = (&mut guard.0).await;
+            proxy.close().await;
+            session.close().await?;
+            let mut session = RabbitConsumerSession::connect(b.consumer(1)).await?;
+            let d = timeout(WAIT, session.next()).await??.unwrap();
+            let out = handle_delivery(&d, &PostgresInventoryProcessor::new(pool.clone()), &session.quarantine, &name(), WAIT).await;
+            assert!(matches!(out.primary, PrimaryOutcome::Processing(Ok(ProcessingOutcome::Duplicate(_)))));
+            assert!(!out.recover());
+            assert_eq!(units(&pool).await, 5);
+            session.close().await?;
+            b.empty(&b.source.queue).await;
+            Ok(())
+        }).await;
+        Ok(())
+    }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone44_missing_quarantine_exchange_retains_source() {
+    isolated(|pool| async move {
+        schema(&pool).await;
+        broker(move |b| async move {
+            let mut session = RabbitConsumerSession::connect(b.consumer(1)).await?;
+            b.channel
+                .exchange_delete(
+                    b.quarantine.exchange.clone().into(),
+                    ExchangeDeleteOptions::default(),
+                )
+                .await?;
+            b.send(b"invalid", BasicProperties::default()).await;
+            let d = timeout(WAIT, session.next()).await??.unwrap();
+            let out = handle_delivery(
+                &d,
+                &PostgresInventoryProcessor::new(pool.clone()),
+                &session.quarantine,
+                &name(),
+                WAIT,
+            )
+            .await;
+            assert!(matches!(out.preservation, Some(Err(_))));
+            assert!(out.acknowledgement.is_none());
+            // Setup/close may report the already failed preservation channel.
+            let _ = session.close().await;
+            let d = b.get(&b.source.queue).await;
+            assert_eq!(d.data, b"invalid");
+            assert!(d.ack(BasicAckOptions::default()).await?);
+            assert_eq!(receipts(&pool).await, 0);
+            // Restore only this exact test exchange for the shared fixture's strict cleanup.
+            RabbitMqPublisher::connect(config(b.uri.clone(), b.quarantine.clone()))
+                .await?
+                .close()
+                .await?;
+            b.empty(&b.quarantine.queue).await;
             Ok(())
         })
         .await;

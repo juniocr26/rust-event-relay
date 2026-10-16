@@ -7,7 +7,7 @@ defineProps<{ active: boolean; title: string; explanation: string; preview: bool
     <div class="flow">
       <div class="station">{{ preview ? 'RabbitMQ arrivals' : 'PostgreSQL' }}</div>
       <span class="message" :class="{ moving: active }" aria-hidden="true">→</span>
-      <div class="station">{{ preview ? 'Future consumer' : 'RabbitMQ' }}</div>
+      <div class="station">{{ preview ? 'Inventory consumer' : 'RabbitMQ' }}</div>
       <span class="message" :class="{ moving: active }" aria-hidden="true">→</span>
       <div class="station">Observed outcome</div>
     </div>

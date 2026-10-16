@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ output: string; broker: string; durable: string }>()
+defineProps<{ output: string; broker: string; durable: string; inventory?: boolean }>()
 </script>
 <template>
   <dl class="evidence">
@@ -19,7 +19,7 @@ defineProps<{ output: string; broker: string; durable: string }>()
   <section class="envelope" aria-label="Input and output envelope">
     <div>
       <strong>Input</strong
-      ><code>{ event_id: "demo-001", payload: { order_id: "order-demo" } }</code>
+      ><code>{{ inventory ? '{ event_id: "demo-001", payload: { warehouse_id: "local", sku: "SKU-1", quantity: 5 } }' : '{ event_id: "demo-001", payload: { order_id: "order-demo" } }' }}</code>
     </div>
     <div>
       <strong>Output</strong><code>{{ output }}</code>

@@ -13,6 +13,8 @@ Um serviço Rust que explora entrega confiável de eventos, tentativas, idempot�
 
 Este projeto de código aberto, estudo e portfólio investiga entrega distribuída de eventos sob falhas. Rust é a ferramenta de implementação; o problema de engenharia é a razão do repositório. Inglês é o idioma canônico da documentação; a documentação em português cobre o mesmo escopo.
 
+Marco 4 fechado com limitações não bloqueantes explícitas. A [verificação/fechamento 4.4](docs/pt-BR/operations/milestone-4-4-review.md) registra estoque/ACK/quarentena reais, contagens de testes, migrations/Supervisor compartilhados pendentes e [inventário de ambiente](docs/pt-BR/docker/environment-inventory.md). Frontend de apresentação verificado; integração ao vivo com backend não implementada.
+
 ## Catálogo de documentação e percurso de leitura
 
 - [Catálogo completo por categoria](docs/pt-BR/index.md)
@@ -24,7 +26,7 @@ Leia propósito/setup, arquitetura e contratos, segurança/falhas, testes/evidê
 
 **Implementado hoje:** envelope canônico, schema outbox/posse/retry/replay PostgreSQL versionado, contratos/adapters focados de persistência, publicação RabbitMQ confirmada, relay sequencial com manutenção/reconexão/shutdown limitados, retry durável e preservação terminal, descoberta/isolamento de poison, replay autorizado idempotente opt-in com auditoria, efeito/deduplicação PostgreSQL de estoque com recibos históricos, HTTP liveness, Docker/Supervisor e frontend Vue de apresentação. A [matriz de aceitação](docs/pt-BR/operations/milestone-3-review.md) distingue verificação isolada, runtime compartilhado e garantias exatas.
 
-**Planejado / exploração futura:** gravações transacionais do produtor, aceitação completa de crash/redelivery do consumidor (4.4), integração frontend/backend real, reparo auditado, pools/backpressure, webhooks, Redis Streams, readiness/métricas, retenção, TLS/HA e backup/recuperação produtivos. HTTP não executa relay; HTTP com replay habilitado conecta ao PostgreSQL. Frontend executa somente cenários ilustrativos locais.
+**Planejado / exploração futura:** gravações transacionais do produtor, integração frontend/backend real, reparo auditado, pools/backpressure, webhooks, Redis Streams, readiness/métricas, retenção, TLS/HA e backup/recuperação produtivos. HTTP não executa relay; HTTP com replay habilitado conecta ao PostgreSQL. Frontend executa somente cenários ilustrativos locais.
 
 [Marco 2.2](docs/pt-BR/architecture/milestone-2-2.md) implementa decisão de posse, modelos, contratos e schema. Eventos com lease permanecem pending; donos expirados não podem concluir/liberar. Tokens protegem transições no banco, mas não impedem publicação nem estabelecem entrega ponta a ponta.
 
@@ -123,7 +125,7 @@ Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem ar
 
 ## Limites e filosofia
 
-`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Health não exige autenticação; rotas privilegiadas replay usam bearer confiável opt-in, desativadas por padrão. Gravações do produtor, medição de desempenho e imagem de produção continuam ausentes. Runtime consumidor e quarentena confirmada estão implementados; ativação compartilhada e aceitação completa do Marco 4 continuam pendentes. A futura entrega pelo menos uma vez exige idempotência dos consumidores; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
+`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Health não exige autenticação; rotas privilegiadas replay usam bearer confiável opt-in, desativadas por padrão. Gravações do produtor, medição de desempenho e imagem de produção continuam ausentes. Runtime consumidor e quarentena confirmada estão implementados; ativação compartilhada continua pendente; aceitação do Marco 4 concluída com limitações não bloqueantes explícitas. Entrega pelo menos uma vez depende de deduplicação durável no consumidor; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
 
 Licença MIT; consulte [LICENSE](LICENSE).
 
