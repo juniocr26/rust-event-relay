@@ -25,7 +25,7 @@ use sqlx::{
 };
 use std::{
     future::Future,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Stdio,
     sync::{Arc, Mutex},
     time::Duration,
@@ -37,6 +37,120 @@ use tokio::{
 };
 use uuid::Uuid;
 const WAIT: Duration = Duration::from_secs(8);
+
+// Only fixed phase names cross this diagnostic boundary, never driver sources,
+// environment values, payloads or captured child output.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BoundaryPhase {
+    Starting,
+    Postgres,
+    Publisher,
+    PublisherDeadline,
+    PublisherFailure,
+    BrokerObserver,
+    Unbind,
+    Transition,
+    ObserverClose,
+    Ready,
+}
+impl BoundaryPhase {
+    fn record(self) {
+        std::fs::write(
+            std::env::var("RECOVERY_PHASE").expect("owned phase path"),
+            format!("{self:?}"),
+        )
+        .expect("write fixed child phase");
+    }
+    fn read(path: &Path) -> Self {
+        match std::fs::read_to_string(path).unwrap_or_default().as_str() {
+            "Postgres" => Self::Postgres,
+            "Publisher" => Self::Publisher,
+            "PublisherDeadline" => Self::PublisherDeadline,
+            "PublisherFailure" => Self::PublisherFailure,
+            "BrokerObserver" => Self::BrokerObserver,
+            "Unbind" => Self::Unbind,
+            "Transition" => Self::Transition,
+            "ObserverClose" => Self::ObserverClose,
+            "Ready" => Self::Ready,
+            _ => Self::Starting,
+        }
+    }
+}
+async fn process_ready(ready: &Path, phase: &Path, children: &Mutex<Vec<Child>>) {
+    let result = timeout(WAIT, async {
+        loop {
+            let exited = children
+                .lock()
+                .unwrap()
+                .last_mut()
+                .expect("owned boundary child")
+                .try_wait()
+                .expect("observe owned boundary child");
+            assert!(
+                exited.is_none(),
+                "boundary child exited before process barrier: status={exited:?}, phase={:?}",
+                BoundaryPhase::read(phase)
+            );
+            if ready.exists() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await;
+    assert!(
+        result.is_ok(),
+        "explicit process barrier deadline: phase={:?}",
+        BoundaryPhase::read(phase)
+    );
+}
+
+#[tokio::test]
+async fn exited_boundary_child_reports_sanitized_phase_without_waiting_for_deadline() {
+    let temp = std::env::temp_dir().join(format!("relay_barrier_{}", Uuid::now_v7().simple()));
+    std::fs::create_dir(&temp).unwrap();
+    let mut child = Command::new(std::env::current_exe().unwrap())
+        .args(["--ignored", "--exact", "boundary_child"])
+        .env_remove("RECOVERY_CHILD")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .kill_on_drop(true)
+        .spawn()
+        .unwrap();
+    let exit = timeout(WAIT, child.wait()).await;
+    if !matches!(exit, Ok(Ok(_))) {
+        child.kill().await.expect("regression child kill/reap");
+        std::fs::remove_dir_all(&temp).unwrap();
+        panic!("regression child must exit before readiness observation");
+    }
+    std::fs::write(temp.join("phase"), "Publisher").unwrap();
+    let owned = temp.clone();
+    let mut task = tokio::spawn(async move {
+        process_ready(
+            &owned.join("ready"),
+            &owned.join("phase"),
+            &Mutex::new(vec![child]),
+        )
+        .await;
+    });
+    let result = timeout(WAIT / 2, &mut task).await;
+    if result.is_err() {
+        task.abort();
+        let _ = task.await;
+    }
+    // Unknown file contents cannot cross the diagnostic boundary.
+    std::fs::write(temp.join("phase"), "private driver source").unwrap();
+    let sanitized = BoundaryPhase::read(&temp.join("phase"));
+    std::fs::remove_dir_all(&temp).unwrap();
+    assert_eq!(sanitized, BoundaryPhase::Starting);
+    let error = result
+        .expect("exited child must not consume the readiness deadline")
+        .unwrap_err();
+    let panic = error.into_panic();
+    let message = panic.downcast_ref::<String>().expect("readiness assertion");
+    assert!(message.contains("boundary child exited before process barrier"));
+    assert!(message.contains("phase=Publisher"));
+}
 
 fn request(ms: u64) -> AcquireRequest {
     AcquireRequest::new(LeaseDuration::from_micros((ms * 1000) as i64).unwrap())
@@ -140,7 +254,8 @@ impl Resources {
         if let Some(mode) = instrumented {
             cmd.args(["--ignored", "--exact", "boundary_child"]);
             cmd.env("RECOVERY_CHILD", mode)
-                .env("RECOVERY_READY", self.temp.join("ready"));
+                .env("RECOVERY_READY", self.temp.join("ready"))
+                .env("RECOVERY_PHASE", self.temp.join("phase"));
         }
         cmd.env("RELAY_MAINTENANCE_CANDIDATES", maintenance)
             .env("POSTGRES_DB", database)
@@ -155,7 +270,17 @@ impl Resources {
             .env("RELAY_SHUTDOWN_MS", "2000")
             .env("RELAY_LOCK_MS", "2000")
             .env("RELAY_STATEMENT_MS", "1000")
-            .env("RABBITMQ_CONNECT_TIMEOUT_MS", "200")
+            // Boundary children perform one-shot setup, not reconnect testing.
+            // A 200 ms setup limit can expire under scheduling pressure before
+            // acquisition and hide behind the parent readiness deadline.
+            .env(
+                "RABBITMQ_CONNECT_TIMEOUT_MS",
+                if instrumented.is_some() {
+                    WAIT.as_millis().to_string()
+                } else {
+                    "200".into()
+                },
+            )
             .env("RABBITMQ_PUBLISH_TIMEOUT_MS", "500")
             .stdout(Stdio::from(
                 std::fs::File::create(
@@ -218,13 +343,12 @@ impl Resources {
         .expect("sanitized child log barrier");
     }
     async fn ready(&self) {
-        timeout(WAIT, async {
-            while !self.temp.join("ready").exists() {
-                tokio::time::sleep(Duration::from_millis(10)).await;
-            }
-        })
-        .await
-        .expect("explicit process barrier");
+        process_ready(
+            &self.temp.join("ready"),
+            &self.temp.join("phase"),
+            &self.children,
+        )
+        .await;
     }
 }
 async fn experiment<F, Fut>(case: F)
@@ -380,6 +504,7 @@ async fn boundary_child() {
     let Ok(mode) = std::env::var("RECOVERY_CHILD") else {
         return;
     };
+    BoundaryPhase::Postgres.record();
     let options = PgConnectOptions::new()
         .host(&std::env::var("POSTGRES_HOST").unwrap_or_else(|_| "postgres".into()))
         .port(
@@ -398,10 +523,20 @@ async fn boundary_child() {
             .await,
         "child pool",
     );
+    BoundaryPhase::Publisher.record();
     let publisher =
         RabbitMqPublisher::connect(RabbitMqConfig::from_lookup(|k| std::env::var(k).ok()).unwrap())
             .await
-            .expect("child publisher");
+            .unwrap_or_else(|error| {
+                if std::error::Error::source(&error)
+                    .is_some_and(|source| source.is::<tokio::time::error::Elapsed>())
+                {
+                    BoundaryPhase::PublisherDeadline.record();
+                } else {
+                    BoundaryPhase::PublisherFailure.record();
+                }
+                panic!("child publisher: {:?}", error.kind());
+            });
     if matches!(mode.as_str(), "scheduled" | "terminal" | "replayed") {
         use reliable_event_relay::{
             application::{
@@ -412,6 +547,7 @@ async fn boundary_child() {
             persistence::{ReplayIntent, ReplayOutcome, RetryTransition},
         };
         let repository = PostgresOutboxRepository::new(pool.clone());
+        BoundaryPhase::Transition.record();
         let token = if mode == "replayed" {
             let id = checked(
                 sqlx::query_scalar("SELECT id FROM relay.outbox_events")
@@ -441,10 +577,12 @@ async fn boundary_child() {
             ));
             Uuid::nil()
         } else {
+            BoundaryPhase::BrokerObserver.record();
             let connection = Connection::connect(&faults::uri(), ConnectionProperties::default())
                 .await
                 .unwrap();
             let channel = connection.create_channel().await.unwrap();
+            BoundaryPhase::Unbind.record();
             channel
                 .queue_unbind(
                     std::env::var("RABBITMQ_QUEUE").unwrap().into(),
@@ -454,6 +592,7 @@ async fn boundary_child() {
                 )
                 .await
                 .unwrap();
+            BoundaryPhase::Transition.record();
             let outcome = deliver_once_with_delay(&repository, &publisher, request(8000), |_| {
                 Ok(RetryDelay::from_micros(2_000_000).unwrap())
             })
@@ -478,12 +617,14 @@ async fn boundary_child() {
                     FailureHandling::Terminal(Ok(RetryTransition::Applied(_)))
                 ));
             }
+            BoundaryPhase::ObserverClose.record();
             connection
                 .close(200, "boundary observer close".into())
                 .await
                 .unwrap();
             claim.key.token().get()
         };
+        BoundaryPhase::Ready.record();
         std::fs::write(std::env::var("RECOVERY_READY").unwrap(), token.to_string()).unwrap();
         std::future::pending::<()>().await;
         unreachable!();
