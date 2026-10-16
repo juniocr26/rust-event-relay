@@ -109,3 +109,60 @@ fn configuration_is_bounded_and_has_no_client_privilege_fields() {
         .is_err()
     );
 }
+
+#[tokio::test]
+async fn replay_admission_rejects_before_body_read_and_releases_on_cancel() {
+    use reliable_event_relay::{
+        application::observation::{Operation as Op, Outcome as Obs},
+        infrastructure::operator_http::router_observed,
+        telemetry::metrics::{Metrics, Process},
+    };
+    let metrics = Metrics::new(Process::Http);
+    let app = router_observed(
+        Fake(Arc::new(AtomicUsize::new(0))),
+        credentials(),
+        metrics.clone(),
+    );
+    let stalled = || {
+        Request::builder()
+            .method("POST")
+            .uri("/operator/replays")
+            .header("content-type", "application/json")
+            .body(Body::from_stream(futures_util::stream::pending::<
+                Result<String, std::io::Error>,
+            >()))
+            .unwrap()
+    };
+    let mut a = Box::pin(app.clone().oneshot(stalled()));
+    let mut b = Box::pin(app.clone().oneshot(stalled()));
+    assert!(futures_util::poll!(&mut a).is_pending());
+    assert!(futures_util::poll!(&mut b).is_pending());
+    assert_eq!(
+        app.clone().oneshot(stalled()).await.unwrap().status(),
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(metrics.count(Op::Replay, Obs::Saturated), 1);
+    drop(a);
+    let req = Request::builder()
+        .uri(format!("/operator/replays/{}", Uuid::now_v7()))
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(
+        app.clone().oneshot(req).await.unwrap().status(),
+        StatusCode::UNAUTHORIZED
+    );
+    drop(b);
+    // Error completion also releases the slot.
+    assert_eq!(
+        app.oneshot(
+            Request::builder()
+                .uri("/operator/replays/invalid")
+                .body(Body::empty())
+                .unwrap()
+        )
+        .await
+        .unwrap()
+        .status(),
+        StatusCode::UNAUTHORIZED
+    );
+}

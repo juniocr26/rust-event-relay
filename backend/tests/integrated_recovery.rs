@@ -251,6 +251,13 @@ impl Resources {
         } else {
             PathBuf::from(env!("CARGO_BIN_EXE_relay"))
         });
+        let metrics_addresses = support::metrics_env(&mut cmd);
+        std::fs::write(
+            self.temp
+                .join(format!("metrics-{}", self.children.lock().unwrap().len())),
+            metrics_addresses[1].to_string(),
+        )
+        .unwrap();
         if let Some(mode) = instrumented {
             cmd.args(["--ignored", "--exact", "boundary_child"]);
             cmd.env("RECOVERY_CHILD", mode)
@@ -1287,4 +1294,23 @@ async fn committed_schedule_terminal_and_replay_survive_process_kill_with_final_
             empty(&r.channel, &r.topology.queue).await;
         }).await;
     }
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn compiled_relay_exports_publication_and_database_completion_separately() {
+    experiment(|r| async move {
+        let id=Uuid::now_v7();seed(&r.pool,id).await;
+        r.spawn(None,None).await;
+        until(&r.pool,"SELECT status='processed' FROM relay.outbox_events").await;
+        let address=std::fs::read_to_string(r.temp.join("metrics-0")).unwrap().parse().unwrap();
+        let metrics=support::scrape(address).await;
+        for (operation,outcome) in [("acquisition","acquired"),("publication","confirmed"),("completion","applied")] {
+            assert!(metrics.contains(&format!("relay_observations_total{{process=\"relay\",operation=\"{operation}\",outcome=\"{outcome}\"}} 1")));
+        }
+        assert!(!metrics.contains(&id.to_string()));
+        r.stop(0,"-TERM").await;
+        assert!(tokio::net::TcpStream::connect(address).await.is_err());
+        message(&r.channel,&r.topology.queue,id).await;
+    }).await;
 }

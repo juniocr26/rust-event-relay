@@ -191,12 +191,13 @@ impl ConsumerRuntimeConfig {
                 get("CONSUMER_NAME").unwrap_or_else(|| "inventory.stock.v1".into()),
             )
             .map_err(|_| ConfigError("invalid CONSUMER_NAME".into()))?,
-            prefetch: number("CONSUMER_PREFETCH", 1, 32)? as u16,
+            prefetch: u16::try_from(number("CONSUMER_PREFETCH", 1, 32)?)
+                .expect("validated prefetch"),
             operation: duration("CONSUMER_OPERATION_MS", 10000, 60000)?,
             reconnect: duration("CONSUMER_RECONNECT_MS", 5000, 60000)?,
             drain: duration("CONSUMER_DRAIN_MS", 15000, 20000)?,
             shutdown: duration("CONSUMER_SHUTDOWN_MS", 25000, 25000)?,
-            pool_max: number("CONSUMER_POOL_MAX", 2, 16)? as u32,
+            pool_max: u32::try_from(number("CONSUMER_POOL_MAX", 2, 16)?).expect("validated pool"),
             pool_acquire: duration("CONSUMER_POOL_ACQUIRE_MS", 5000, 60000)?,
             statement_ms: number("CONSUMER_STATEMENT_MS", 5000, 60000)?,
             lock_ms: number("CONSUMER_LOCK_MS", 3000, 60000)?,

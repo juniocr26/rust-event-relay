@@ -944,3 +944,45 @@ Novos testes possuem filas/exchanges UUID exatos e bancos descartáveis; remoç�
 Observação compartilhada final: HTTP PID 11 e relay PID 12 seguem RUNNING. Consumer não foi instalado/recarregado/iniciado nesse manager; configuração fonte mantém autostart=false. relay.local continua classic durável, x-queue-type=classic, sem auto-delete e com zero consumidores; binding event existente e ausência de política efetiva DLX/TTL inspecionados somente leitura. Quatro migrations aplicadas até 20261012000000; replay/consumer pendentes. Sem nova migration, reset de volumes, troca de credenciais, restart de serviços ou mutação de topologia compartilhada. Frontend/Viva Bem intocados. Sem staging, commit ou push.
 
 CI agora configura a suíte no job combinado PostgreSQL/RabbitMQ, excluindo apenas o teste específico de Supervisor (não instalado no job): nove casos configurados. Não se alega execução remota. Execução local completa dos dez inclui Supervisor. Aceitação ampliada 4.4 de crash/redelivery/ACK perdido/capacidade e rollout compartilhado autorizado continuam pendentes. Relatório de continuação em português entregue somente no chat, sem arquivo salvo/rastreado.
+
+
+## Marco 5.1 — validação executada da implementação
+
+Base `05f0ebbb84722a6bf4e3b68f695d726cc2dd7df3`, árvore inicial limpa. [Implementação, matriz, métricas e lacunas](../operations/milestone-5-1.md). Reutilizados serviços Docker sem restart/migration compartilhados; testes usam bancos descartáveis/topologias UUID. Frontend não mudou e não foi validado novamente nesta sessão.
+
+| Check local executado | Resultado |
+| --- | --- |
+| `cargo fmt --check`; Clippy estrito `--locked --all-targets --all-features -- -D warnings` | Passaram na fonte final |
+| `cargo test --locked` | 99 passaram, 123 ignorados, zero falhas; ignorados não são evidência de execução padrão |
+| `cargo build --locked --bins`; rustdoc com `RUSTDOCFLAGS='-D warnings'` / `--no-deps` | Passaram; três binários |
+| `integrated_recovery` completo / ignored / uma thread | 18 passaram: 17 substantivos + entrada interna de filho; preservada correção de orçamento/diagnóstico |
+| `consumer_runtime` completo / ignored / uma thread | 21 passaram: 20 substantivos + entrada interna; oversize real, perda de ACK/COMMIT, crash, quarentena e métricas reais |
+| PostgreSQL consumer / discovery / ownership / replay / retry | 12 / 7 / 12 / 10 / 18 passaram |
+| RabbitMQ publisher | Dois passaram: retorno mandatory, confirm perdido/cancelamento |
+| Conexão própria e admissão real publisher (lib) | Dois passaram: classificação de conexão fechada, saturação, liberação no cancelamento e retirement; admissão configurada também no CI RabbitMQ |
+| Worker smoke / Supervisor isolado | Cinco passaram; fixture final exclui consumer e usa portas de métricas próprias |
+| Endpoints dos processos compilados finais | Relay: um; consumer/exporter e prefetch: dois passaram novamente após correção de consistência dos histogramas; HTTP real verificado pelo lifecycle padrão |
+| Exporter, contratos e observações semânticas | Incluídos na suíte padrão: colisões/cardinalidade/quatro clientes/shutdown/rebind, bytes/escapes/profundidade/nós, admissão replay/drop/erro, Applied/Duplicate, quarentena falha, aquisição e transições duráveis incertas |
+| Compose, links, testes do validador e `git diff --check` | Passaram: 107 Markdown / quatro testes; sem validar âncoras ou URLs remotos |
+
+O teste novo de métrica terminal inicialmente configurou count 12, mas o ciclo do fixture esgotava em baseline 3 + maximum 10 = 13. Corrigido para derivar a fronteira exata; assertion e política de produção preservadas. Teste focado e suíte final passaram. Um filtro --exact incompleto selecionou zero testes; não foi contado como evidência e foi substituído pelo nome completo. Nenhum timeout de produção foi ampliado ou assertion de confiabilidade enfraquecida. Histogramas usam locks locais curtos para coerência interna de buckets/count/sum; fases distintas continuam sem snapshot atômico. Fixture Supervisor de worker exclui consumer, sem depender de schema ausente para impedir assinatura.
+
+Comandos executados no app existente, em `/app/backend`:
+
+```sh
+cargo fmt --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked
+cargo test --locked --test integrated_recovery -- --ignored --test-threads=1
+cargo test --locked --test consumer_runtime -- --ignored --test-threads=1
+cargo test --locked --test postgres_consumer --test postgres_discovery --test postgres_ownership --test postgres_replay --test postgres_retry --test rabbitmq_publisher -- --ignored --test-threads=1
+cargo test --locked --lib infrastructure::rabbitmq::tests:: -- --ignored --test-threads=1
+cargo test --locked --test worker_smoke -- --ignored --test-threads=1
+cargo test --locked --test integrated_recovery --test consumer_runtime compiled_ -- --ignored --test-threads=1
+cargo build --locked --bins
+RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps
+```
+
+Na raiz: `docker compose config --quiet`, `python3 -B scripts/check-docs.py`, `python3 -B -m unittest discover -s scripts -p 'test_*.py'`, `git diff --check`. O [run remoto 38970986836](https://github.com/juniocr26/rust-event-relay/actions/runs/38970986836) passou todos os jobs na **base**, conforme API GitHub. Este diff sem commit não foi executado remotamente. Logs do job antigo retornaram HTTP 403; assertion/causa original seguem desconhecidas. Cenários reais atuais de recovery passaram localmente; não é reprodução de uma falha histórica desconhecida no Ubuntu.
+
+Inspeção final somente de leitura: seis migrations bem-sucedidas; mesmos PIDs consumer=11/HTTP=12/relay=13 RUNNING; health 200 e replay 404; sem listeners compartilhados de métricas (sem rollout). Demo processed/count 1, estoque 15 e exatamente um recibo 10/5/15. Origem ready=0/unacked=0/consumers=1, quarentena 0/0/0. max_message_size broker=16777216 bytes. Nenhum banco relay_it_ ou fila/exchange relay.it. restante. Preservadas credenciais, topologia/volumes/linhas compartilhadas. Testes de trabalho limitado não provam teto de memória ou capacidade medida. Readiness/backlog pertencem a 5.2; medição reproduzível de capacidade/backpressure/recovery a 5.3.

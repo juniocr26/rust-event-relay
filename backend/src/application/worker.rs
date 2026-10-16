@@ -1,6 +1,7 @@
 //! Sequential admission, explicit publisher replacement and finite shutdown.
+use super::observation::{self, Noop, Observer, Operation as Op, Outcome as Obs, observe};
 use super::{
-    delivery::{DeliveryOutcome, deliver_once},
+    delivery::{DeliveryOutcome, deliver_once_observed},
     publisher::{EventPublisher, PublishError, PublishErrorKind},
 };
 use crate::{
@@ -104,6 +105,27 @@ where
         + OutboxCandidateIsolator,
     L: PublisherLifecycle,
 {
+    run_observed(repository, lifecycle, config, shutdown, &Noop).await
+}
+
+pub async fn run_observed<R, L, O: Observer>(
+    repository: &R,
+    lifecycle: &L,
+    config: &WorkerConfig,
+    shutdown: &mut (impl Future<Output = ()> + Unpin),
+    observer: &O,
+) -> Instant
+where
+    R: OutboxAcquirer
+        + OutboxCompleter
+        + OutboxReleaser
+        + OutboxRetryScheduler
+        + OutboxFailurePreserver
+        + OutboxExhaustedMaintainer
+        + OutboxCandidateDiscovery
+        + OutboxCandidateIsolator,
+    L: PublisherLifecycle,
+{
     let mut publisher = None;
     let mut maintenance = config.maintenance().iter().copied();
     let mut cursor = DiscoveryCursor::default();
@@ -116,6 +138,8 @@ where
         // At most one observation + one isolation (or one configured exact ID)
         // per second and per loop. No catch-up bursts after slow operations.
         if Instant::now() >= next_maintenance {
+            let observation = super::observation::Observation::new(observer, Op::Maintenance);
+            let mut discovery_error = None;
             let (result, stop) = if let Some(candidate) = maintenance.next() {
                 drain_on_shutdown(
                     async {
@@ -137,20 +161,34 @@ where
                 )
                 .await;
                 if let Some(Err(error)) = &result {
+                    discovery_error = Some(observation::persistence(error));
                     tracing::warn!(error = %error, "discovery failed; no isolation authorized");
                 }
                 (result.and_then(Result::ok), stop)
             };
             next_maintenance = Instant::now() + Duration::from_secs(1);
-            if let Some(result) = result {
+            if let Some(result) = &result {
                 if let super::maintenance::MaintenanceOutcome::Observed {
                     cursor,
                     evidence: crate::persistence::CandidateEvidence::Valid,
-                } = &result
+                } = result
                 {
                     discovered_valid = cursor.after;
                 }
                 tracing::info!(outcome = ?result, "database maintenance outcome");
+            }
+            if let Some(result) = &result {
+                observation.finish(match result {
+                    super::maintenance::MaintenanceOutcome::EndOfTraversal => Obs::End,
+                    super::maintenance::MaintenanceOutcome::Observed { .. } => Obs::Observed,
+                    super::maintenance::MaintenanceOutcome::Isolation(r) => observation::retry(r),
+                });
+            } else {
+                observation.finish(if stop.is_some() {
+                    Obs::Cancelled
+                } else {
+                    discovery_error.unwrap_or(Obs::Failed)
+                });
             }
             if let Some(deadline) = stop {
                 break deadline;
@@ -159,7 +197,17 @@ where
         if publisher.is_none() {
             tracing::info!("publisher connecting");
             let (result, stop) = drain_on_shutdown(
-                lifecycle.connect(),
+                observe(observer, Op::Connect, lifecycle.connect(), |r| {
+                    if r.is_ok() {
+                        Obs::Completed
+                    } else {
+                        observation::publication(
+                            &r.as_ref()
+                                .map(|_| ())
+                                .map_err(|e| super::publisher::PublishError::new(e.kind())),
+                        )
+                    }
+                }),
                 &mut *shutdown,
                 config.drain,
                 config.shutdown,
@@ -186,7 +234,13 @@ where
         if publisher.as_ref().is_some_and(|p| !lifecycle.usable(p)) {
             let old = publisher.take().expect("present publisher");
             let (closed, stop) = drain_on_shutdown(
-                lifecycle.close(old),
+                observe(observer, Op::Close, lifecycle.close(old), |r| {
+                    if r.is_ok() {
+                        Obs::Completed
+                    } else {
+                        observation::publication(r)
+                    }
+                }),
                 &mut *shutdown,
                 config.drain,
                 config.shutdown,
@@ -215,10 +269,17 @@ where
             None => request,
         };
         let (outcome, stop) = drain_on_shutdown(
-            deliver_once(
-                repository,
-                publisher.as_ref().expect("connected publisher"),
-                request,
+            observe(
+                observer,
+                Op::Delivery,
+                deliver_once_observed(
+                    repository,
+                    publisher.as_ref().expect("connected publisher"),
+                    request,
+                    super::retry_policy::sample_delay,
+                    observer,
+                ),
+                |_| Obs::Completed,
             ),
             &mut *shutdown,
             config.drain,
@@ -239,7 +300,13 @@ where
             Decision::Replace => {
                 let old = publisher.take().expect("connected publisher");
                 let (closed, stop) = drain_on_shutdown(
-                    lifecycle.close(old),
+                    observe(observer, Op::Close, lifecycle.close(old), |r| {
+                        if r.is_ok() {
+                            Obs::Completed
+                        } else {
+                            observation::publication(r)
+                        }
+                    }),
                     &mut *shutdown,
                     config.drain,
                     config.shutdown,
@@ -259,7 +326,18 @@ where
         }
     };
     if let Some(publisher) = publisher {
-        match timeout_at(deadline, lifecycle.close(publisher)).await {
+        match timeout_at(
+            deadline,
+            observe(observer, Op::Close, lifecycle.close(publisher), |r| {
+                if r.is_ok() {
+                    Obs::Completed
+                } else {
+                    observation::publication(r)
+                }
+            }),
+        )
+        .await
+        {
             Ok(Ok(())) => tracing::info!("publisher closed"),
             _ => tracing::warn!("publisher cleanup failed or exhausted shutdown budget"),
         }

@@ -1,3 +1,5 @@
+Current resource admission and instrumentation: publisher/quarantine reject saturation immediately before serialization; no internal admission waiters. Earlier dated admission descriptions below are historical. [Milestone 5.1](../operations/milestone-5-1.md).
+
 #
 Current worker behavior, configuration, cancellation and authorized rollout: [Milestone 2.5](../architecture/milestone-2-5.md). Earlier sections retain their historical scope.
 

@@ -503,6 +503,7 @@ async fn consumers(b: &Broker, expected: u32) {
 }
 fn command(b: &Broker, database: &str) -> tokio::process::Command {
     let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_consumer"));
+    support::metrics_env(&mut command);
     command
         .env("POSTGRES_DB", database)
         .env("CONSUMER_SOURCE_EXCHANGE", &b.source.exchange)
@@ -548,7 +549,8 @@ async fn compiled_consumer_prefetch_drain_and_buffered_recovery() {
             checked(sqlx::query("INSERT INTO consumer.stock VALUES('local','SKU-1',10)").execute(&pool).await,"initial stock");
             let mut blocker=pool.begin().await?;checked(sqlx::query("SELECT units FROM consumer.stock FOR UPDATE").execute(&mut *blocker).await,"hold effect");
             let observer=sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_with((*pool.connect_options()).clone()).await?;
-            let mut child=command(&b,&database).env("CONSUMER_PREFETCH","2").spawn()?;consumers(&b,1).await;
+            let mut cmd=command(&b,&database);let addresses=support::metrics_env(&mut cmd);
+            let mut child=cmd.env("CONSUMER_PREFETCH","2").spawn()?;consumers(&b,1).await;
             let a=event();let second=event();b.send_event(&a).await;b.send_event(&second).await;b.send_event(&event()).await;
             timeout(WAIT,async {loop {
                 let waiting:bool=checked(sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock')").fetch_one(&observer).await,"consumer effect barrier");
@@ -561,6 +563,10 @@ async fn compiled_consumer_prefetch_drain_and_buffered_recovery() {
             }}).await?;
             let waits:i64=checked(sqlx::query_scalar("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock'").fetch_one(&observer).await,"one in-flight operation");
             assert_eq!(waits,1);
+            let metrics=support::scrape(addresses[2]).await;
+            assert!(metrics.contains("relay_in_flight{process=\"consumer\",operation=\"processing\"} 1"));
+            assert!(metrics.contains("relay_prefetch_limit{process=\"consumer\"} 2"));
+            assert!(metrics.contains("relay_processing_limit{process=\"consumer\"} 1"));
             terminate(&mut child).await;consumers(&b,0).await;
             checked(blocker.rollback().await,"release effect barrier");observer.close().await;
             // Cancelled processing is reconciled by the next real subscription, never by ACK.
@@ -1384,4 +1390,41 @@ async fn milestone44_missing_quarantine_exchange_retains_source() {
         Ok(())
     })
     .await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn compiled_consumer_exports_applied_duplicate_and_quarantine_without_business_labels() {
+    isolated(|pool| async move {
+        schema(&pool).await;
+        broker(move |b| async move {
+            let database:String=checked(sqlx::query_scalar("SELECT current_database()").fetch_one(&pool).await,"test database");
+            checked(sqlx::query("INSERT INTO consumer.stock VALUES('local','SKU-1',10)").execute(&pool).await,"initial stock");
+            let mut command=command(&b,&database);
+            let addresses=support::metrics_env(&mut command);
+            let mut child=command.spawn()?;
+            let result=async {
+                consumers(&b,1).await;
+                let e=event();b.send_event(&e).await;b.send_event(&e).await;
+                b.send(b"invalid-json",BasicProperties::default()).await;
+                timeout(WAIT,async {
+                    loop {
+                        let metrics=support::scrape(addresses[2]).await;
+                        if metrics.contains("operation=\"ack_send\",outcome=\"completed\"} 3") {
+                            for (op,outcome) in [("processing","applied"),("processing","duplicate"),("quarantine","confirmed")] {
+                                assert!(metrics.contains(&format!("relay_observations_total{{process=\"consumer\",operation=\"{op}\",outcome=\"{outcome}\"}} 1")));
+                            }
+                            assert!(!metrics.contains(&e.id().to_string()));assert!(!metrics.contains("SKU-1"));break;
+                        }
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                    }
+                }).await?;
+                assert_eq!(units(&pool).await,15);assert_eq!(receipts(&pool).await,1);
+                Ok::<(),Box<dyn std::error::Error+Send+Sync>>(())
+            }.await;
+            terminate(&mut child).await;
+            assert!(tokio::net::TcpStream::connect(addresses[2]).await.is_err());
+            result?;Ok(())
+        }).await;Ok(())
+    }).await;
 }

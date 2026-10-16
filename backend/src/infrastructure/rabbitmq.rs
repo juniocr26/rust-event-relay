@@ -236,9 +236,14 @@ fn classify(confirmation: Confirmation) -> Result<(), PublishError> {
 }
 impl EventPublisher for RabbitMqPublisher {
     async fn publish(&self, event: &EventEnvelope) -> Result<(), PublishError> {
+        // Fail fast before allocating an envelope body; there is no waiter queue.
+        let _gate = self
+            .gate
+            .try_lock()
+            .map_err(|_| PublishError::new(Kind::Unavailable))?;
         let body = serde_json::to_vec(event)
             .map_err(|e| PublishError::with_source(Kind::Serialization, e))?;
-        self.publish_raw(
+        self.publish_admitted(
             &body,
             BasicProperties::default()
                 .with_content_type("application/json".into())
@@ -249,15 +254,14 @@ impl EventPublisher for RabbitMqPublisher {
     }
 }
 impl RabbitMqPublisher {
-    // Shared confirmed transport, not the envelope-only EventPublisher contract.
-    async fn publish_raw(
+    // Shared confirmed transport; callers hold admission before allocating bytes.
+    async fn publish_admitted(
         &self,
         body: &[u8],
         properties: BasicProperties,
     ) -> Result<(), PublishError> {
-        let _gate = timeout(self.config.publish_timeout, self.gate.lock())
-            .await
-            .map_err(|e| PublishError::with_source(Kind::Unavailable, e))?;
+        // Lapin 4.12.0 converts usize to the AMQP u64 body length internally.
+        u64::try_from(body.len()).map_err(|e| PublishError::with_source(Kind::Serialization, e))?;
         if self.retired.load(Ordering::Acquire)
             || !self.channel.status().connected()
             || !self.connection.status().connected()
@@ -413,6 +417,52 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    #[ignore = "requires real RabbitMQ and explicit credentials"]
+    async fn publisher_admission_is_immediate_and_released_after_error_and_cancellation() {
+        let mut config = RabbitMqConfig::from_lookup(|key| std::env::var(key).ok()).unwrap();
+        let id = uuid::Uuid::now_v7().simple().to_string();
+        config.topology.exchange = format!("relay.it.{id}.exchange");
+        config.topology.queue = format!("relay.it.{id}.queue");
+        let publisher = RabbitMqPublisher::connect(config).await.unwrap();
+        let gate = publisher.gate.try_lock().unwrap();
+        let event = EventEnvelope::new("test", "test", "1", 1, serde_json::Value::Null).unwrap();
+        let mut rejected = Box::pin(publisher.publish(&event));
+        assert!(
+            matches!(futures_util::poll!(&mut rejected),std::task::Poll::Ready(Err(e)) if e.kind()==Kind::Unavailable)
+        );
+        drop(rejected);
+        drop(gate);
+        // Cancel after admission and before confirmation: guard releases, publisher retires.
+        let mut operation = Box::pin(publisher.publish(&event));
+        assert!(futures_util::poll!(&mut operation).is_pending());
+        drop(operation);
+        assert!(publisher.gate.try_lock().is_ok());
+        assert!(!publisher.is_usable());
+        assert_eq!(
+            publisher.publish(&event).await.unwrap_err().kind(),
+            Kind::Unavailable
+        );
+        assert!(publisher.gate.try_lock().is_ok());
+        publisher
+            .channel
+            .queue_delete(
+                publisher.config.topology.queue.clone().into(),
+                QueueDeleteOptions::default(),
+            )
+            .await
+            .unwrap();
+        publisher
+            .channel
+            .exchange_delete(
+                publisher.config.topology.exchange.clone().into(),
+                ExchangeDeleteOptions::default(),
+            )
+            .await
+            .unwrap();
+        publisher.close().await.unwrap();
+    }
+
     #[test]
     fn validates_deadlines_and_redacts_config() {
         for d in [Duration::ZERO, Duration::from_secs(301)] {
@@ -442,6 +492,6 @@ mod consumer;
 mod properties;
 pub use consumer::{
     RabbitConsumerConfig, RabbitConsumerSession, RabbitDelivery, RabbitQuarantinePublisher,
-    run_consumer,
+    run_consumer, run_consumer_observed,
 };
 pub use properties::{decode_properties, encode_properties};

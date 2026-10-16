@@ -130,3 +130,41 @@ where
         _ => panic!("integration setup/task failed or exceeded 45 seconds"),
     }
 }
+
+// Test-owned ephemeral exporter addresses; never scrape or bind shared defaults.
+// Listeners remain reserved together until command environment is complete.
+#[allow(dead_code)]
+pub fn metrics_env(command: &mut tokio::process::Command) -> [std::net::SocketAddr; 3] {
+    let listeners: Vec<_> = (0..3)
+        .map(|_| std::net::TcpListener::bind("127.0.0.1:0").unwrap())
+        .collect();
+    let addresses = std::array::from_fn(|i| listeners[i].local_addr().unwrap());
+    for (key, addr) in [
+        "HTTP_METRICS_ADDR",
+        "RELAY_METRICS_ADDR",
+        "CONSUMER_METRICS_ADDR",
+    ]
+    .into_iter()
+    .zip(addresses)
+    {
+        command.env(key, addr.to_string());
+    }
+    addresses
+}
+#[allow(dead_code)]
+pub async fn scrape(address: std::net::SocketAddr) -> String {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    tokio::time::timeout(WAIT, async {
+        let mut socket = tokio::net::TcpStream::connect(address).await.unwrap();
+        socket
+            .write_all(b"GET /metrics HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .await
+            .unwrap();
+        let mut response = String::new();
+        socket.read_to_string(&mut response).await.unwrap();
+        assert!(response.starts_with("HTTP/1.1 200 OK"));
+        response
+    })
+    .await
+    .expect("bounded metrics scrape")
+}

@@ -1,11 +1,13 @@
 //! Dedicated consumer composition; never runs migrations or changes credentials.
 //! Composição dedicada; nunca executa migrations ou altera credenciais.
+use reliable_event_relay::application::observation::{Observer, Operation as Op, Outcome as Obs};
+use reliable_event_relay::telemetry::metrics::{Exporter, ExporterConfig, Metrics, Process};
 use reliable_event_relay::{
     application,
     config::{Config, ConsumerRuntimeConfig},
     infrastructure::{
         postgres::PostgresInventoryProcessor,
-        rabbitmq::{RabbitConsumerConfig, run_consumer},
+        rabbitmq::{RabbitConsumerConfig, run_consumer_observed},
     },
     telemetry,
 };
@@ -17,6 +19,13 @@ async fn main() -> Result<(), &'static str> {
     telemetry::init(&app.log_filter).map_err(|_| "invalid telemetry configuration")?;
     let config = ConsumerRuntimeConfig::from_lookup(|key| std::env::var(key).ok())
         .map_err(|_| "invalid consumer configuration")?;
+    let metrics = Metrics::new(Process::Consumer);
+    let exporter_config =
+        ExporterConfig::from_lookup(|key| std::env::var(key).ok(), app.http_addr)?;
+    let exporter = Exporter::start(exporter_config.address(Process::Consumer), metrics.clone())
+        .await
+        .map_err(|_| "metrics bind failed")?;
+    metrics.configure(config.pool_max, config.prefetch, false);
     let rabbit = RabbitConsumerConfig::from_lookup(|key| std::env::var(key).ok(), config.prefetch)
         .map_err(|_| "invalid source/quarantine configuration")?;
     let required = |key| {
@@ -53,17 +62,19 @@ async fn main() -> Result<(), &'static str> {
             prefetch = config.prefetch,
             "consumer starting; sequential admission; sources redacted"
         );
-        run_consumer(
+        run_consumer_observed(
             &PostgresInventoryProcessor::new(pool.clone()),
             &config,
             &rabbit,
             &mut shutdown,
+            metrics.as_ref(),
         )
         .await
     } else {
         Instant::now() + config.shutdown
     };
-    if timeout_at(deadline, pool.close()).await.is_err() {
+    let cleanup_expired = timeout_at(deadline, pool.close()).await.is_err();
+    if cleanup_expired {
         tracing::warn!("consumer pool cleanup deadline exhausted");
     }
     if failed {
@@ -71,6 +82,15 @@ async fn main() -> Result<(), &'static str> {
             "consumer schema unavailable; apply migration 20261014000000 and verify privileges before rollout (source redacted)",
         );
     }
+    metrics.event(
+        Op::Shutdown,
+        if cleanup_expired {
+            Obs::Deadline
+        } else {
+            Obs::Completed
+        },
+    );
+    exporter.shutdown().await;
     tracing::info!("consumer stopped; unacknowledged deliveries remain recoverable");
     Ok(())
 }

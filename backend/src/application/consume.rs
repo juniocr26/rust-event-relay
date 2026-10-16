@@ -1,5 +1,6 @@
 //! One delivery: durable processing or confirmed preservation precedes individual ACK.
 //! Uma entrega: processamento durável ou preservação confirmada precede ACK individual.
+use super::observation::{self, Noop, Observer, Operation as Op, Outcome as Obs, observe};
 use super::{
     consumer::*,
     publisher::{PublishError, PublishErrorKind},
@@ -65,6 +66,21 @@ pub async fn handle_delivery<
     consumer: &ConsumerName,
     deadline: Duration,
 ) -> HandlingOutcome {
+    handle_delivery_observed(delivery, processor, quarantine, consumer, deadline, &Noop).await
+}
+pub async fn handle_delivery_observed<
+    D: IncomingDelivery,
+    P: AtomicInventoryProcessor,
+    Q: QuarantinePublisher,
+    O: Observer,
+>(
+    delivery: &D,
+    processor: &P,
+    quarantine: &Q,
+    consumer: &ConsumerName,
+    deadline: Duration,
+    observer: &O,
+) -> HandlingOutcome {
     // Bound parse cost before serde (which also applies its recursion limit).
     let parsed = if delivery.body().len() > QuarantineMessage::MAX_BODY_BYTES {
         Err(QuarantineReason::Unsupported)
@@ -81,16 +97,38 @@ pub async fn handle_delivery<
     };
     let primary = match parsed {
         Ok(event) => PrimaryOutcome::Processing(
-            timeout(deadline, processor.process(consumer, &event))
-                .await
-                // Whole processing timeout can race COMMIT, never proves rollback.
-                .unwrap_or_else(|_| {
-                    Err(ProcessingFailure::new(
-                        ProcessingFailureKind::CommitUncertain,
-                    ))
-                }),
+            observe(
+                observer,
+                Op::Processing,
+                async {
+                    timeout(deadline, processor.process(consumer, &event))
+                        .await
+                        // Whole processing timeout can race COMMIT, never proves rollback.
+                        .unwrap_or_else(|_| {
+                            Err(ProcessingFailure::new(
+                                ProcessingFailureKind::CommitUncertain,
+                            ))
+                        })
+                },
+                |r| match r {
+                    Ok(ProcessingOutcome::Applied(_)) => Obs::Applied,
+                    Ok(ProcessingOutcome::Duplicate(_)) => Obs::Duplicate,
+                    Ok(ProcessingOutcome::IdentityConflict) => Obs::IdentityConflict,
+                    Ok(ProcessingOutcome::Invalid(_)) => Obs::Invalid,
+                    Err(e) => match e.kind() {
+                        ProcessingFailureKind::CommitUncertain => Obs::CommitUncertain,
+                        ProcessingFailureKind::Unavailable => Obs::Unavailable,
+                        ProcessingFailureKind::InvalidStoredData => Obs::Invalid,
+                        ProcessingFailureKind::PreCommit => Obs::Failed,
+                    },
+                },
+            )
+            .await,
         ),
-        Err(reason) => PrimaryOutcome::Invalid(reason),
+        Err(reason) => {
+            observer.event(Op::Processing, Obs::Invalid);
+            PrimaryOutcome::Invalid(reason)
+        }
     };
     let preserve = match &primary {
         PrimaryOutcome::Processing(Ok(
@@ -118,12 +156,21 @@ pub async fn handle_delivery<
     };
     if let Some(reason) = preserve {
         let Some(message) = delivery.preservation(consumer, reason) else {
+            observer.event(Op::Quarantine, Obs::Blocked);
             outcome.preservation_blocked = true;
             return outcome;
         };
-        let result = timeout(deadline, quarantine.preserve(&message))
-            .await
-            .unwrap_or_else(|_| Err(PublishError::new(PublishErrorKind::Uncertain)));
+        let result = observe(
+            observer,
+            Op::Quarantine,
+            async {
+                timeout(deadline, quarantine.preserve(&message))
+                    .await
+                    .unwrap_or_else(|_| Err(PublishError::new(PublishErrorKind::Uncertain)))
+            },
+            observation::publication,
+        )
+        .await;
         let confirmed = result.is_ok();
         outcome.preservation = Some(result);
         if !confirmed {
@@ -131,9 +178,23 @@ pub async fn handle_delivery<
         }
     }
     outcome.acknowledgement = Some(
-        timeout(deadline, delivery.ack())
-            .await
-            .unwrap_or_else(|_| Err(PublishError::new(PublishErrorKind::Uncertain))),
+        observe(
+            observer,
+            Op::Ack,
+            async {
+                timeout(deadline, delivery.ack())
+                    .await
+                    .unwrap_or_else(|_| Err(PublishError::new(PublishErrorKind::Uncertain)))
+            },
+            |r| {
+                if r.is_ok() {
+                    Obs::Completed
+                } else {
+                    observation::publication(r)
+                }
+            },
+        )
+        .await,
     );
     outcome
 }

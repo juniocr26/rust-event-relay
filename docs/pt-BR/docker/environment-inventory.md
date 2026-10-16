@@ -93,3 +93,15 @@ A tabela usa defaults versionados, nunca valores locais de credenciais. Entradas
 Valores numéricos de runtime rejeitam vazio/não inteiro/zero/fora da faixa; exceção: o parser separado de porta PostgreSQL no HTTP aceita sintaxe u16 e depende da falha de conexão para porta zero. Relay/consumer rejeitam zero explicitamente. Drain deve ser estritamente menor que shutdown. Mudar CONSUMER_NAME muda o escopo da deduplicação; exchanges/filas de origem e quarentena devem diferir. Consulte [parsers](../../../backend/src/config.rs), [broker](../../../backend/src/infrastructure/rabbitmq.rs), [consumer](../../../backend/src/infrastructure/rabbitmq/consumer.rs), [HTTP](../../../backend/src/main.rs) e [wrapper SQLx](../../../docker/sqlx.py).
 
 Nenhum segredo ausente bloqueia os testes isolados. O rollout compartilhado do consumer depende da migration 20261014000000 e instalação do launcher/configuração Supervisor; replay está desabilitado intencionalmente e a migration 20261013000000 está pendente. Mantenha ambos desabilitados até o [rollout revisado](../operations/milestone-4-4-review.md). Não altere senhas persistidas para corresponder ao exemplo.
+
+## Adições do Marco 5.1
+
+Exporters separados por processo; variáveis opcionais com defaults validados. Compose injeta explicitamente; nenhuma porta publicada no host. [Contract](../operations/milestone-5-1.md).
+
+| Variable | Default | Validation |
+| --- | --- | --- |
+| HTTP_METRICS_ADDR | 127.0.0.1:9100 | loopback IP, port 1..65535 |
+| RELAY_METRICS_ADDR | 127.0.0.1:9101 | loopback IP, port 1..65535 |
+| CONSUMER_METRICS_ADDR | 127.0.0.1:9102 | loopback IP, port 1..65535 |
+
+As três portas precisam ser distintas entre si e de HTTP_ADDR; defaults independem de replay. Processo parado não tem listener. Sem knobs extras: publisher rejeita espera imediatamente, replay fica em 2 requisições/10 segundos/4096 bytes de corpo; exporter em 4 clientes/2 segundos/1024 bytes de request. Processos compartilhados não foram reiniciados para instalar defaults.

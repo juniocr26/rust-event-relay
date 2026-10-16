@@ -592,3 +592,121 @@ async fn every_definitive_final_failure_stops_while_final_acceptance_can_complet
         matches!(deliver_once(&fake,&fake,request()).await,DeliveryOutcome::PublicationFailed {handling:FailureHandling::Terminal(Ok(RetryTransition::Applied(value))),..} if value.reason==TerminalReason::StorageCounterExhausted)
     );
 }
+
+#[tokio::test]
+async fn observations_keep_confirm_even_when_completion_is_uncertain_or_cancelled() {
+    use reliable_event_relay::{
+        application::observation::{Operation as Op, Outcome as Obs},
+        telemetry::metrics::{Metrics, Process},
+    };
+    let metrics = Metrics::new(Process::Relay);
+    let mut fake = Fake::new();
+    fake.transition = Err(PersistenceErrorKind::CommitUncertain);
+    let request = || AcquireRequest::new(LeaseDuration::from_micros(1_000_000).unwrap());
+    let result = deliver_once_observed(
+        &fake,
+        &fake,
+        request(),
+        reliable_event_relay::application::retry_policy::sample_delay,
+        metrics.as_ref(),
+    )
+    .await;
+    assert!(matches!(
+        result,
+        DeliveryOutcome::Published {
+            completion: Err(_),
+            ..
+        }
+    ));
+    assert_eq!(metrics.count(Op::Acquisition, Obs::Acquired), 1);
+    assert_eq!(metrics.count(Op::Publication, Obs::Confirmed), 1);
+    assert_eq!(metrics.count(Op::Completion, Obs::CommitUncertain), 1);
+    assert_eq!(metrics.count(Op::Completion, Obs::Applied), 0);
+    fake.pause = Some(Boundary::Complete);
+    let mut operation = Box::pin(deliver_once_observed(
+        &fake,
+        &fake,
+        request(),
+        reliable_event_relay::application::retry_policy::sample_delay,
+        metrics.as_ref(),
+    ));
+    assert!(futures_util::poll!(&mut operation).is_pending());
+    assert_eq!(metrics.count(Op::Publication, Obs::Confirmed), 2);
+    assert_eq!(metrics.in_flight(Op::Completion), 1);
+    drop(operation);
+    assert_eq!(metrics.in_flight(Op::Completion), 0);
+    assert_eq!(metrics.count(Op::Completion, Obs::Cancelled), 1);
+    assert_eq!(metrics.count(Op::Completion, Obs::Applied), 0);
+}
+
+#[tokio::test]
+async fn durable_schedule_and_terminal_metrics_require_acknowledged_applied_transition() {
+    use reliable_event_relay::{
+        application::observation::{Operation as Op, Outcome as Obs},
+        telemetry::metrics::{Metrics, Process},
+    };
+    for terminal in [false, true] {
+        for (transition, label) in [
+            (Ok(TransitionOutcome::Applied), Obs::Applied),
+            (Ok(TransitionOutcome::OwnershipLost), Obs::Conflict),
+            (
+                Err(PersistenceErrorKind::CommitUncertain),
+                Obs::CommitUncertain,
+            ),
+        ] {
+            let metrics = Metrics::new(Process::Relay);
+            let mut fake = Fake::new();
+            fake.publication = Err(PublishErrorKind::Rejected);
+            fake.transition = transition;
+            if terminal {
+                fake.count = u32::try_from(fake.state.baseline() + fake.state.maximum()).unwrap();
+            }
+            deliver_once_observed(
+                &fake,
+                &fake,
+                request(),
+                reliable_event_relay::application::retry_policy::sample_delay,
+                metrics.as_ref(),
+            )
+            .await;
+            let op = if terminal { Op::Terminal } else { Op::Schedule };
+            assert_eq!(metrics.count(op, label), 1);
+            assert_eq!(metrics.count(Op::Publication, Obs::Confirmed), 0);
+            if !matches!(transition, Ok(TransitionOutcome::Applied)) {
+                assert_eq!(metrics.count(op, Obs::Applied), 0);
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn acquisition_observations_do_not_infer_claims_or_publications_on_failure() {
+    use reliable_event_relay::{
+        application::observation::{Operation as Op, Outcome as Obs},
+        telemetry::metrics::{Metrics, Process},
+    };
+    for (acquisition, label) in [
+        (Ok(false), Obs::Empty),
+        (
+            Err(PersistenceErrorKind::CommitUncertain),
+            Obs::CommitUncertain,
+        ),
+        (Err(PersistenceErrorKind::Unavailable), Obs::Unavailable),
+    ] {
+        let metrics = Metrics::new(Process::Relay);
+        let mut fake = Fake::new();
+        fake.acquisition = acquisition;
+        deliver_once_observed(
+            &fake,
+            &fake,
+            request(),
+            reliable_event_relay::application::retry_policy::sample_delay,
+            metrics.as_ref(),
+        )
+        .await;
+        assert_eq!(metrics.count(Op::Acquisition, label), 1);
+        assert_eq!(metrics.count(Op::Acquisition, Obs::Acquired), 0);
+        assert_eq!(metrics.count(Op::Publication, Obs::Confirmed), 0);
+        assert_eq!(fake.calls(), vec![Call::Acquire]);
+    }
+}

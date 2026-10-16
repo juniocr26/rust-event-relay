@@ -268,3 +268,44 @@ fn preservation_bounds_do_not_truncate_evidence() {
         QuarantineMessage::new(vec![], json!([]), None, QuarantineReason::InvalidContent).is_none()
     );
 }
+
+#[test]
+fn quarantine_preflight_bounds_raw_escaped_bytes_nodes_and_depth() {
+    use reliable_event_relay::application::consumer::{
+        QuarantineMessage, QuarantineReason, properties_fit,
+    };
+    let max = QuarantineMessage::MAX_PROPERTIES_BYTES;
+    let exact = serde_json::json!({"x":"x".repeat(max-8)});
+    assert_eq!(serde_json::to_vec(&exact).unwrap().len(), max);
+    assert!(properties_fit(&exact));
+    assert!(!properties_fit(&serde_json::json!({"x":"x".repeat(max-7)})));
+    assert!(!properties_fit(
+        &serde_json::json!({"x":"\u{0}".repeat(max/2)})
+    ));
+    assert!(!properties_fit(
+        &serde_json::json!({"x":vec![serde_json::Value::Null;4096]})
+    ));
+    let mut deep = serde_json::Value::Null;
+    for _ in 0..66 {
+        deep = serde_json::json!([deep]);
+    }
+    assert!(!properties_fit(&deep));
+    assert!(
+        QuarantineMessage::new(
+            vec![0; QuarantineMessage::MAX_BODY_BYTES],
+            exact,
+            None,
+            QuarantineReason::Unsupported
+        )
+        .is_some()
+    );
+    assert!(
+        QuarantineMessage::new(
+            vec![0; QuarantineMessage::MAX_BODY_BYTES + 1],
+            serde_json::json!({}),
+            None,
+            QuarantineReason::Unsupported
+        )
+        .is_none()
+    );
+}

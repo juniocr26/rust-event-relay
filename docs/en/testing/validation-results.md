@@ -965,3 +965,45 @@ New consumer tests own exact UUID queues/exchanges and disposable databases; bro
 Shared final observation: HTTP PID 11 and relay PID 12 still RUNNING. Consumer was not installed/reloaded/started in that manager; source configuration keeps it autostart=false. relay.local remains durable classic, x-queue-type=classic, non-auto-delete with zero consumers; its existing event binding and lack of effective DLX/TTL policy were inspected read-only. Four shared migrations remain applied through 20261012000000; replay/consumer are pending. No new migration, volume reset, credential change, service restart or shared topology mutation. Frontend/Viva Bem untouched. No staging, commit or push.
 
 CI configuration now runs the consumer suite in the combined PostgreSQL/RabbitMQ job, excluding only the Supervisor-specific test (not installed in that job): nine configured cases. No remote CI execution is claimed. Local full ten-case execution includes Supervisor. Full 4.4 crash/redelivery/ACK-loss/capacity acceptance and authorized shared rollout remain pending. The Portuguese continuation report is chat text only, not a tracked or saved report.
+
+
+## Milestone 5.1 — executed implementation validation
+
+Base `05f0ebbb84722a6bf4e3b68f695d726cc2dd7df3`, initially clean. [Implementation, boundary matrix, metrics and remaining gaps](../operations/milestone-5-1.md). Existing Docker services were reused without shared restart/migrations. Tests own disposable PostgreSQL databases and UUID broker topology. Frontend was unchanged and no frontend check was run in this session.
+
+| Executed local check | Result |
+| --- | --- |
+| `cargo fmt --check`; strict Clippy `--locked --all-targets --all-features -- -D warnings` | Passed on final source |
+| `cargo test --locked` | 99 passed, 123 ignored, zero failed; ignored cases are not default-suite evidence |
+| `cargo build --locked --bins`; `RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps` | Passed; all three binaries |
+| Full `integrated_recovery -- --ignored --test-threads=1` | 18 passed: 17 substantive + internal child entry; source retains phase/early-exit setup fix |
+| Full `consumer_runtime -- --ignored --test-threads=1` | 21 passed: 20 substantive + internal child entry; includes real oversize retention, lost ACK/COMMIT, crashes, quarantine and process metrics |
+| PostgreSQL consumer / discovery / ownership / replay / retry | 12 / 7 / 12 / 10 / 18 passed, respectively |
+| RabbitMQ publisher | 2 passed; mandatory return and lost confirm/cancellation |
+| Owned-connection and real publisher admission library tests | 2 passed; closed connection classification, gate saturation, cancellation release and retirement; admission case also configured in RabbitMQ CI job |
+| Isolated worker smoke / Supervisor | 5 passed; final fixture excludes consumer program and uses test-owned metric ports |
+| Final compiled process exporter checks | Relay exporter 1; consumer exporter and prefetch barrier 2 passed again after histogram consistency change; HTTP binary exporter verified in standard lifecycle test |
+| Exporter / contract / semantic observation tests | Included in default suite; config collision, fixed cardinality, four-client bound, shutdown/rebind, bytes/escaping/depth/nodes, replay saturation/drop/error, Applied/Duplicate, failed quarantine, acquisition and durable transition uncertainty |
+| Compose config, documentation links, validator tests, `git diff --check` | Passed; 107 Markdown files checked / four validator tests; heading anchors/remote links excluded |
+
+The new terminal-counter test initially supplied count 12 although the fixture cycle exhausted at baseline 3 + maximum 10 = 13. Corrected the fixture to derive that exact boundary; the assertion and production policy were preserved, the focused test and final standard suite passed. One mistyped exact test filter selected zero tests; it is not evidence and was replaced by the complete exact test name. No production timeout was increased or reliability assertion weakened. Histograms now copy/update fixed buckets under short local locks so count/sum/buckets are coherent within each histogram; independent phase observations remain non-atomic. The worker-only Supervisor fixture excludes consumer activation rather than depending on a missing consumer schema to prevent subscription.
+
+Commands used inside the existing app (Cargo directory `/app/backend`):
+
+```sh
+cargo fmt --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked
+cargo test --locked --test integrated_recovery -- --ignored --test-threads=1
+cargo test --locked --test consumer_runtime -- --ignored --test-threads=1
+cargo test --locked --test postgres_consumer --test postgres_discovery --test postgres_ownership --test postgres_replay --test postgres_retry --test rabbitmq_publisher -- --ignored --test-threads=1
+cargo test --locked --lib infrastructure::rabbitmq::tests:: -- --ignored --test-threads=1
+cargo test --locked --test worker_smoke -- --ignored --test-threads=1
+cargo test --locked --test integrated_recovery --test consumer_runtime compiled_ -- --ignored --test-threads=1
+cargo build --locked --bins
+RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps
+```
+
+Root checks: `docker compose config --quiet`, `python3 -B scripts/check-docs.py`, `python3 -B -m unittest discover -s scripts -p 'test_*.py'`, `git diff --check`. Remote [run 38970986836](https://github.com/juniocr26/rust-event-relay/actions/runs/38970986836) passed all jobs at the **base**, verified via GitHub API. This uncommitted diff has not run remotely. The older failed job's logs returned HTTP 403; its original failing assertion/root cause remains unconfirmed. Current real recovery scenarios passed locally; this does not recreate an unknown historical failure on Ubuntu.
+
+Final read-only shared observations: six successful migrations; named PIDs consumer=11, HTTP=12, relay=13 still RUNNING; health 200/replay route 404; no shared exporter listeners (no rollout). Retained demo event processed/count 1, stock 15, exactly one receipt 10/5/15. Source queue ready=0/unacked=0/consumers=1, quarantine 0/0/0. Broker max_message_size=16777216 bytes. No remaining relay_it_ databases or relay.it. queues/exchanges. Credentials, shared topology/volumes/rows were preserved. Finite bounded-work tests do not prove a whole-process memory ceiling or measured capacity. Readiness/backlog observation design is 5.2; reproducible capacity/backpressure/recovery measurement is 5.3.

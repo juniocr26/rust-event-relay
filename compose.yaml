@@ -11,6 +11,9 @@ services:
     stop_grace_period: 95s
     working_dir: /app/backend
     environment:
+      HTTP_METRICS_ADDR: ${HTTP_METRICS_ADDR:-127.0.0.1:9100}
+      RELAY_METRICS_ADDR: ${RELAY_METRICS_ADDR:-127.0.0.1:9101}
+      CONSUMER_METRICS_ADDR: ${CONSUMER_METRICS_ADDR:-127.0.0.1:9102}
       CONSUMER_NAME: ${CONSUMER_NAME:-inventory.stock.v1}
       CONSUMER_PREFETCH: ${CONSUMER_PREFETCH:-1}
       CONSUMER_SOURCE_EXCHANGE: ${CONSUMER_SOURCE_EXCHANGE:-relay.events}

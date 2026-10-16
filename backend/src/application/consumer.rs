@@ -137,7 +137,7 @@ impl QuarantineMessage {
         reason: QuarantineReason,
     ) -> Option<Self> {
         if !properties.is_object()
-            || serde_json::to_vec(&properties).ok()?.len() > Self::MAX_PROPERTIES_BYTES
+            || !properties_fit(&properties)
             || body.len() > Self::MAX_BODY_BYTES
             || message_id
                 .as_ref()
@@ -181,4 +181,53 @@ pub fn preservation_action(result: &Result<(), PublishError>) -> DeliveryAction 
     } else {
         DeliveryAction::RecoverWithPacing
     }
+}
+
+/// Preflight caller-owned trees before allocating encoded diagnostics.
+/// Bounds nodes, depth and raw strings, then caps escaped JSON bytes while writing.
+pub fn properties_fit(value: &serde_json::Value) -> bool {
+    fn visit(
+        value: &serde_json::Value,
+        depth: usize,
+        nodes: &mut usize,
+        bytes: &mut usize,
+    ) -> Option<()> {
+        *nodes = nodes.checked_sub(1)?;
+        if depth > 64 {
+            return None;
+        }
+        match value {
+            serde_json::Value::String(s) => *bytes = bytes.checked_sub(s.len())?,
+            serde_json::Value::Array(a) => {
+                for item in a {
+                    visit(item, depth + 1, nodes, bytes)?;
+                }
+            }
+            serde_json::Value::Object(o) => {
+                for (key, item) in o {
+                    *bytes = bytes.checked_sub(key.len())?;
+                    visit(item, depth + 1, nodes, bytes)?;
+                }
+            }
+            _ => {}
+        }
+        Some(())
+    }
+    struct Counter(usize);
+    impl std::io::Write for Counter {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0 = self
+                .0
+                .checked_sub(bytes.len())
+                .ok_or_else(|| std::io::Error::other("preservation byte budget"))?;
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let mut nodes = 4096;
+    let mut bytes = QuarantineMessage::MAX_PROPERTIES_BYTES;
+    visit(value, 0, &mut nodes, &mut bytes).is_some()
+        && serde_json::to_writer(Counter(QuarantineMessage::MAX_PROPERTIES_BYTES), value).is_ok()
 }

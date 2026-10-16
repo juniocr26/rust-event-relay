@@ -70,7 +70,11 @@ fn binary_loads_dotenv_and_handles_signals() {
         )
         .unwrap();
         let log_path = directory.join("output.log");
+        let reserve = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let metrics_address = reserve.local_addr().unwrap();
+        drop(reserve);
         let mut child = Command::new(env!("CARGO_BIN_EXE_reliable-event-relay"))
+            .env("HTTP_METRICS_ADDR", metrics_address.to_string())
             .current_dir(&directory)
             .env_remove("APP_ENV")
             .env_remove("HTTP_ADDR")
@@ -95,6 +99,17 @@ fn binary_loads_dotenv_and_handles_signals() {
         }
         // Allow the server to poll and register signal handlers after its startup log.
         thread::sleep(Duration::from_millis(100));
+        let mut socket = std::net::TcpStream::connect(metrics_address).unwrap();
+        socket
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        socket
+            .write_all(b"GET /metrics HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .unwrap();
+        let mut metrics = String::new();
+        socket.read_to_string(&mut metrics).unwrap();
+        assert!(metrics.starts_with("HTTP/1.1 200 OK"));
+        assert!(metrics.contains("process=\"http\""));
         assert!(
             Command::new("kill")
                 .args([signal, &child.id().to_string()])

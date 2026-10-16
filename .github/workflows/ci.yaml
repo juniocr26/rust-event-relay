@@ -82,6 +82,7 @@ jobs:
           rustup default 1.95.0
       - run: cargo test --locked --test rabbitmq_publisher -- --ignored
       - run: cargo test --locked --lib infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable -- --ignored
+      - run: cargo test --locked --lib infrastructure::rabbitmq::tests::publisher_admission_is_immediate_and_released_after_error_and_cancellation -- --ignored
   integrated-recovery:
     runs-on: ubuntu-latest
     timeout-minutes: 10

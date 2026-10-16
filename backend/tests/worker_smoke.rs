@@ -84,10 +84,13 @@ async fn smoke(supervised: bool, interactive: bool) {
         std::fs::create_dir(&temp).unwrap();
         let supervisor_config=temp.join("supervisord.conf");
         let physical=include_str!("../../docker/supervisor/normal.conf")
+            // This target owns only HTTP/relay; consumer acceptance has its own opt-in fixture.
+            .split("[program:consumer]").next().unwrap()
             .replace("/tmp/relay-supervisor",temp.to_str().unwrap())
             .replace("command=/usr/local/bin/relay-worker",&format!("command={}/../docker/supervisor/relay-worker",env!("CARGO_MANIFEST_DIR")));
         std::fs::write(&supervisor_config,physical).unwrap();
         let mut command=tokio::process::Command::new(if supervised {"/usr/bin/supervisord"} else {env!("CARGO_BIN_EXE_relay")});
+        support::metrics_env(&mut command);
         if supervised { command.arg("-c").arg(&supervisor_config); }
         let mut child=command.env("POSTGRES_DB",database).env("RABBITMQ_EXCHANGE",&exchange).env("RABBITMQ_QUEUE",&queue)
             .env("HTTP_ADDR","127.0.0.1:0").env("RELAY_IDLE_MS","10").stdout(Stdio::null()).stderr(Stdio::null()).kill_on_drop(true).spawn().unwrap();
@@ -200,6 +203,7 @@ async fn missing_schema(ownership_only: bool) {
             "isolated name",
         );
         let mut command = tokio::process::Command::new(env!("CARGO_BIN_EXE_relay"));
+        support::metrics_env(&mut command);
         command.env("POSTGRES_DB", database).kill_on_drop(true);
         let output = timeout(Duration::from_secs(10), command.output())
             .await

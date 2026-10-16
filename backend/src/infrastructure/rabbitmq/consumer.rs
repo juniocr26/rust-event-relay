@@ -1,9 +1,12 @@
 //! Explicit AMQP lifecycle. No automatic Lapin recovery, per-delivery tasks or nack loop.
 //! Ciclo AMQP explícito. Sem recovery automático, tarefas por entrega ou loop de nack.
 use super::*;
+use crate::application::observation::{
+    self, Noop, Observer, Operation as Op, Outcome as Obs, observe,
+};
 use crate::{
     application::{
-        consume::{IncomingDelivery, handle_delivery},
+        consume::{IncomingDelivery, handle_delivery_observed},
         consumer::{
             AtomicInventoryProcessor, QuarantineMessage, QuarantinePublisher, QuarantineReason,
         },
@@ -95,6 +98,11 @@ impl RabbitQuarantinePublisher {
 }
 impl QuarantinePublisher for RabbitQuarantinePublisher {
     async fn preserve(&self, message: &QuarantineMessage) -> Result<(), PublishError> {
+        let _gate = self
+            .0
+            .gate
+            .try_lock()
+            .map_err(|_| PublishError::new(Kind::Unavailable))?;
         let sidecar = serde_json::to_vec(message.properties())
             .map_err(|e| PublishError::with_source(Kind::Serialization, e))?;
         let mut headers = FieldTable::default();
@@ -111,7 +119,7 @@ impl QuarantinePublisher for RabbitQuarantinePublisher {
         if let Some(id) = message.message_id() {
             properties = properties.with_message_id(id.into());
         }
-        self.0.publish_raw(message.body(), properties).await
+        self.0.publish_admitted(message.body(), properties).await
     }
 }
 /// Carries only the original receiving channel's acker; no synthetic delivery tags.
@@ -301,8 +309,23 @@ impl RabbitConsumerSession {
         quarantine
     }
 }
-async fn close_session(session: RabbitConsumerSession, deadline: Instant) {
-    match timeout_at(deadline, session.close()).await {
+async fn close_session<O: Observer>(
+    session: RabbitConsumerSession,
+    deadline: Instant,
+    observer: &O,
+) {
+    match timeout_at(
+        deadline,
+        observe(observer, Op::Close, session.close(), |r| {
+            if r.is_ok() {
+                Obs::Completed
+            } else {
+                observation::publication(r)
+            }
+        }),
+    )
+    .await
+    {
         Ok(Ok(())) => tracing::info!("consumer session closed"),
         Ok(Err(error)) => {
             tracing::warn!(error=%error,"consumer close failed (source redacted); unacknowledged work requires recovery")
@@ -323,10 +346,30 @@ pub async fn run_consumer<P: AtomicInventoryProcessor>(
     rabbit: &RabbitConsumerConfig,
     shutdown: &mut (impl Future<Output = ()> + Unpin),
 ) -> Instant {
+    run_consumer_observed(processor, config, rabbit, shutdown, &Noop).await
+}
+pub async fn run_consumer_observed<P: AtomicInventoryProcessor, O: Observer>(
+    processor: &P,
+    config: &ConsumerRuntimeConfig,
+    rabbit: &RabbitConsumerConfig,
+    shutdown: &mut (impl Future<Output = ()> + Unpin),
+    observer: &O,
+) -> Instant {
     loop {
         tokio::select! {biased; ()=&mut *shutdown=>return Instant::now()+config.shutdown,_=std::future::ready(())=>{}}
         let (connected, stop) = crate::application::worker::drain_on_shutdown(
-            RabbitConsumerSession::connect(rabbit.clone()),
+            observe(
+                observer,
+                Op::Connect,
+                RabbitConsumerSession::connect(rabbit.clone()),
+                |r| {
+                    if r.is_ok() {
+                        Obs::Completed
+                    } else {
+                        Obs::Unavailable
+                    }
+                },
+            ),
             &mut *shutdown,
             config.drain,
             config.shutdown,
@@ -348,7 +391,7 @@ pub async fn run_consumer<P: AtomicInventoryProcessor>(
             }
         };
         if let Some(deadline) = stop {
-            close_session(session, deadline).await;
+            close_session(session, deadline, observer).await;
             return deadline;
         }
         let mut stop = None;
@@ -360,12 +403,18 @@ pub async fn run_consumer<P: AtomicInventoryProcessor>(
             if !session.is_usable() {
                 break;
             }
-            let operation = handle_delivery(
-                &delivery,
-                processor,
-                &session.quarantine,
-                &config.name,
-                config.operation,
+            let operation = observe(
+                observer,
+                Op::Delivery,
+                handle_delivery_observed(
+                    &delivery,
+                    processor,
+                    &session.quarantine,
+                    &config.name,
+                    config.operation,
+                    observer,
+                ),
+                |_| Obs::Completed,
             );
             tokio::pin!(operation);
             let outcome = tokio::select! {biased;
@@ -398,7 +447,7 @@ pub async fn run_consumer<P: AtomicInventoryProcessor>(
             }
         }
         let deadline = stop.unwrap_or_else(|| Instant::now() + config.shutdown);
-        close_session(session, deadline).await;
+        close_session(session, deadline, observer).await;
         if stop.is_some() {
             return deadline;
         }

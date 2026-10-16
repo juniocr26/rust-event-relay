@@ -268,3 +268,85 @@ async fn cancellation_has_no_compensating_follow_up() {
         assert!(!d.calls.lock().unwrap().contains(&"ack"));
     }
 }
+
+#[tokio::test]
+async fn observations_distinguish_effect_quarantine_and_ack_send_and_uncertainty() {
+    use reliable_event_relay::{
+        application::observation::{Operation as Op, Outcome as Obs},
+        telemetry::metrics::{Metrics, Process},
+    };
+    let (mut d, mut p, q, n) = fixture();
+    let metrics = Metrics::new(Process::Consumer);
+    for (result, label) in [
+        (
+            ProcessingOutcome::Applied(EffectReceipt {
+                stock_after: Stock::new(15).unwrap(),
+            }),
+            Obs::Applied,
+        ),
+        (
+            ProcessingOutcome::Duplicate(EffectReceipt {
+                stock_after: Stock::new(15).unwrap(),
+            }),
+            Obs::Duplicate,
+        ),
+        (ProcessingOutcome::IdentityConflict, Obs::IdentityConflict),
+    ] {
+        p.outcome = result;
+        let outcome =
+            handle_delivery_observed(&d, &p, &q, &n, Duration::from_secs(1), metrics.as_ref())
+                .await;
+        assert!(!outcome.recover());
+        assert_eq!(metrics.count(Op::Processing, label), 1);
+    }
+    assert_eq!(metrics.count(Op::Quarantine, Obs::Confirmed), 1);
+    assert_eq!(metrics.count(Op::Ack, Obs::Completed), 3);
+    p.failure = Some(ProcessingFailureKind::CommitUncertain);
+    let outcome =
+        handle_delivery_observed(&d, &p, &q, &n, Duration::from_secs(1), metrics.as_ref()).await;
+    assert!(outcome.recover());
+    assert_eq!(metrics.count(Op::Processing, Obs::CommitUncertain), 1);
+    assert_eq!(metrics.count(Op::Ack, Obs::Completed), 3);
+    p.failure = None;
+    p.outcome = ProcessingOutcome::Duplicate(EffectReceipt {
+        stock_after: Stock::new(15).unwrap(),
+    });
+    d.ack_failure = true;
+    handle_delivery_observed(&d, &p, &q, &n, Duration::from_secs(1), metrics.as_ref()).await;
+    assert_eq!(metrics.count(Op::Ack, Obs::Uncertain), 1);
+    assert_eq!(metrics.count(Op::Ack, Obs::Completed), 3);
+    d.body = vec![b'x'; QuarantineMessage::MAX_BODY_BYTES + 1];
+    d.blocked = true;
+    let outcome =
+        handle_delivery_observed(&d, &p, &q, &n, Duration::from_secs(1), metrics.as_ref()).await;
+    assert!(outcome.preservation_blocked);
+    assert_eq!(metrics.count(Op::Quarantine, Obs::Blocked), 1);
+    assert_eq!(metrics.count(Op::Quarantine, Obs::Confirmed), 1);
+    assert_eq!(metrics.count(Op::Ack, Obs::Completed), 3);
+}
+
+#[tokio::test]
+async fn failed_quarantine_never_counts_confirmed_or_ack_success() {
+    use reliable_event_relay::{
+        application::observation::{Operation as Op, Outcome as Obs},
+        telemetry::metrics::{Metrics, Process},
+    };
+    for (failure, label) in [
+        (PublishErrorKind::Rejected, Obs::Rejected),
+        (PublishErrorKind::Uncertain, Obs::Uncertain),
+        (PublishErrorKind::Unavailable, Obs::Unavailable),
+    ] {
+        let (d, mut p, mut q, n) = fixture();
+        p.outcome = ProcessingOutcome::IdentityConflict;
+        q.failure = Some(failure);
+        let metrics = Metrics::new(Process::Consumer);
+        let outcome =
+            handle_delivery_observed(&d, &p, &q, &n, Duration::from_secs(1), metrics.as_ref())
+                .await;
+        assert!(outcome.recover());
+        assert_eq!(metrics.count(Op::Quarantine, label), 1);
+        assert_eq!(metrics.count(Op::Quarantine, Obs::Confirmed), 0);
+        assert_eq!(metrics.count(Op::Ack, Obs::Completed), 0);
+        assert_eq!(metrics.count(Op::Processing, Obs::IdentityConflict), 1);
+    }
+}

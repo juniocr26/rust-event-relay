@@ -1,3 +1,5 @@
+Admissão e instrumentação atuais: publisher/quarentena rejeitam saturação antes da serialização, sem waiters internos. Descrições datadas abaixo são históricas. [Milestone 5.1](../operations/milestone-5-1.md).
+
 #
 Worker atual, configuração, cancelamento e rollout autorizado: [Marco 2.5](../architecture/milestone-2-5.md). Seções anteriores mantêm escopo histórico.
 

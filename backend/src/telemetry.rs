@@ -8,3 +8,5 @@ pub fn init(filter: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>
         .try_init()?;
     Ok(())
 }
+
+pub mod metrics;

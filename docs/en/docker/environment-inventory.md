@@ -93,3 +93,15 @@ The defaults below are versioned source/example defaults, never observed credent
 All numeric runtime values reject empty/noninteger/zero/out-of-range input, except HTTP's separate PostgreSQL port parser accepts u16 syntax and relies on connection failure for port zero. Consumer/relay explicitly reject port zero. Both drain budgets must be strictly below their shutdown budget. Changing logical consumer name changes deduplication scope. Source and quarantine exchange/queue names must differ. Bounds and exact parsing are linked to [configuration](../../../backend/src/config.rs), [broker config](../../../backend/src/infrastructure/rabbitmq.rs), [consumer config](../../../backend/src/infrastructure/rabbitmq/consumer.rs), [HTTP composition](../../../backend/src/main.rs) and [SQLx wrapper](../../../docker/sqlx.py).
 
 No missing secret blocks isolated verification. Shared consumer rollout is blocked by unapplied migration 20261014000000 and missing installed Supervisor launcher/config; shared replay is deliberately disabled and migration 20261013000000 is pending. Keep both disabled until the [reviewed rollout](../operations/milestone-4-4-review.md) is executed. Never change persisted database/broker passwords merely to match an example.
+
+## Milestone 5.1 additions
+
+Separate process-local exporters; all optional, with validated source defaults. Compose explicitly injects them; no host port is published. [Contract](../operations/milestone-5-1.md).
+
+| Variable | Default | Validation |
+| --- | --- | --- |
+| HTTP_METRICS_ADDR | 127.0.0.1:9100 | loopback IP, port 1..65535 |
+| RELAY_METRICS_ADDR | 127.0.0.1:9101 | loopback IP, port 1..65535 |
+| CONSUMER_METRICS_ADDR | 127.0.0.1:9102 | loopback IP, port 1..65535 |
+
+All three ports must be distinct and differ from HTTP_ADDR; defaults apply independently of replay. A stopped process has no listener. No additional limit knobs: publisher rejects waiting calls immediately, replay admission is fixed at 2 / 10 seconds / 4096 body bytes, exporter at 4 clients / 2 seconds / 1024 request bytes. These defaults were not installed by restarting shared processes.

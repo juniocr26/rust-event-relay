@@ -93,10 +93,62 @@ pub fn router<R: OutboxReplay + 'static>(
     repository: R,
     credentials: OperatorCredentials,
 ) -> Router {
+    router_observed(
+        repository,
+        credentials,
+        Arc::new(crate::application::observation::Noop),
+    )
+}
+pub fn router_observed<
+    R: OutboxReplay + 'static,
+    O: crate::application::observation::Observer + Send + 'static,
+>(
+    repository: R,
+    credentials: OperatorCredentials,
+    observer: Arc<O>,
+) -> Router {
+    let admission = Arc::new(tokio::sync::Semaphore::new(2));
     Router::new()
         .route("/operator/replays", post(submit::<R>))
         .route("/operator/replays/{request_id}", get(lookup::<R>))
         .layer(DefaultBodyLimit::max(4096))
+        // Outermost boundary: reject before JSON extraction or pool waiting.
+        .layer(axum::middleware::from_fn(
+            move |request: axum::extract::Request, next: axum::middleware::Next| {
+                let admission = admission.clone();
+                let observer = observer.clone();
+                async move {
+                    use crate::application::observation::{Operation as Op, Outcome as Obs};
+                    let Ok(_permit) = admission.try_acquire_owned() else {
+                        observer.event(Op::Replay, Obs::Saturated);
+                        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+                    };
+                    let observation = crate::application::observation::Observation::new(
+                        observer.as_ref(),
+                        Op::Replay,
+                    );
+                    match tokio::time::timeout(
+                        std::time::Duration::from_secs(10),
+                        next.run(request),
+                    )
+                    .await
+                    {
+                        Ok(response) => {
+                            observation.finish(if response.status().is_success() {
+                                Obs::Completed
+                            } else {
+                                Obs::Rejected
+                            });
+                            response
+                        }
+                        Err(_) => {
+                            observation.finish(Obs::Deadline);
+                            StatusCode::SERVICE_UNAVAILABLE.into_response()
+                        }
+                    }
+                }
+            },
+        ))
         .with_state(Arc::new(OperatorState {
             repository,
             credentials,

@@ -29,6 +29,8 @@ impl PublisherLifecycle for RabbitLifecycle {
     }
 }
 
+use reliable_event_relay::application::observation::{Observer, Operation as Op, Outcome as Obs};
+use reliable_event_relay::telemetry::metrics::{Exporter, ExporterConfig, Metrics, Process};
 #[tokio::main]
 async fn main() -> Result<(), &'static str> {
     let app = Config::load().map_err(|_| "invalid application configuration (source redacted)")?;
@@ -37,6 +39,13 @@ async fn main() -> Result<(), &'static str> {
         tracing::error!(error = %e, "invalid worker configuration");
         "invalid worker configuration"
     })?;
+    let metrics = Metrics::new(Process::Relay);
+    let exporter_config =
+        ExporterConfig::from_lookup(|key| std::env::var(key).ok(), app.http_addr)?;
+    let exporter = Exporter::start(exporter_config.address(Process::Relay), metrics.clone())
+        .await
+        .map_err(|_| "metrics bind failed")?;
+    metrics.configure(config.pool_max, 0, false);
     let rabbit = RabbitMqConfig::from_lookup(|key| std::env::var(key).ok())
         .map_err(|_| "invalid RabbitMQ configuration (source redacted)")?;
     let required = |key| {
@@ -74,15 +83,17 @@ async fn main() -> Result<(), &'static str> {
     } else {
         tracing::info!(config = ?config, "relay started; sequential admission");
         let repository = PostgresOutboxRepository::new(pool.clone());
-        worker::run(
+        worker::run_observed(
             &repository,
             &RabbitLifecycle(rabbit),
             &config,
             &mut shutdown,
+            metrics.as_ref(),
         )
         .await
     };
-    if timeout_at(deadline, pool.close()).await.is_err() {
+    let cleanup_expired = timeout_at(deadline, pool.close()).await.is_err();
+    if cleanup_expired {
         tracing::warn!("pool cleanup exhausted shutdown budget");
     }
     if setup_failed {
@@ -90,6 +101,15 @@ async fn main() -> Result<(), &'static str> {
             "required ownership schema unavailable; inspect migrations 20261009000000/20261012000000 and database privileges (source redacted)",
         );
     }
+    metrics.event(
+        Op::Shutdown,
+        if cleanup_expired {
+            Obs::Deadline
+        } else {
+            Obs::Completed
+        },
+    );
+    exporter.shutdown().await;
     tracing::info!("relay stopped");
     Ok(())
 }
