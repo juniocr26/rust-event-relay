@@ -4,6 +4,10 @@
 
 Percurso: propósito/setup → arquitetura/contratos → segurança/falhas → testes/evidência → operações. Na biblioteca: catálogo/dossiê → entrevista por projeto → fundamentos → falhas. Marcos/refactors/handoff históricos descrevem datas originais; revisão/checklist explica escopo atual.
 
+## Rollout local atual
+
+- [Marco 4.5 — rollout controlado, backup verificado, demonstração preservada e recuperação](operations/milestone-4-5-rollout.md)
+
 ## Fechamento atual do Marco 4
 
 - [Marco 4.4 — verificação, matriz de aceitação e rollout](operations/milestone-4-4-review.md)

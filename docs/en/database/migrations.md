@@ -1,3 +1,5 @@
+**Current local state — Milestone 4.5 (2026-10-16):** [Verified rollout and recovery](../operations/milestone-4-5-rollout.md). Six migrations applied; current HTTP/relay/consumer artifacts installed and running; consumer autostart=true. Protected backup/isolated restore and real 10 → 15 → 15 demonstration verified. Replay API remains disabled; frontend remains simulation. Earlier observations below retain their dates.
+
 Current 4.2: six additive versions are tracked. Migration 20261014000000 creates consumer-owned stock/receipts; its down migration loses all stock and deduplication history. Validate only in exact isolated databases. Shared development still has four installed versions; replay 20261013000000 and consumer 20261014000000 are pending, without rollout authorization. [Protocol and constraints](../architecture/milestone-4-2.md).
 
 Current schema/contracts: [Milestone 3.2](../architecture/milestone-3-2.md). Earlier milestone sections below describe their original scope.

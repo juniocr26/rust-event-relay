@@ -4,6 +4,10 @@
 
 Reading path: purpose/setup → architecture/contracts → security/failures → testing/evidence → operations. For the library, use catalog/dossier → project interview → foundations → failure follow-ups. Historical milestone/refactor/handoff records describe their original dates; current review/checklist explains present scope.
 
+## Current local rollout
+
+- [Milestone 4.5 — controlled rollout, verified backup, retained demonstration and recovery](operations/milestone-4-5-rollout.md)
+
 ## Current Milestone 4 closure
 
 - [Milestone 4.4 — verification, acceptance matrix and rollout](operations/milestone-4-4-review.md)

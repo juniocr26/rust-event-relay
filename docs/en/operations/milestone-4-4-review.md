@@ -1,3 +1,5 @@
+**Current local state — Milestone 4.5 (2026-10-16):** [Verified rollout and recovery](milestone-4-5-rollout.md). Six migrations applied; current HTTP/relay/consumer artifacts installed and running; consumer autostart=true. Protected backup/isolated restore and real 10 → 15 → 15 demonstration verified. Replay API remains disabled; frontend remains simulation. Earlier observations below retain their dates.
+
 [Português brasileiro](../../pt-BR/operations/milestone-4-4-review.md) | [Catalog](../index.md)
 
 # Milestone 4.4 — full verification and Milestone 4 closure

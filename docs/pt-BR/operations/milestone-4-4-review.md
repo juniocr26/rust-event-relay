@@ -1,3 +1,5 @@
+**Estado local atual — Marco 4.5 (2026-10-16):** [Rollout verificado e recuperação](milestone-4-5-rollout.md). Seis migrations aplicadas; artefatos atuais HTTP/relay/consumer instalados e ativos; consumer autostart=true. Backup protegido/restore isolado e demonstração real 10 → 15 → 15 verificados. API replay desabilitada; frontend continua simulação. Observações anteriores abaixo preservam suas datas.
+
 [English](../../en/operations/milestone-4-4-review.md) | [Catálogo](../index.md)
 
 # Marco 4.4 — verificação completa e fechamento do Marco 4

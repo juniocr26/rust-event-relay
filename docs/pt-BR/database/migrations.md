@@ -1,3 +1,5 @@
+**Estado local atual — Marco 4.5 (2026-10-16):** [Rollout verificado e recuperação](../operations/milestone-4-5-rollout.md). Seis migrations aplicadas; artefatos atuais HTTP/relay/consumer instalados e ativos; consumer autostart=true. Backup protegido/restore isolado e demonstração real 10 → 15 → 15 verificados. API replay desabilitada; frontend continua simulação. Observações anteriores abaixo preservam suas datas.
+
 Estado 4.2: seis versões aditivas no código. Migração 20261014000000 cria estoque/recibos do consumidor; down perde estoque e histórico de deduplicação. Validar somente em banco exato isolado. Desenvolvimento compartilhado conserva quatro versões instaladas; replay 20261013000000 e consumidor 20261014000000 pendentes, sem autorização de rollout. [Protocolo e constraints](../architecture/milestone-4-2.md).
 
 Schema/contratos atuais: [Marco 3.2](../architecture/milestone-3-2.md). Seções de marcos anteriores abaixo descrevem o escopo original.

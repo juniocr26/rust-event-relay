@@ -2,7 +2,7 @@
 
 # Reliable Event Relay
 
-[Aceitação do Marco 3, lacunas operacionais e leitura guiada](docs/pt-BR/operations/milestone-3-review.md): fechado com limitações explícitas não bloqueantes. Rollout replay compartilhado pendente; frontend de apresentação é simulação local.
+[Aceitação do Marco 3, lacunas operacionais e leitura guiada](docs/pt-BR/operations/milestone-3-review.md): fechado com limitações explícitas não bloqueantes. API replay desabilitada; schema replay instalado. Frontend de apresentação é simulação local.
 
 [Preparação frontend/backend — estrutura e comandos atuais](docs/pt-BR/guides/frontend-backend.md). Comandos Cargo nativos rodam em `backend/`; comandos frontend em `frontend/`.
 
@@ -13,7 +13,9 @@ Um serviço Rust que explora entrega confiável de eventos, tentativas, idempot�
 
 Este projeto de código aberto, estudo e portfólio investiga entrega distribuída de eventos sob falhas. Rust é a ferramenta de implementação; o problema de engenharia é a razão do repositório. Inglês é o idioma canônico da documentação; a documentação em português cobre o mesmo escopo.
 
-Marco 4 fechado com limitações não bloqueantes explícitas. A [verificação/fechamento 4.4](docs/pt-BR/operations/milestone-4-4-review.md) registra estoque/ACK/quarentena reais, contagens de testes, migrations/Supervisor compartilhados pendentes e [inventário de ambiente](docs/pt-BR/docker/environment-inventory.md). Frontend de apresentação verificado; integração ao vivo com backend não implementada.
+Marco 4 fechado com limitações não bloqueantes explícitas. A [verificação/fechamento 4.4](docs/pt-BR/operations/milestone-4-4-review.md) registra estoque/ACK/quarentena reais, contagens de testes, migrations/Supervisor compartilhados então pendentes e [inventário de ambiente](docs/pt-BR/docker/environment-inventory.md). Frontend de apresentação verificado; integração ao vivo com backend não implementada.
+
+[Marco 4.5 — rollout local concluído](docs/pt-BR/operations/milestone-4-5-rollout.md): backup protegido/restore isolado verificados, seis migrations aplicadas, HTTP/relay/consumer atuais com autostart e demonstração real 10 → 15 → 15 preservada. API replay desabilitada; frontend continua simulação.
 
 ## Catálogo de documentação e percurso de leitura
 
@@ -24,7 +26,7 @@ Leia propósito/setup, arquitetura e contratos, segurança/falhas, testes/evidê
 
 ## Estado atual e escopo
 
-**Implementado hoje:** envelope canônico, schema outbox/posse/retry/replay PostgreSQL versionado, contratos/adapters focados de persistência, publicação RabbitMQ confirmada, relay sequencial com manutenção/reconexão/shutdown limitados, retry durável e preservação terminal, descoberta/isolamento de poison, replay autorizado idempotente opt-in com auditoria, efeito/deduplicação PostgreSQL de estoque com recibos históricos, HTTP liveness, Docker/Supervisor e frontend Vue de apresentação. A [matriz de aceitação](docs/pt-BR/operations/milestone-3-review.md) distingue verificação isolada, runtime compartilhado e garantias exatas.
+**Implementado hoje:** envelope canônico, schema outbox/posse/retry/replay PostgreSQL versionado, contratos/adapters focados de persistência, publicação RabbitMQ confirmada, relay sequencial com manutenção/reconexão/shutdown limitados, retry durável e preservação terminal, descoberta/isolamento de poison, replay autorizado idempotente opt-in com auditoria, efeito/deduplicação PostgreSQL de estoque com recibos históricos, consumer RabbitMQ com ACK manual/quarentena confirmada ativo localmente na 4.5, HTTP liveness, Docker/Supervisor e frontend Vue de apresentação. A [matriz de aceitação](docs/pt-BR/operations/milestone-4-4-review.md) distingue verificação isolada, runtime compartilhado e garantias exatas.
 
 **Planejado / exploração futura:** gravações transacionais do produtor, integração frontend/backend real, reparo auditado, pools/backpressure, webhooks, Redis Streams, readiness/métricas, retenção, TLS/HA e backup/recuperação produtivos. HTTP não executa relay; HTTP com replay habilitado conecta ao PostgreSQL. Frontend executa somente cenários ilustrativos locais.
 
@@ -100,7 +102,7 @@ supervisorctl stop relay
 supervisorctl restart relay
 ```
 
-Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem argumentos para console interativo. `all` inclui `http`, `relay` e o `consumer` opt-in após instalação. **Não usar start all/restart all: iniciam consumer apesar de autostart=false e consomem mensagens reais.** Use controles nomeados; rollout do consumidor continua pendente. Login e inicialização estão no [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md).
+Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem argumentos para console interativo. HTTP, relay e consumer agora têm autostart após rollout local autorizado. Use controles nomeados porque consumer consome mensagens reais. Parada intencional persiste até start explícito ou restart do manager; veja [contenção e recuperação](docs/pt-BR/operations/milestone-4-5-rollout.md). Login e inicialização estão no [Marco 2.1](docs/pt-BR/architecture/milestone-2-1.md).
 
 ## Documentação
 
@@ -125,7 +127,7 @@ Os mesmos argumentos funcionam com `supervisor`; execute qualquer comando sem ar
 
 ## Limites e filosofia
 
-`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Health não exige autenticação; rotas privilegiadas replay usam bearer confiável opt-in, desativadas por padrão. Gravações do produtor, medição de desempenho e imagem de produção continuam ausentes. Runtime consumidor e quarentena confirmada estão implementados; ativação compartilhada continua pendente; aceitação do Marco 4 concluída com limitações não bloqueantes explícitas. Entrega pelo menos uma vez depende de deduplicação durável no consumidor; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
+`/health` comprova apenas que o HTTP responde, sem readiness de infraestrutura nem garantia de entrega. O binário encerra HTTP graciosamente; Supervisor limita parada do filho a 30 segundos. Health não exige autenticação; rotas privilegiadas replay usam bearer confiável opt-in, desativadas por padrão. Gravações do produtor, medição de desempenho e imagem de produção continuam ausentes. Runtime consumidor e quarentena confirmada estão ativos localmente após 4.5; aceitação do Marco 4 concluída com limitações não bloqueantes explícitas. Entrega pelo menos uma vez depende de deduplicação durável no consumidor; nenhuma garantia de exatamente uma vez é alegada. As decisões evoluirão com testes e experimentos de falha documentados. Priorizar semântica clara de falhas, controle de recursos e recuperação acima de complexidade ou afirmações sem medição.
 
 Licença MIT; consulte [LICENSE](LICENSE).
 
@@ -144,8 +146,8 @@ Schema durável de retry, agenda/preservação terminal protegidas por dono/cicl
 
 Descoberta limitada e isolamento com autoridade atual implementados; replay permanece 3.5 e fechamento integrado 3.6. Rollout local preservado; esta alteração não tem migration ou reinício compartilhado. [Marco 3.4 — descoberta/isolamento atuais](docs/pt-BR/architecture/milestone-3-4.md).
 
-[Marco 3.5 — replay autorizado](docs/pt-BR/architecture/milestone-3-5.md) | [API operacional](docs/pt-BR/operations/replay.md). Fonte implementada; migration 5 e ativação da API privilegiada continuam pendentes no ambiente compartilhado.
+[Marco 3.5 — replay autorizado](docs/pt-BR/architecture/milestone-3-5.md) | [API operacional](docs/pt-BR/operations/replay.md). Migration 5 instalada localmente; API privilegiada continua desabilitada.
 
-[Marco 4.2 — persistência atômica PostgreSQL de estoque](docs/pt-BR/architecture/milestone-4-2.md): adaptador/migração implementados com evidência em bancos isolados; runtime RabbitMQ de consumidor/quarentena implementado na 4.3, com ativação compartilhada pendente.
+[Marco 4.2 — persistência atômica PostgreSQL de estoque](docs/pt-BR/architecture/milestone-4-2.md): adaptador/migração implementados com evidência em bancos isolados; runtime RabbitMQ de consumidor/quarentena implementado na 4.3, com ativação local compartilhada concluída na 4.5.
 
-[Marco 4.3 — ACK manual, quarentena confirmada, configuração e rollout explícito](docs/pt-BR/architecture/milestone-4-3.md). Novo programa Supervisor consumer com autostart=false.
+[Marco 4.3 — ACK manual, quarentena confirmada, configuração e rollout explícito](docs/pt-BR/architecture/milestone-4-3.md). Consumer agora com autostart=true após [rollout local 4.5 autorizado](docs/pt-BR/operations/milestone-4-5-rollout.md).
