@@ -48,7 +48,7 @@ def validate():
     name = "relay_migration_" + uuid.uuid4().hex
     files = sorted((ROOT / "backend/migrations").glob("*.up.sql"))
     expected = {str(int(p.name.split("_", 1)[0])): hashlib.sha384(p.read_bytes()).hexdigest() for p in files}
-    assert len(files) == 5, "review acceptance when the migration inventory changes"
+    assert len(files) == 6, "review acceptance when the migration inventory changes"
     admin(f'CREATE DATABASE "{name}";')
     try:
         def migrate(*args):
@@ -62,13 +62,16 @@ def validate():
             assert [r[0] for r in applied] == [v for v in expected if int(v) <= int(version)]
             assert all(success == "t" and checksum == expected[v] for v, success, checksum in applied)
         migrate("run")  # No pending migrations; checksum validation still runs.
-        assert query(name, "SELECT to_regclass('relay.outbox_events') IS NOT NULL AND to_regclass('relay.replay_requests') IS NOT NULL;") == "t"
+        assert query(name, "SELECT to_regclass('relay.outbox_events') IS NOT NULL AND to_regclass('relay.replay_requests') IS NOT NULL AND to_regclass('consumer.receipts') IS NOT NULL;") == "t"
         migrate("revert")
+        assert query(name, "SELECT to_regclass('consumer.receipts') IS NULL;") == "t"
+        assert query(name, "SELECT count(*) FROM public._sqlx_migrations;") == "5"
+        migrate("revert")  # Preserve the earlier replay rollback regression as well.
         assert query(name, "SELECT to_regclass('relay.replay_requests') IS NULL;") == "t"
         assert query(name, "SELECT count(*) FROM public._sqlx_migrations;") == "4"
         migrate("run")
-        assert query(name, "SELECT count(*) FROM public._sqlx_migrations WHERE success;") == "5"
-        print("Five ordered SQLx upgrades/checksums, no-op, replay down/re-up passed in isolated database.")
+        assert query(name, "SELECT count(*) FROM public._sqlx_migrations WHERE success;") == "6"
+        print("Six ordered SQLx upgrades/checksums, no-op, consumer/replay down/re-up passed in isolated database.")
     finally:
         # No test connection remains after each CLI invocation. Never use FORCE.
         admin(f'DROP DATABASE "{name}";')

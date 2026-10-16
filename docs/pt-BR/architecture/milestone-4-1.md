@@ -66,3 +66,5 @@ Pré-requisitos exatos de 4.2: finalizar persistência v1 com distinções numé
 Implementado: evento canônico em relay.outbox_events; publicação significa aceite do broker. Relay processed não significa efeito de estoque. Planejado: RabbitMQ entrega manualmente a inventory.stock.v1; transação grava recibo e soma cinco em consumer.stock: 10 + 5 = 15. Reentrega de A encontra mesmo recibo/conteúdo: permanece 15. Evento B distinto soma cinco: 20. ACK perdido altera entregas, não unidades.
 
 SQL dead_letter preserva falha do relay antes da conclusão de publicação; quarentena do consumidor preserva mensagens que ele não aplica com segurança. Replay SQL abre ciclo do relay preservando identidade/conteúdo; não desfaz estoque nem faz ID processado somar novamente. Replay do broker é separado e planejado. [Guia existente](../guides/project-guide.md), [revisão do Marco 3](../operations/milestone-3-review.md). Modelos/testes puros implementados; efeitos no banco/runtime do exemplo planejados.
+
+Continuação de 13/10/2026: [4.2 implementa efeito PostgreSQL e deduplicação](milestone-4-2.md). O texto anterior conserva o escopo de 4.1; runtime de broker permanece planejado.

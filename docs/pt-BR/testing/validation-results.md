@@ -866,3 +866,20 @@ Validador documental: 236 documentos, zero erros, 18 avisos anteriores de fixtur
 Container app existente, CARGO_TARGET_DIR separado em /tmp/relay-m41-target: cargo fmt --check; cargo clippy --locked --all-targets --all-features -- -D warnings; cargo test --locked (75 aprovados, 0 falhas, 88 ignorados, incluindo seis testes puros novos); cargo build --locked --bins; RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps. Validador documental bilíngue: 0 erros, 18 avisos de fixtures restritas do projeto Go. git diff --check passou nos dois repositórios.
 
 Testes cobrem limites de identificadores/quantidade/estoque, tipo/versão, identidade coerente, comparação imutável, política de ACK, limites corpo/propriedades e duplicação de quarentena após crash/ACK incerto simulados. Recorder é fake: não prova atomicidade PostgreSQL, preservação RabbitMQ, correlação return/confirm ou recuperação real de crash. Suítes de infraestrutura permanecem ignoradas, não executadas: sem alteração em adaptador/migration/runtime. Docker consultado/reutilizado sem restart, consumo compartilhado, topologia/credenciais ou migrations. Engineering Library somente documentação. [Contratos e experimentos reais planejados](../architecture/milestone-4-1.md).
+
+## Marco 4.2 — execução local real, 13/10/2026
+
+Base Rust `4d3734c79b3d635a91a4e7d415a903b18b43a610`; Library `281231333240e20a9704e15bb9fbcdaeb5ed151c`; ambos inicialmente limpos. App Docker existente usa Rust 1.95.0, SQLx fixado 0.8.6 e PostgreSQL 18.6. Sem rebuild/restart de serviço, escrita compartilhada ou consumo.
+
+- `cargo fmt --check`: passou no código final.
+- `cargo clippy --locked --all-targets --all-features -- -D warnings`: passou no código final.
+- `cargo test --locked`: suíte padrão passou; testes de banco/broker conservam gating ignored explícito.
+- `cargo test --locked --test postgres_consumer -- --ignored --test-threads=1`: **10 passaram**, zero falhas. Inclui disputa observada de estoque/identidade, preservação de envelope/histórico relay no upgrade, comparação de nanos/offset UTC, constraints/corrupção somente de teste, rejeição de comando/commit diferido, rollback, overflow, duplicata histórica, proxy de perda de COMMIT e cancelamento.
+- Regressões isoladas afetadas: postgres_repository **15**, delivery_ownership_schema **1**, postgres_ownership **12**, postgres_retry **18**, postgres_discovery **7**, postgres_replay **10** passaram (63 no total). Caso opt-in existente do repository continua filtrado pelo gating.
+- `cargo build --locked --bins`: binários HTTP e relay compilados. `RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps`: passou.
+- `python3 scripts/check-migrations.py`: seis upgrades/checksums SQLx ordenados, no-op, down/re-up de consumidor e replay passaram; banco gerado removido e ausência verificada. Down/up SQL de consumidor também testado com estoque/recibos, comprovando perda. Harness verifica cleanup individual de cada banco exato.
+- Validador Engineering Library: zero erros, 18 avisos existentes de links restritos de fixtures; seus 18 testes sintéticos passaram. Sintaxe Python do checker passou. `git diff --check` passou nos dois repositórios.
+
+CI configurado para executar a suíte de consumidor no job PostgreSQL; nenhuma execução remota alegada. Frontend/broker/aceitação integrada de crash não mudaram nem foram reexecutados. Inspeção compartilhada somente leitura mostra quatro versões instaladas (20261007000000, 20261007175358, 20261009000000, 20261012000000); replay 20261013000000 e consumidor 20261014000000 permanecem pendentes. Supervisor HTTP PID 11 e relay PID 12 permaneceram ativos; consulta de catálogo retornou zero bancos relay_it_/relay_migration_ restantes. Sem staging, commit ou push.
+
+[Transação, justificativa do trigger, limites de incerteza e pré-requisitos exatos de 4.3](../architecture/milestone-4-2.md). Cancelamento/falhas de protocolo são evidência local finita, sem provar processo morto, perda de energia, throughput ou prontidão produtiva. Validação anterior conserva caráter histórico.

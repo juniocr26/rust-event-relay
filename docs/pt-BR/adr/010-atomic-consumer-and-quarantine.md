@@ -13,3 +13,5 @@ Quarentena pela aplicação é compatível com a fila clássica, preserva bytes/
 [Contratos, matriz de ACK, limites, estudo e aceite 4.2–4.4](../architecture/milestone-4-1.md).
 
 Fontes primárias consultadas em 13/10/2026: [RabbitMQ confirms](https://www.rabbitmq.com/docs/confirms), [DLX](https://www.rabbitmq.com/docs/dlx), [quorum](https://www.rabbitmq.com/docs/quorum-queues), [PostgreSQL INSERT](https://www.postgresql.org/docs/18/sql-insert.html). Confirm e ACK do consumidor são independentes; verificar returns mandatory mesmo com confirm positivo. ON CONFLICT coordena dentro da transação local completa.
+
+13/10/2026: [protocolo de banco 4.2 implementado e justificativa do trigger diferido](../architecture/milestone-4-2.md). Representação BYTEA v1; reserva/conclusão do recibo e estoque compartilham commit. Quarentena/runtime permanecem em 4.3.

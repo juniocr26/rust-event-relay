@@ -13,3 +13,5 @@ Application-managed preservation fits the existing classic queue, gives explicit
 [Full contracts, ACK matrix, limits, study and 4.2–4.4 acceptance](../architecture/milestone-4-1.md).
 
 Primary references checked 2026-10-13: [RabbitMQ confirms](https://www.rabbitmq.com/docs/confirms), [DLX](https://www.rabbitmq.com/docs/dlx), [quorum queues](https://www.rabbitmq.com/docs/quorum-queues), [PostgreSQL INSERT](https://www.postgresql.org/docs/18/sql-insert.html). Confirms and consumer acknowledgements are independent; mandatory returns must be checked even with a positive confirm. ON CONFLICT coordination belongs inside the complete local transaction.
+
+2026-10-13: [4.2 implemented database protocol and deferred-trigger rationale](../architecture/milestone-4-2.md). BYTEA representation v1; receipt reservation/completion and stock share one commit. Quarantine/runtime remain 4.3.

@@ -52,6 +52,7 @@ jobs:
       - run: cargo test --locked --test postgres_retry -- --ignored --test-threads=4
       - run: cargo test --locked --test postgres_discovery -- --ignored --test-threads=1
       - run: cargo test --locked --test postgres_replay -- --ignored --test-threads=1
+      - run: cargo test --locked --test postgres_consumer -- --ignored --test-threads=1
   rabbitmq-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 10

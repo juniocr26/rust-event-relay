@@ -19,6 +19,8 @@ pub enum ProcessingOutcome {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProcessingFailure {
     PreCommit,
+    /// Persisted content or receipt cannot be faithfully restored.
+    InvalidStoredData,
     CommitUncertain,
 }
 /// One transaction owns (consumer,event), increments stock and stores the receipt.

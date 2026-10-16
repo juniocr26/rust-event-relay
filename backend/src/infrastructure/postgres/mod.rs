@@ -395,3 +395,6 @@ mod tests {
 }
 
 mod replay;
+
+mod consumer;
+pub use consumer::PostgresInventoryProcessor;

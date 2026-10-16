@@ -22,9 +22,9 @@ Read purpose/setup first, then architecture and contracts, security and failures
 
 ## Current status and scope
 
-**Implemented today:** canonical event envelope, versioned PostgreSQL outbox/ownership/retry/replay schema, focused persistence contracts and adapters, confirmed RabbitMQ publication, sequential relay with bounded maintenance/reconnection/shutdown, durable retry and terminal preservation, poison discovery/isolation, opt-in authorized idempotent replay with audit, HTTP liveness, Docker/Supervisor operation and a Vue presentation frontend. The [acceptance matrix](docs/en/operations/milestone-3-review.md) separates isolated verification from shared running state and exact guarantees.
+**Implemented today:** canonical event envelope, versioned PostgreSQL outbox/ownership/retry/replay schema, focused persistence contracts and adapters, confirmed RabbitMQ publication, sequential relay with bounded maintenance/reconnection/shutdown, durable retry and terminal preservation, poison discovery/isolation, opt-in authorized idempotent replay with audit, atomic PostgreSQL inventory effect/deduplication with historical receipts, HTTP liveness, Docker/Supervisor operation and a Vue presentation frontend. The [acceptance matrix](docs/en/operations/milestone-3-review.md) separates isolated verification from shared running state and exact guarantees.
 
-**Planned / future exploration:** transactional producer writes, consumer idempotency, live frontend/backend integration, audited repair, worker pools/backpressure, webhooks, Redis Streams, readiness/metrics, retention, production TLS/HA and backup/recovery. The HTTP binary does not run the relay; replay-enabled HTTP connects to PostgreSQL. The frontend runs local illustrative scenarios only.
+**Planned / future exploration:** transactional producer writes, RabbitMQ consumer/quarantine runtime, live frontend/backend integration, audited repair, worker pools/backpressure, webhooks, Redis Streams, readiness/metrics, retention, production TLS/HA and backup/recovery. The HTTP binary does not run the relay; replay-enabled HTTP connects to PostgreSQL. The frontend runs local illustrative scenarios only.
 
 [Milestone 2.2](docs/en/architecture/milestone-2-2.md) implements the ownership decision, models, contracts and schema only. Leased events remain pending; expired owners cannot complete/release. Tokens protect database transitions but do not fence publication or establish end-to-end delivery.
 
@@ -123,7 +123,7 @@ The same arguments work with `supervisor`; run either command without arguments 
 
 ## Limits and philosophy
 
-`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. The binary has graceful HTTP shutdown; Supervisor bounds child shutdown to 30 seconds. The health route is unauthenticated; privileged replay routes use opt-in trusted bearer configuration and are disabled by default. Producer writes, consumer business idempotency, performance measurement and a production deployment image remain absent. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
+`/health` proves HTTP liveness only, with no infrastructure readiness or delivery guarantee. The binary has graceful HTTP shutdown; Supervisor bounds child shutdown to 30 seconds. The health route is unauthenticated; privileged replay routes use opt-in trusted bearer configuration and are disabled by default. Producer writes, RabbitMQ consumer runtime, performance measurement and a production deployment image remain absent. Future at-least-once delivery requires consumer idempotency; no exactly-once guarantee is claimed. Decisions will evolve through tests and documented failure experiments. Favor clear failure semantics, resource control and recovery over complexity or unmeasured claims.
 
 MIT licensed; see [LICENSE](LICENSE).
 
@@ -143,3 +143,5 @@ Durable retry schema, ownership/cycle/revision-protected scheduling and terminal
 Bounded discovery and fresh-authority isolation are implemented; replay remains 3.5 and integrated closure 3.6. Current local rollout is preserved; this change has no migration or shared restart. [Milestone 3.4 — current discovery/isolation](docs/en/architecture/milestone-3-4.md).
 
 [Milestone 3.5 — authorized replay](docs/en/architecture/milestone-3-5.md) | [Operator API](docs/en/operations/replay.md). Source implemented; migration 5 and privileged API activation remain pending on shared data.
+
+[Milestone 4.2 — atomic PostgreSQL inventory persistence](docs/en/architecture/milestone-4-2.md): implemented adapter/migration and isolated database evidence; RabbitMQ consumer/quarantine runtime remains 4.3.

@@ -1,3 +1,5 @@
+Current 4.2: six additive versions are tracked. Migration 20261014000000 creates consumer-owned stock/receipts; its down migration loses all stock and deduplication history. Validate only in exact isolated databases. Shared development still has four installed versions; replay 20261013000000 and consumer 20261014000000 are pending, without rollout authorization. [Protocol and constraints](../architecture/milestone-4-2.md).
+
 Current schema/contracts: [Milestone 3.2](../architecture/milestone-3-2.md). Earlier milestone sections below describe their original scope.
 
 Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](../guides/frontend-backend.md).

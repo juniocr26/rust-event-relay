@@ -165,6 +165,7 @@ fn ack_requires_commit_or_verified_duplicate() {
     }
     for error in [
         ProcessingFailure::PreCommit,
+        ProcessingFailure::InvalidStoredData,
         ProcessingFailure::CommitUncertain,
     ] {
         assert_eq!(

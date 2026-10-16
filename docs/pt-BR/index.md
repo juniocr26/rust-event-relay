@@ -114,3 +114,5 @@ Descoberta limitada e isolamento com autoridade atual implementados; replay perm
 ## Marco 4.1 — contratos implementados; runtime planejado
 
 [Estoque, deduplicação, quarentena e 4.2–4.4](architecture/milestone-4-1.md) | [ADR 010](adr/010-atomic-consumer-and-quarantine.md).
+
+[Milestone 4.2 — PostgreSQL](architecture/milestone-4-2.md).

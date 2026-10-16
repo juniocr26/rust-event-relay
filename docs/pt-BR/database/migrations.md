@@ -1,3 +1,5 @@
+Estado 4.2: seis versões aditivas no código. Migração 20261014000000 cria estoque/recibos do consumidor; down perde estoque e histórico de deduplicação. Validar somente em banco exato isolado. Desenvolvimento compartilhado conserva quatro versões instaladas; replay 20261013000000 e consumidor 20261014000000 pendentes, sem autorização de rollout. [Protocolo e constraints](../architecture/milestone-4-2.md).
+
 Schema/contratos atuais: [Marco 3.2](../architecture/milestone-3-2.md). Seções de marcos anteriores abaixo descrevem o escopo original.
 
 Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/backend`. Consulte [frontend/backend](../guides/frontend-backend.md).
