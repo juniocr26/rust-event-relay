@@ -1,3 +1,5 @@
+**Fechamento atual do Marco 5 (17/10/2026):** [5.3 protocolo, medições, matriz, rollout e decisões](operations/milestone-5-3.md) | [Dados finitos](../en/testing/milestone-5-3-results.json). Fechado com limitações explícitas não bloqueantes; Marco 6 indefinido. Entradas datadas anteriores permanecem históricas.
+
 # Catálogo de documentação: rust-event-relay
 
 [Introdução do projeto](../../README.pt-BR.md) | [Outro idioma](../en/index.md)

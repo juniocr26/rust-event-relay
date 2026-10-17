@@ -2,6 +2,37 @@
 
 # Resultados de validação
 
+## Marco 5.3 — medições finitas, verificação completa e fechamento — 17/10/2026
+
+[Protocolo, matriz completa, hashes de rollout e decisão](../operations/milestone-5-3.md) | [22 registros finitos](../../en/testing/milestone-5-3-results.json). Base inicialmente limpa `bde9cba132e8369e71395b7872586fc1a840b08e`; nenhum AGENTS.md aplicável em projeto/ancestrais. Teste/executor/docs/comentário do exemplo locais, sem stage/commit/push. Nenhuma fonte produtiva/dependência/migração alterada. Engineering Library/Viva Bem preservados.
+
+Main remoto exato e [run 39031053588](https://github.com/juniocr26/rust-event-relay/actions/runs/39031053588) conferidos: seis jobs obrigatórios aprovados para 5.2. Rollout nominal deliberado substituiu binários 5.1 carregados por 5.2 compilado locked de fonte limpa. HTTP/relay/consumer RUNNING, hashes carregados/instalados iguais aos selecionados; metrics/ready 200, health 200 ok, replay off. Sem migração compartilhada ou restart de dependências. Diff 5.3 sem CI remoto e sem deploy.
+
+| Check final | Resultado real |
+| --- | --- |
+| Campanha dedicada | Um teste Rust opt-in com 22 experimentos (três repetições × sete cenários + stale real), aprovado em 100,64s; 1.760 IDs medidos/adquiridos/confirmados/concluídos, 1.520 Applied, 240 Duplicate, 240 cópias exatas de quarentena, 2.000 retornos de ACK; nenhum resto inexplicado |
+| fmt / Clippy estrito all-targets/all-features | Aprovados |
+| cargo test --locked padrão | 102 passaram, 128 explicitamente ignorados, zero exemplos doc-test |
+| PostgreSQL repository / schema ownership / ownership / retry / discovery / replay / consumer / readiness | 15 / 1 / 12 / 18 / 7 / 10 / 12 / 3 passaram |
+| RabbitMQ publisher / adapters ignorados | 2 / 2 passaram, incluindo admissão imediata/cancelamento |
+| Consumer runtime | 22 entradas: 21 substantivas + uma child/no-op |
+| Integrated recovery | 18 entradas: 17 substantivas + uma child/no-op; regressão independente de log/barreira está separadamente na suíte padrão |
+| Worker / Supervisor isolado | Cinco substantivos passaram; controles nominais/interativos/recuperação de transporte |
+| Total opt-in único sem campanha | 127 entradas: 125 substantivas e duas auxiliares/no-op; sem inflar com repetições de desenvolvimento |
+| Três binários / rustdoc estrito | cargo build --locked --bins e RUSTDOCFLAGS=-D warnings cargo doc --locked --no-deps aprovados |
+| Frontend em cópia limpa | Node 22.23.3, npm ci pelo lockfile, type-check/build; 13 Chromium no Vite acceptance próprio; capturas mobile/tablet/desktop inspecionadas |
+| Migrações / Compose | Seis upgrades/checksums/no-op/down consumer/replay/re-up em banco descartável e ausência após remoção; Compose config --quiet aprovado |
+| Operação compartilhada somente leitura | Diagnósticos autenticados DB/broker; seis checksums, filas classic durable/bindings/permissões esperados; sem publish/get/purge compartilhados |
+| Scripts / dados | Nove Python analisados; seis shell aprovados em sh -n; JSON finito e hashes fonte/executor final conferidos |
+| Documentação | Validador de links locais e quatro regressões aprovados; anchors/remotos/certificação de tradução fora desse checker |
+| Git | git diff --check aprovado; sem stage/commit/push |
+
+Falhas de desenvolvimento preservadas: primeira fixture de duplicatas diferia na precisão de timestamp PostgreSQL e foi corrigida antes da medição final; contenção/freshness reforçados antes da campanha final. Primeiro wrapper de verificação impôs RUST_LOG=error, causando 11 falhas de barreira info; corrigido apenas o log de verificação para info e repetida a verificação final com sucesso, sem relaxar assertions/deadlines. Campanha mantém error e comportamento idêntico; hashes distinguem executor medido/final. Nenhum defeito/otimização produtivo inventado. Recursos próprios das execuções malsucedidas também removidos.
+
+Auditoria final: PIDs HTTP 30565, relay 30576, consumer 30589; manager/launchers iguais à fonte, sem restart desde rollout selecionado 5.2. Evento original `481fb751-81d5-46b7-aea2-eed344084725` processed/attempt_count=1, estoque 15, recibo 10+5→15/completed_at 2026-10-16 15:34:23.514788+00. Source/quarentena ready/unacked=0/0, consumers 1/0. Nenhum segredo obrigatório ausente/placeholder; três endereços de exporter ausentes da injeção usam defaults loopback validados. Sem container/rede de medição ou banco/fila de fixture residual; serviços/volumes anônimos próprios removidos; browser removido, capturas/logs só em /tmp, caches de build/browser são artefatos de validação. Dados/credenciais/serviços compartilhados preservados.
+
+**Marco 5 fechado com limitações explícitas não bloqueantes.** Presentation frontend verified; live backend integration is not implemented. Resultados finitos completion-paced não estabelecem capacidade máxima, saturação sustentada, teto global de memória/disco ou prontidão produtiva. Utilização por serviço, percentis produtivos de cauda/recuperação, HA/power-loss e certificação completa de browsers/acessibilidade não medidos. Projeto não declarado concluído; Marco 6 indefinido. Próximo escopo depende de decisão, sem implementação. Este diff de testes/docs/comentário não exige deploy 5.3; mudança futura de runtime exige rollout deliberado.
+
 ## Marco 5.2 — validação local e runtime 5.1 — 17/10/2026
 
 [Contrato, orçamentos, hashes do rollout e limites](../operations/milestone-5-2.md). O [run remoto 38974809458](https://github.com/juniocr26/rust-event-relay/actions/runs/38974809458) passou nos seis jobs para `9b0323af3fad769b1d0813e0330b32e87d64a91c` (5.1). Os resultados abaixo do diff 5.2 são locais, sem CI remoto/deploy. Executáveis carregados 5.1 permanecem nos caminhos originais; builds 5.2 usam `/app/target/m52`. Compilador observado: Rust 1.95.0.

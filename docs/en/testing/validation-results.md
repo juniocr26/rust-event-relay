@@ -2,6 +2,37 @@
 
 # Validation results
 
+## Milestone 5.3 — finite measurements, full verification and closure — 2026-10-17
+
+[Protocol, full capability matrix, rollout hashes and closure decision](../operations/milestone-5-3.md) | [22 bounded result records](milestone-5-3-results.json). Initial clean base `bde9cba132e8369e71395b7872586fc1a840b08e`; no applicable ancestor/project AGENTS.md was present. New test/script/docs and example-comment changes are local, unstaged and uncommitted. No production source/dependency/migration change. Engineering Library/Viva Bem untouched.
+
+Exact remote main and [CI run 39031053588](https://github.com/juniocr26/rust-event-relay/actions/runs/39031053588) verified: all six required jobs passed for 5.2. Deliberate named rollout replaced still-loaded 5.1 binaries with locked clean-source 5.2. HTTP/relay/consumer remain RUNNING, loaded and installed hashes match selected 5.2; role metrics/readiness 200, health 200 ok, replay disabled. No shared migration or dependency restart. New 5.3 diff has no remote CI result and was not deployed.
+
+| Final check | Actual result |
+| --- | --- |
+| Dedicated campaign | One opt-in Rust test passed, containing 22 experiments (three repetitions × seven scenarios + one actual stale-process regression), 100.64s; 1,760 measured unique IDs, 1,760 acquired/confirmed/completed, 1,520 Applied, 240 Duplicate, 240 exact quarantine copies, 2,000 ACK-send completions; no unexplained remainder |
+| fmt / strict all-target/all-feature Clippy | Passed |
+| Standard cargo test --locked | 102 passed, 128 explicitly ignored, zero doc-test examples |
+| PostgreSQL repository / ownership schema / ownership / retry / discovery / replay / consumer / readiness | 15 / 1 / 12 / 18 / 7 / 10 / 12 / 3 passed |
+| RabbitMQ publisher / ignored adapter tests | 2 / 2 passed, including immediate publisher admission and cancellation release |
+| Consumer runtime | 22 passed: 21 substantive + one child/no-op entry |
+| Integrated recovery | 18 passed: 17 substantive + one child/no-op entry; includes infrastructure-independent log-barrier regression in standard suite separately |
+| Worker / isolated Supervisor | Five substantive passed; named/interactive lifecycle and transport recovery |
+| Unique opt-in regression total excluding campaign | 127 entries: 125 substantive + two child/no-op; no inflation from development repetitions |
+| All three binaries / strict rustdoc | cargo build --locked --bins and RUSTDOCFLAGS=-D warnings cargo doc --locked --no-deps passed |
+| Frontend clean copy | Node 22.23.3, npm ci from lockfile, type-check/build; 13 Chromium tests passed on own Vite acceptance server; mobile/tablet/desktop screenshots inspected |
+| Migrations / Compose | Six ordered SQLx upgrades/checksums/no-op, consumer/replay down/re-up and exact disposable DB removal passed; Compose config --quiet passed |
+| Read-only shared operation | Authenticated PostgreSQL/RabbitMQ diagnostics passed; six shared checksums match; expected durable classic source/quarantine, bindings and permissions; no shared publish/get/purge |
+| Scripts / data | Nine Python files parsed; six shell scripts passed sh -n; bounded result JSON parsed and source/final-runner hashes checked |
+| Documentation | Local link validator and four validator regressions passed; heading anchors/remote links and translation certification excluded |
+| Git | git diff --check passed; no stage/commit/push |
+
+Development failures are retained as such: first duplicate fixture differed at PostgreSQL timestamp precision and was corrected before final measurement; later contention/freshness strengthened before final campaign. First verification wrapper forced RUST_LOG=error, causing 11 integrated-recovery log-barrier failures; corrected verification-only logging to info and reran final verification successfully, without relaxing assertions/deadlines. The campaign branch remains error and unchanged; recorded source digests distinguish actual measured runner from the final wrapper. No production defect/optimization was invented. All owned failed-run resources were also removed.
+
+Final read-only audit: shared HTTP PID 30565, relay 30576, consumer 30589; exact installed manager/launchers match source; no restart since selected 5.2 rollout. Original event `481fb751-81d5-46b7-aea2-eed344084725` processed/attempt_count=1, stock 15, receipt 10+5→15/completed_at 2026-10-16 15:34:23.514788+00. Source/quarantine ready/unacked=0/0, source consumers=1/quarantine=0. No required missing/placeholder secret; three absent exporter-address injected variables use validated loopback defaults. No owned measurement containers/networks, fixture databases or queues remained; disposable services/anonymous volumes removed; browser container removed, screenshots/logs only under /tmp, build/browser caches are verification artifacts. Shared data/credentials/services preserved.
+
+**Milestone 5 closed with explicit nonblocking limitations.** Presentation frontend verified; live backend integration is not implemented. Finite completion-paced results do not establish maximum capacity, sustained saturation, whole-process memory/storage ceilings or production readiness. No per-service utilization measurement, production tail/recovery percentile, HA/power-loss or complete browser/accessibility certification. Project is not declared finished; Milestone 6 remains undefined. Future scope is a decision list, not implementation. No 5.3 deployment required for this test/docs/comment diff; future runtime changes still require deliberate rollout.
+
 ## Milestone 5.2 — local validation and 5.1 runtime — 2026-10-17
 
 [Contract, budgets, rollout hashes and limitations](../operations/milestone-5-2.md). Remote [run 38974809458](https://github.com/juniocr26/rust-event-relay/actions/runs/38974809458) succeeded in all six jobs for `9b0323af3fad769b1d0813e0330b32e87d64a91c` (5.1). New 5.2 working-tree validation below is local, not remote CI or deployment. Shared 5.1 loaded executables remain at their original paths; all 5.2 builds use `/app/target/m52`. Rust actually reports 1.95.0.

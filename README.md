@@ -1,3 +1,5 @@
+**Current — Milestone 5 (2026-10-17):** [Reproducible measurements, full acceptance matrix and closure with explicit nonblocking limitations](docs/en/operations/milestone-5-3.md). Shared HTTP/relay/consumer deliberately rolled out to remotely validated 5.2; new 5.3 test/docs evidence is local and uncommitted. Presentation frontend verified; live backend integration is not implemented. Project production readiness is not established; Milestone 6 remains undefined. Earlier dated records below retain their historical scope.
+
 [English](README.md) | [Português brasileiro](README.pt-BR.md)
 
 # Reliable Event Relay

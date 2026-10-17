@@ -1,3 +1,5 @@
+**Fluxo atual de estudo — Marco 5.3:** outbox → aquisição relay → confirmação RabbitMQ → conclusão SQL relay → recibo/estoque consumer → envio ACK. Retry/incerteza, SQL dead_letter e quarentena broker são ramos separados; replay autorizado preserva identidade e não repete efeito já receipted. [Cenários medidos, cobertura e limites](../operations/milestone-5-3.md). Frontend continua ilustração local rotulada; Marco 6 indefinido.
+
 Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/backend`. Consulte [frontend/backend](frontend-backend.md).
 
 [English](../../en/guides/project-guide.md) | [README](../../../README.pt-BR.md)

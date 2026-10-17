@@ -1,3 +1,5 @@
+**Current study flow — Milestone 5.3:** outbox → relay acquisition → RabbitMQ confirmation → SQL relay completion → consumer receipt/stock → ACK-send. Retry/uncertainty, SQL dead_letter and broker quarantine are separate branches; authorized replay keeps identity and cannot repeat an already receipted effect. [Measured scenarios, full coverage and decision limits](../operations/milestone-5-3.md). Frontend remains a labelled local illustration; Milestone 6 is undefined.
+
 Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](frontend-backend.md).
 
 [Português brasileiro](../../pt-BR/guides/project-guide.md) | [README](../../../README.md)

@@ -1,3 +1,5 @@
+**Auditoria atual — 17/10/2026:** [5.3 revisão de configuração/conexões/topologia](../operations/milestone-5-3.md). Credenciais obrigatórias válidas; replay/maintenance vazios intencionalmente. Supervisor/launchers instalados iguais à fonte, consumer RUNNING/autostart=true; comentário `.env.example` corrigido. Três endereços de exporter ausentes da injeção antiga usam defaults verificados. Nenhum segredo, migração ou recriação necessária; observações abaixo mantêm suas datas.
+
 **Estado local atual — Marco 4.5 (2026-10-16):** [Rollout verificado e recuperação](../operations/milestone-4-5-rollout.md). Seis migrations aplicadas; artefatos atuais HTTP/relay/consumer instalados e ativos; consumer autostart=true. Backup protegido/restore isolado e demonstração real 10 → 15 → 15 verificados. API replay desabilitada; frontend continua simulação. Observações anteriores abaixo preservam suas datas.
 
 [Other language](../../en/docker/environment-inventory.md) | [Catalog](../index.md)

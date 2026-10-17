@@ -1,3 +1,5 @@
+**Aceitação atual 5.3 — 17/10/2026:** [Matriz completa e fechamento do Marco 5](milestone-5-3.md). 5.2 remoto selecionado e implantado deliberadamente; medições isoladas finitas/checks finais aprovados. Prontidão produtiva do projeto não estabelecida; Marco 6 indefinido. Entradas abaixo preservam seu escopo datado.
+
 **Estado local atual — Marco 4.5 (2026-10-16):** [Rollout verificado e recuperação](milestone-4-5-rollout.md). Seis migrations aplicadas; artefatos atuais HTTP/relay/consumer instalados e ativos; consumer autostart=true. Backup protegido/restore isolado e demonstração real 10 → 15 → 15 verificados. API replay desabilitada; frontend continua simulação. Observações anteriores abaixo preservam suas datas.
 
 Contrato operacional atual (17/10/2026): [5.2 prontidão/atualidade e rollout validado 5.1](milestone-5-2.md). Entradas anteriores abaixo preservam seu escopo histórico.

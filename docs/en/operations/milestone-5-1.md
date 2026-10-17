@@ -1,3 +1,5 @@
+[Current 5.3 measurements, remotely validated 5.2 rollout and Milestone 5 closure](milestone-5-3.md). Earlier pending statements below are historical.
+
 [Português brasileiro](../../pt-BR/operations/milestone-5-1.md) | [Catalog](../index.md)
 
 # Milestone 5.1 — resource boundaries and observability foundations

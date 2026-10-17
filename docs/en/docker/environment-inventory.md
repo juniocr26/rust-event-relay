@@ -1,3 +1,5 @@
+**Current audit — 2026-10-17:** [5.3 configuration/connection/topology review](../operations/milestone-5-3.md). Required credentials valid; optional replay/maintenance intentionally empty. Installed Supervisor/launchers match source, consumer RUNNING/autostart=true; `.env.example` comment corrected. Three exporter address variables absent from old container injection use verified defaults. No secret, migration or service recreation required; historical observations below retain their dates.
+
 **Current local state — Milestone 4.5 (2026-10-16):** [Verified rollout and recovery](../operations/milestone-4-5-rollout.md). Six migrations applied; current HTTP/relay/consumer artifacts installed and running; consumer autostart=true. Protected backup/isolated restore and real 10 → 15 → 15 demonstration verified. Replay API remains disabled; frontend remains simulation. Earlier observations below retain their dates.
 
 [Other language](../../pt-BR/docker/environment-inventory.md) | [Catalog](../index.md)

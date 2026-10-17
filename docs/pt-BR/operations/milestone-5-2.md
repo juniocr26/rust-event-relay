@@ -1,3 +1,5 @@
+[Medições atuais 5.3, rollout 5.2 validado remotamente e fechamento do Marco 5](milestone-5-3.md). Pendências datadas abaixo são históricas.
+
 [English](../../en/operations/milestone-5-2.md) | [Catálogo](../index.md)
 
 # Marco 5.2 — prontidão e atualidade operacional

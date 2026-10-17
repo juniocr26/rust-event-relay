@@ -1,3 +1,5 @@
+**Current deployment/evidence — 2026-10-17:** [5.3](milestone-5-3.md) records exact remote 5.2 CI, controlled named rollout, loaded hashes, finite isolated measurements and preserved demonstration. 5.3 itself is local test/docs/comment work and was not deployed. Older records below retain their original scope.
+
 ## Milestone 4.4 — current verification and closure — 2026-10-16
 
 Milestone 4 is closed with explicit nonblocking limitations. Real inventory/deduplication, ACK/quarantine and recovery evidence is separate from pending shared rollout. Presentation frontend verified; live backend integration is not implemented. Earlier dated sections retain their historical scope. [Verification matrix](../operations/milestone-4-4-review.md) | [Environment inventory](../docker/environment-inventory.md).

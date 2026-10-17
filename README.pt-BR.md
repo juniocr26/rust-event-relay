@@ -1,3 +1,5 @@
+**Atual — Marco 5 (17/10/2026):** [Medições reproduzíveis, matriz completa e fechamento com limitações explícitas não bloqueantes](docs/pt-BR/operations/milestone-5-3.md). HTTP/relay/consumer compartilhados receberam rollout deliberado do 5.2 validado remotamente; evidência nova 5.3 é local e não commitada. Frontend de apresentação verificado, integração live ausente. Prontidão produtiva do projeto não estabelecida; Marco 6 indefinido. Registros datados abaixo preservam seu escopo histórico.
+
 [English](README.md) | [Português brasileiro](README.pt-BR.md)
 
 # Reliable Event Relay
