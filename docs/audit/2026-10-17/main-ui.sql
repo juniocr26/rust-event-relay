@@ -1,0 +1,12 @@
+SELECT * FROM demo.runs WHERE run_id = '01a14af3-4765-747a-ac4d-c471ffde7fbe';
+SELECT * FROM demo.goods_receipts WHERE run_id = '01a14af3-4765-747a-ac4d-c471ffde7fbe';
+SELECT id,status,attempt_count,processed_at FROM relay.outbox_events WHERE id = '01a14af3-4765-747a-ac4d-c47252bdb61b';
+SELECT consumer_name,event_id,stock_before,quantity,stock_after,completed_at FROM consumer.receipts WHERE event_id = '01a14af3-4765-747a-ac4d-c47252bdb61b';
+SELECT * FROM demo.actions WHERE run_id = '01a14af3-4765-747a-ac4d-c471ffde7fbe';
+SELECT * FROM demo.actions WHERE request_id = '781f79a4-06f7-40db-a3e2-f80021fa40f4';
+SELECT * FROM demo.consumer_observations WHERE run_id = '01a14af3-4765-747a-ac4d-c471ffde7fbe';
+SELECT * FROM demo.publications WHERE run_id = '01a14af3-4765-747a-ac4d-c471ffde7fbe';
+SELECT * FROM demo.publications WHERE run_id = '01a14af3-4765-747a-ac4d-c471ffde7fbe' AND action_id = '01a14af3-4b6f-7090-9215-4572e226394b';
+SELECT * FROM demo.consumer_observations WHERE run_id = '01a14af3-4765-747a-ac4d-c471ffde7fbe' AND action_id = '01a14af3-4b6f-7090-9215-4572e226394b';
+SELECT * FROM demo.faults WHERE run_id = '01a14af3-4765-747a-ac4d-c471ffde7fbe';
+SELECT units FROM consumer.stock WHERE warehouse_id = 'demo-01a14af3-4765-747a-ac4d-c471ffde7fbe' AND sku = 'SKU-01a14af3-4765-747a-ac4d-c471ffde7fbe';

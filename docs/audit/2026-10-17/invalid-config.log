@@ -1,0 +1,3 @@
+missing: rejected before infrastructure startup: Create private .env from .env.example and configure infrastructure credentials first.
+malformed-token: rejected before infrastructure startup: DEMO_TOKEN must be a private 64-character hex token; value redacted.
+placeholders: rejected before infrastructure startup: Configure required values in .env (values redacted): POSTGRES_USER, POSTGRES_PASSWORD, RABBITMQ_DEFAULT_USER, RABBITMQ_DEFAULT_PASS

@@ -1,0 +1,13 @@
+BEGIN
+consumer.receipts|2|482f5c9cd4cf393557393e7e22cbfb7e
+consumer.stock|2|909bafa8efbf5c3a56b03d0c2d2b3a93
+demo.actions|1|ace90fda599b879b25bba64d67d183f3
+demo.consumer_observations|2|e5bd2e7759f6f6300087206abde4ed9e
+demo.faults|0|d41d8cd98f00b204e9800998ecf8427e
+demo.goods_receipts|1|d5c4c33cdaa9149b26263c7f6c951b1b
+demo.publications|2|f0d0374fc803dc3e71a25faa1928bfc3
+demo.runs|1|f947913532c925b77ab4f3c761826da7
+relay.outbox_events|2|a9e7ed71cc4dd1f05270a8a70bd7e77c
+relay.replay_requests|0|d41d8cd98f00b204e9800998ecf8427e
+public._sqlx_migrations|9|a262e2fca0489696b28c415634811b90
+COMMIT

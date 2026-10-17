@@ -1,0 +1,150 @@
+{
+  "git_base": "18893c865eba506e7d4a2124864920d82ce6237d",
+  "date": "2026-10-17",
+  "timezone": "America/Sao_Paulo",
+  "decision": "accepted for local portfolio scope",
+  "runtime_changes": false,
+  "candidate_additions": "Uncommitted documentation, evidence and root PDF; no final commit claimed.",
+  "commands": [
+    {
+      "command": "python3 -B scripts/measure-isolated.py verification",
+      "exit_code": 0,
+      "log": "verification.log",
+      "standard_passed": 102,
+      "standard_ignored": 141,
+      "selected_opt_in_entries_passed": 138,
+      "selected_helpers": 2,
+      "additional_library_opt_ins_passed": 2
+    },
+    {
+      "command": "python3 -B scripts/test-application.py",
+      "exit_code": 0,
+      "browser_passed": 27,
+      "log": "application.log"
+    },
+    {
+      "command": "python3 -B scripts/test-clean-install.py",
+      "exit_code": 0,
+      "browser_passed": 24,
+      "standard_rust_passed": 102,
+      "log": "clean-install.log"
+    },
+    {
+      "command": "python3 -B scripts/measure-isolated.py campaign",
+      "exit_code": 0,
+      "substantive_tests_passed": 1,
+      "trials": 22,
+      "log": "capacity.log"
+    },
+    {
+      "command": "python3 -B scripts/check-migrations.py",
+      "exit_code": 0,
+      "migrations": 9,
+      "log": "migrations.log"
+    }
+  ],
+  "unique_rust_entries_passed": 243,
+  "substantive_rust_tests_passed": 241,
+  "helper_dispatchers": 2,
+  "remote_ci": "unverified",
+  "production_readiness": "not established",
+  "files": {
+    "after.txt": {
+      "sha256": "d57f7cebf84090be7f620e4ace0d806db8bfdb1f8088cfee948c65ce59abb41d",
+      "bytes": 597
+    },
+    "application.log": {
+      "sha256": "230a45428519240b1698f2a3d5f79d61959ca7795150d070112f702023280bc6",
+      "bytes": 10198
+    },
+    "before.txt": {
+      "sha256": "d57f7cebf84090be7f620e4ace0d806db8bfdb1f8088cfee948c65ce59abb41d",
+      "bytes": 597
+    },
+    "capacity.log": {
+      "sha256": "90d9edc99b887b4bcfd2fa6a32fc5b873fd89921e517399817963fa73de73c5e",
+      "bytes": 19655
+    },
+    "clean-install-result.json": {
+      "sha256": "91e216b39b1edddcf3845aa10b48c4200af8de4afaabd25b2f8639241be81dbb",
+      "bytes": 244
+    },
+    "clean-install.log": {
+      "sha256": "6a3e3196a209ba90a49828a14b1ce9aa2764e8c7873be9a828b9c8d229118cf3",
+      "bytes": 60278
+    },
+    "history-1920.png": {
+      "sha256": "dd84e989aa490d84ebe9b834738b43ce5dd4fe0ee4d20a16f15d059080050fde",
+      "bytes": 237527
+    },
+    "history-320.png": {
+      "sha256": "6df6a0b0818256129dd1b8b513c7cc677794f4d2029411e0503caf066a2995db",
+      "bytes": 84459
+    },
+    "history-768.png": {
+      "sha256": "07c74fb3e97a151956fb8797d3e1a4ad6a78a6b915462dc50227f0f45e13559d",
+      "bytes": 131826
+    },
+    "invalid-config.log": {
+      "sha256": "fb141ae1b35969bf22bf77a11f58ddcc1aa0ca1e4223e7ff69f47d9fcd42f14c",
+      "bytes": 447
+    },
+    "live-1920.png": {
+      "sha256": "2fde8863917c89d4865a2521701ac5e9f83fe09cb82c3b7b565bcb14494300d4",
+      "bytes": 197297
+    },
+    "live-320.png": {
+      "sha256": "d67db8ff331998e0f8d7fde0ccafe2f9a7dc07eea3d7eeda5efbac19fa7599bd",
+      "bytes": 61328
+    },
+    "local-checks.log": {
+      "sha256": "75a8000f7c5b45c51a9219554e6ce7d98ee80e7ad14eeb9a5aee6cb5739168da",
+      "bytes": 218
+    },
+    "main-browser.log": {
+      "sha256": "280e9c91eeda3045d4d10d0d3eb80e9aee0bb3547c27984fee2ccf6253ddb610",
+      "bytes": 95
+    },
+    "main-state.json": {
+      "sha256": "3b4d0261505103b2707f40de6964414748ab745815fd0dc7a93de9f48b82dfcf",
+      "bytes": 2332
+    },
+    "main-ui-sql-result.txt": {
+      "sha256": "8d78631ccf72a0b2dae9c4d8df133b997fa9e9e90c6783384c85e07a4f2767ea",
+      "bytes": 2040
+    },
+    "main-ui.png": {
+      "sha256": "c5291d2e53b568c2a709ba466d91af85c6d33c52da065c32e52a23a279e93c57",
+      "bytes": 172126
+    },
+    "main-ui.sql": {
+      "sha256": "7a9e573e8d590bbdaa4c58348a5bfaeb7c1f0b61d3f0850ed3b695b6840bcb1e",
+      "bytes": 1321
+    },
+    "migrations.log": {
+      "sha256": "817782ea7527eb2205c7100974d89c69403723305eb6a9a07b88f2e56a2c9afb",
+      "bytes": 170
+    },
+    "report-qa.json": {
+      "sha256": "b4a23ed5eba90a221df146713edc666601da99c9bf37868951778eda7a632da9",
+      "bytes": 482
+    },
+    "stale.png": {
+      "sha256": "c31774d5ae9bd134e9eaf712e88a41a03172293480f3ddaf6bfe3b3661ca0114",
+      "bytes": 135477
+    },
+    "unknown.png": {
+      "sha256": "3f33a94d21b6350241a530fe4c241e73326854037babc0f70d67323956716caf",
+      "bytes": 109480
+    },
+    "verification.log": {
+      "sha256": "c4871e080a6e7855c3314fbeeff0e7cb7383c096f163e5ad7860aa7975f18ddc",
+      "bytes": 45808
+    }
+  },
+  "pdf": {
+    "path": "PROJECT_FINAL_AUDIT.pdf",
+    "sha256": "10ed8d09732a8cdebb6490b76078b1cf27f725d43d86e0c4f02b3de50e46cd74",
+    "pages": 22
+  }
+}

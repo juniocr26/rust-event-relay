@@ -1,0 +1,675 @@
+Owned disposable resources: relay-m53-45b24864110a45e49fdcc1267a55acb4 suite: verification
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.70s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.46s
+     Running unittests src/lib.rs (/app/target/m52/debug/deps/reliable_event_relay-c244f2eff3b6e747)
+
+running 27 tests
+test application::readiness::tests::transitions_degradation_recovery_freshness_and_sticky_shutdown ... ok
+test application::readiness::tests::optional_database_is_required_only_when_enabled ... ok
+test config::tests::rejects_invalid_address_and_empty_environment ... ok
+test config::tests::defaults_are_valid ... ok
+test infrastructure::postgres::consumer::tests::failure_sources_are_typed_and_public_formatting_is_sanitized ... ok
+test infrastructure::postgres::ownership::tests::commit_classification_depends_on_acknowledgement ... ok
+test infrastructure::postgres::tests::checked_limit ... ok
+test infrastructure::postgres::tests::driver_classification_and_sanitized_sources ... ok
+test infrastructure::postgres::tests::json_preserves_precision_and_rejects_unsupported_representations ... ok
+test infrastructure::postgres::tests::faithful_restoration ... ok
+test infrastructure::postgres::tests::rejects_malformed_values_without_partial_results ... ok
+test infrastructure::postgres::tests::sqlstate_classification_is_conservative ... ok
+test infrastructure::postgres::tests::timestamps_reject_infinity_and_chrono_overflow ... ok
+test infrastructure::rabbitmq::consumer::tests::reconnect_pacing_waits_and_is_interruptible ... ok
+test infrastructure::rabbitmq::consumer::tests::validates_prefetch_separation_and_configuration_bounds ... ok
+test infrastructure::rabbitmq::properties::tests::refuses_size_depth_and_node_excess_without_normalization ... ok
+test infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable ... ignored, requires real RabbitMQ and explicit credentials
+test infrastructure::rabbitmq::tests::confirms_and_sources_are_sanitized ... ok
+test infrastructure::rabbitmq::tests::publisher_admission_is_immediate_and_released_after_error_and_cancellation ... ignored, requires real RabbitMQ and explicit credentials
+test infrastructure::rabbitmq::properties::tests::preserves_binary_numeric_types_and_nonfinite_bits_with_collision_isolation ... ok
+test infrastructure::rabbitmq::tests::refused_connection_retains_driver_source ... ok
+test infrastructure::rabbitmq::tests::validates_deadlines_and_redacts_config ... ok
+test telemetry::metrics::tests::exporter_admits_at_most_four_connections_and_cleans_up_stalled_clients ... ok
+test telemetry::metrics::tests::exporter_serves_only_metrics_and_releases_listener_on_shutdown ... ok
+test telemetry::metrics::tests::fixed_registry_tracks_cancellation_and_cumulative_buckets ... ok
+test telemetry::metrics::tests::validates_all_addresses_and_collision_combinations ... ok
+test infrastructure::rabbitmq::tests::stalled_handshake_is_bounded_and_retains_timeout_source ... ok
+
+test result: ok. 25 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running unittests src/bin/consumer.rs (/app/target/m52/debug/deps/consumer-47e0436089e1c7b6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/demo.rs (/app/target/m52/debug/deps/demo-bf0b1761b59595c3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/relay.rs (/app/target/m52/debug/deps/relay-1cd8f57aac6fa499)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/app/target/m52/debug/deps/reliable_event_relay-54ce76b8e77abaa2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/capacity_measurements.rs (/app/target/m52/debug/deps/capacity_measurements-01760ffad54e5c8a)
+
+running 1 test
+test finite_capacity_and_recovery_campaign ... ignored, dedicated disposable PostgreSQL/RabbitMQ only; explicit protocol required
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/consumer_application.rs (/app/target/m52/debug/deps/consumer_application-ad2c076856518402)
+
+running 9 tests
+test cancellation_has_no_compensating_follow_up ... ok
+test committed_and_duplicate_outcomes_precede_ack ... ok
+test database_errors_never_quarantine_or_ack ... ok
+test conflict_retains_primary_and_secondary_errors ... ok
+test failed_quarantine_never_counts_confirmed_or_ack_success ... ok
+test invalid_inputs_never_reach_persistence_and_confirm_before_ack ... ok
+test phase_timeouts_cannot_authorize_follow_up_ack ... ok
+test unsupported_preservation_never_truncates_or_acks ... ok
+test observations_distinguish_effect_quarantine_and_ack_send_and_uncertainty ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/consumer_contract.rs (/app/target/m52/debug/deps/consumer_contract-09cbd7299a43e2e3)
+
+running 7 tests
+test ack_requires_commit_or_verified_duplicate ... ok
+test preservation_bounds_do_not_truncate_evidence ... ok
+test quantity_and_stock_boundaries ... ok
+test crash_or_uncertain_source_ack_can_duplicate_quarantine_publication ... ok
+test stable_identity_and_identifier_bounds ... ok
+test supported_schema_and_immutable_comparison ... ok
+test quarantine_preflight_bounds_raw_escaped_bytes_nodes_and_depth ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/consumer_runtime.rs (/app/target/m52/debug/deps/consumer_runtime-fdf00086f54a9efc)
+
+running 23 tests
+test compiled_consumer_exports_applied_duplicate_and_quarantine_without_business_labels ... ignored, requires isolated PostgreSQL and RabbitMQ
+test compiled_consumer_prefetch_drain_and_buffered_recovery ... ignored, requires isolated PostgreSQL and RabbitMQ
+test incompatible_source_declaration_is_sanitized_and_keeps_existing_queue ... ignored, requires isolated PostgreSQL and RabbitMQ
+test isolated_supervisor_consumer_is_opt_in_and_named_start_stop_works ... ignored, requires isolated PostgreSQL, RabbitMQ and Supervisor in app
+test lost_database_commit_ack_redelivery_has_one_effect ... ignored, requires isolated PostgreSQL and RabbitMQ
+test lost_quarantine_confirmation_retains_source_and_allows_duplicate_preservation ... ignored, requires isolated PostgreSQL and RabbitMQ
+test mandatory_return_and_known_database_failure_retain_original ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_boundary_child ... ignored, internal child entry; no-op without CONSUMER_BOUNDARY_FILE
+test milestone44_cancel_after_observed_commit_retains_source ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_concurrent_deliveries_keep_one_effect_per_identity ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_full_quarantine_rejects_without_source_ack ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_kill_after_commit_and_quarantine_before_ack ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_kill_before_commit_rolls_back_and_restart_applies ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_lost_source_ack_redelivers_committed_duplicate ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_missing_quarantine_exchange_retains_source ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_oversize_stops_for_operator_without_source_ack ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_sql_replay_preserves_identity_and_consumer_effect ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone62_committed_duplicate_observation_survives_lost_ack ... ignored, requires isolated PostgreSQL and RabbitMQ
+test missing_consumer_schema_fails_before_subscription ... ignored, requires isolated PostgreSQL and RabbitMQ
+test readiness_tracks_subscription_outage_and_recovery_without_messages ... ignored, requires isolated PostgreSQL and RabbitMQ
+test real_effect_duplicate_conflict_and_invalid_preservation ... ignored, requires isolated PostgreSQL and RabbitMQ
+test runtime_resubscribes_after_server_cancellation_and_shutdown_idle ... ignored, requires isolated PostgreSQL and RabbitMQ
+test unavailable_database_and_poisoned_source_ack_keep_primary_and_recover ... ignored, requires isolated PostgreSQL and RabbitMQ
+
+test result: ok. 0 passed; 0 failed; 23 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/delivery_ownership.rs (/app/target/m52/debug/deps/delivery_ownership-726c6802281b4a52)
+
+running 5 tests
+test lease_validation_and_exact_expiry ... ok
+test recovery_replaces_authority_and_rejects_expired_and_stale_owners ... ok
+test release_and_counter_limits_without_partial_mutation ... ok
+test terminal_and_lease_shape_invariants ... ok
+test contracts_preserve_identity_and_separate_conflicts_from_unknown_commits ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/delivery_ownership_schema.rs (/app/target/m52/debug/deps/delivery_ownership_schema-005236523d5f8f44)
+
+running 1 test
+test migration_preserves_rows_checks_ownership_and_keeps_reader_observational ... ignored, requires PostgreSQL and CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/delivery_use_case.rs (/app/target/m52/debug/deps/delivery_use_case-3934e4fbbed3d897)
+
+running 11 tests
+test completion_waits_for_explicit_publisher_confirmation ... ok
+test acquisition_observations_do_not_infer_claims_or_publications_on_failure ... ok
+test confirmation_is_required_and_cancellation_stops_subsequent_calls ... ok
+test confirmed_publication_then_every_completion_result_without_cleanup_or_retry ... ok
+test empty_or_failed_acquisition_has_no_subsequent_effect ... ok
+test durable_schedule_and_terminal_metrics_require_acknowledged_applied_transition ... ok
+test every_definitive_final_failure_stops_while_final_acceptance_can_complete ... ok
+test final_and_permanent_failures_terminalize_with_independent_results ... ok
+test final_uncertainty_retains_and_scheduling_samples_once_or_reports_policy_failure ... ok
+test every_publication_failure_preserves_primary_and_handling_outcomes ... ok
+test observations_keep_confirm_even_when_completion_is_uncertain_or_cancelled ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/demo_runs.rs (/app/target/m52/debug/deps/demo_runs-d79fb7b74059e91e)
+
+running 12 tests
+test action_concurrent_identity_conflict_and_lost_commit_recovery ... ignored, requires isolated PostgreSQL
+test atomic_idempotent_concurrent_and_independent_effect ... ignored, requires isolated PostgreSQL
+test authorized_read_and_csrf_boundaries ... ignored, requires isolated PostgreSQL
+test cancellation_after_server_commit_recovers_without_new_run ... ignored, requires isolated PostgreSQL
+test correlated_observation_survives_reprocessing_without_second_effect ... ignored, requires isolated PostgreSQL
+test finite_admission_preserves_pending_work ... ignored, requires isolated PostgreSQL
+test interrupted_publication_action_is_unknown_and_never_reissued ... ignored, requires isolated PostgreSQL
+test lost_commit_ack_recovers_same_identity ... ignored, requires isolated PostgreSQL
+test multiple_actions_preserve_history_and_refuse_destructive_rollback ... ignored, requires isolated PostgreSQL
+test rejected_transaction_rolls_back_all_producer_records ... ignored, requires isolated PostgreSQL
+test retained_capacity_stops_without_eviction ... ignored, requires isolated PostgreSQL
+test retained_history_pages_include_pending_runs_without_mutation ... ignored, requires isolated PostgreSQL
+
+test result: ok. 0 passed; 0 failed; 12 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/event_envelope.rs (/app/target/m52/debug/deps/event_envelope-568e7e47d57b2c2f)
+
+running 6 tests
+test creates_event_with_generated_v7_identity_and_utc_time ... ok
+test normalizes_offset_timestamps_to_utc ... ok
+test deserialization_enforces_envelope_validation ... ok
+test rejects_empty_and_whitespace_identifiers_and_zero_version ... ok
+test restores_identity_and_time_and_serializes_exact_wire_shape ... ok
+test round_trip_preserves_generated_event_and_optional_metadata ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/integrated_recovery.rs (/app/target/m52/debug/deps/integrated_recovery-062cbafc80cb6fd0)
+
+running 19 tests
+test authorized_http_replay_new_cycle_confirmed_publication_and_completion ... ignored, requires PostgreSQL/RabbitMQ; isolated resources only
+test boundary_child ... ignored, internal child entry; no-op without RECOVERY_CHILD
+test committed_schedule_terminal_and_replay_survive_process_kill_with_final_budget_success ... ignored, requires PostgreSQL/RabbitMQ; isolated resources only
+test compiled_relay_exports_publication_and_database_completion_separately ... ignored, requires isolated PostgreSQL and RabbitMQ
+test configured_worker_maintenance_protects_live_final_owner_and_keeps_general_delivery_possible ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test confirmed_publication_with_lost_completion_ack_is_not_replayed ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test crash_before_send_and_after_confirmation_recover_after_real_expiration ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test database_lock_deadline_fails_completion_without_premature_processed_state ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test definitive_unroutable_schedules_recovers_original_and_preserves_final_failure ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test discovered_poison_isolated_before_independent_real_publication ... ignored, requires PostgreSQL/RabbitMQ; isolated resources only
+test graceful_shutdown_cancels_blocked_completion_then_expired_work_recovers ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test harness_cleans_exact_resources_after_assertion_failure ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test integrated_worker_replaces_failed_delivery_connection_before_fresh_acquisition ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test ordinary_completion_failure_recovers_and_stale_owner_cannot_transition ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test real_worker_discovers_beyond_unsafe_prefix_and_publishes_valid_identity ... ignored, requires PostgreSQL/RabbitMQ; isolated resources only
+test real_worker_waits_for_broker_availability_and_shutdown_interrupts_reconnect ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test two_real_workers_have_distinct_durable_owners_before_completion ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test uncertain_publication_retains_claim_and_fresh_connection_does_not_replay ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test exited_boundary_child_reports_sanitized_phase_without_waiting_for_deadline ... ok
+
+test result: ok. 1 passed; 0 failed; 18 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/lifecycle.rs (/app/target/m52/debug/deps/lifecycle-a98e27b692dd68a6)
+
+running 2 tests
+test health_and_graceful_shutdown ... ok
+test binary_loads_dotenv_and_handles_signals ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+
+     Running tests/maintenance.rs (/app/target/m52/debug/deps/maintenance-d9edbb374a7d3f9c)
+
+running 3 tests
+test discovery_errors_never_authorize_isolation_or_erase_progress ... ok
+test consumes_observation_before_conflict_or_uncertainty_and_requires_fresh_discovery ... ok
+test unsafe_and_live_observations_advance_without_mutation ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/operational_readiness.rs (/app/target/m52/debug/deps/operational_readiness-aeebd9ca957c598f)
+
+running 4 tests
+test enabled_replay_database_degradation_preserves_http_liveness_and_recovers ... ignored, requires isolated PostgreSQL
+test sampler_lock_failure_recovery_and_single_flight ... ignored, requires isolated PostgreSQL
+test sampler_overall_deadline_never_reports_success ... ignored, requires isolated PostgreSQL
+test reachable_unready_ready_stopping_and_absence_do_not_poll_dependencies ... ok
+
+test result: ok. 1 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/persistence_contract.rs (/app/target/m52/debug/deps/persistence_contract-ac696bd451240e17)
+
+running 5 tests
+test bounded_requests_reject_zero_without_an_arbitrary_maximum ... ok
+test generic_caller_handles_empty_snapshot_and_classified_failure ... ok
+test pending_snapshot_preserves_canonical_identity_and_keeps_metadata_separate ... ok
+test generic_caller_uses_bounded_contract_on_a_send_future ... ok
+test persistence_errors_keep_classification_and_sources_but_redact_formatting ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_consumer.rs (/app/target/m52/debug/deps/postgres_consumer-88e05b9f1dea30c9)
+
+running 12 tests
+test atomic_effect_history_conflict_scopes_and_overflow ... ignored, requires isolated PostgreSQL
+test cancellation_before_admission_and_while_waiting_leaves_no_effect ... ignored, requires isolated PostgreSQL
+test concurrent_identical_conflicting_and_distinct_deliveries ... ignored, requires isolated PostgreSQL
+test concurrent_loser_reads_winners_completed_receipt_after_wait ... ignored, requires isolated PostgreSQL
+test consumer_upgrade_preserves_existing_relay_envelope_and_history ... ignored, requires isolated PostgreSQL
+test lost_ack_and_cancellation_after_observed_commit ... ignored, requires isolated PostgreSQL
+test restricted_consumer_grants_allow_atomic_adapter_without_receipt_removal ... ignored, requires isolated PostgreSQL and test-owned NOLOGIN role creation
+test schema_constraints_completeness_immutability_and_down_up ... ignored, requires isolated PostgreSQL
+test statement_and_deferred_rejections_rollback_both_writes ... ignored, requires isolated PostgreSQL
+test stored_representation_validation_and_exact_roundtrip ... ignored, requires isolated PostgreSQL
+test unavailable_pool_retains_typed_diagnostics_without_mutation ... ignored, requires isolated PostgreSQL
+test waiting_writer_rollback_and_lock_deadline ... ignored, requires isolated PostgreSQL
+
+test result: ok. 0 passed; 0 failed; 12 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_discovery.rs (/app/target/m52/debug/deps/postgres_discovery-28ed6c1b47a56ce3)
+
+running 7 tests
+test active_final_owner_completion_and_expired_owner_are_distinguished ... ignored, requires PostgreSQL and CREATE DATABASE
+test exact_selection_hint_revalidates_without_repairing_unsafe_prefix ... ignored, requires PostgreSQL and CREATE DATABASE
+test locks_concurrent_scanners_stale_revision_cycle_and_unversioned_repair_are_safe ... ignored, requires PostgreSQL and CREATE DATABASE
+test mixed_candidates_preserve_raw_history_and_allow_independent_delivery ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejected_and_uncertain_commits_and_cancelled_ack_are_observed_independently ... ignored, requires PostgreSQL and CREATE DATABASE
+test traversal_progresses_past_unmanageable_rows_and_wraps_changes_and_insertions ... ignored, requires PostgreSQL and CREATE DATABASE
+test unsupported_versions_timestamps_and_unsafe_metadata_require_repair ... ignored, requires PostgreSQL and CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_ownership.rs (/app/target/m52/debug/deps/postgres_ownership-922322c66bafdd6d)
+
+running 12 tests
+test acquisition_acknowledgement_does_not_promise_remaining_lease_time ... ignored, requires PostgreSQL and CREATE DATABASE
+test acquisition_eligibility_single_row_counter_and_reader_observation ... ignored, requires PostgreSQL and CREATE DATABASE
+test cancelling_a_lock_wait_leaves_fixture_unchanged_and_pool_usable ... ignored, requires PostgreSQL and CREATE DATABASE
+test completion_and_release_sample_time_after_lock_wait_expiration ... ignored, requires PostgreSQL and CREATE DATABASE
+test concurrent_acquirers_are_disjoint_and_skip_locked_does_not_prove_empty_backlog ... ignored, requires PostgreSQL and CREATE DATABASE
+test expired_owner_is_rejected_and_recovery_replaces_token ... ignored, requires PostgreSQL and CREATE DATABASE
+test lost_commit_acknowledgement_returns_uncertain_and_durable_state_is_inspected_separately ... ignored, requires PostgreSQL and CREATE DATABASE
+test malformed_selected_data_and_duration_overflow_do_not_mutate_or_skip ... ignored, requires PostgreSQL and CREATE DATABASE
+test maximum_counter_and_pre_acquisition_time_reject_without_partial_changes ... ignored, requires PostgreSQL and CREATE DATABASE
+test release_reacquisition_and_completion_preserve_identity_and_metadata ... ignored, requires PostgreSQL and CREATE DATABASE
+test server_rejected_commit_is_known_failure_and_rolls_back_all_operations ... ignored, requires PostgreSQL and CREATE DATABASE
+test statement_rejection_before_commit_is_not_commit_uncertainty ... ignored, requires PostgreSQL and CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 12 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_replay.rs (/app/target/m52/debug/deps/postgres_replay-52cc7eed14276386)
+
+running 10 tests
+test atomic_preservation_idempotency_authorization_and_fresh_acquisition ... ignored, requires isolated PostgreSQL
+test audit_terminal_evidence_canonical_fields_and_revision_limits ... ignored, requires isolated PostgreSQL
+test concurrent_changed_intent_and_deferred_commit_rejection ... ignored, requires isolated PostgreSQL
+test concurrent_request_identity_and_same_revision ... ignored, requires isolated PostgreSQL
+test rejected_transaction_and_lock_wait_recheck ... ignored, requires isolated PostgreSQL
+test rejects_invalid_states_content_and_capacity_without_mutation ... ignored, requires isolated PostgreSQL
+test replay_competes_with_stale_discovery_isolation_and_acquisition ... ignored, requires isolated PostgreSQL
+test replay_down_removes_audit_metadata_without_reversing_reenabled_event ... ignored, requires isolated PostgreSQL
+test supported_interpretation_boundary_delay_and_maintenance_contention ... ignored, requires isolated PostgreSQL
+test uncertain_commit_and_cancelled_result_have_independent_receipts ... ignored, requires isolated PostgreSQL fault proxy
+
+test result: ok. 0 passed; 0 failed; 10 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_repository.rs (/app/target/m52/debug/deps/postgres_repository-c8deca6843faab65)
+
+running 16 tests
+test committed_schema_fixture_validates_constraints_and_rolls_back ... ignored, requires PostgreSQL and CREATE DATABASE
+test eligibility_bounds_and_adapter_tie_breakers ... ignored, requires PostgreSQL and CREATE DATABASE
+test harness_cleans_up_after_assertion_failure ... ignored, requires PostgreSQL and CREATE DATABASE
+test harness_cleans_up_after_returned_error ... ignored, requires PostgreSQL and CREATE DATABASE
+test malformed_excluded_rows_do_not_poison_eligible_batch ... ignored, requires PostgreSQL and CREATE DATABASE
+test missing_table_preserves_typed_database_failure ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_blank_aggregate_id ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_blank_aggregate_type ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_blank_event_type ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_finite_timestamp_outside_chrono ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_negative_infinite_occurrence ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_positive_infinite_occurrence ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_selected_negative_infinite_availability ... ignored, requires PostgreSQL and CREATE DATABASE
+test repeated_and_independent_readers_observe_without_mutation ... ignored, requires PostgreSQL and CREATE DATABASE
+test restores_every_envelope_field_and_pending_metadata ... ignored, requires PostgreSQL and CREATE DATABASE
+test closed_pool_and_oversized_limit_fail_through_public_contract ... ok
+
+test result: ok. 1 passed; 0 failed; 15 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/postgres_retry.rs (/app/target/m52/debug/deps/postgres_retry-31848736a8888df2)
+
+running 18 tests
+test cancellation_after_server_commit_suppresses_results_but_not_durable_mutations ... ignored, requires PostgreSQL and CREATE DATABASE
+test cancellation_of_owned_lock_waits_leaves_no_partial_changes_and_maintenance_skips_lock ... ignored, requires PostgreSQL and CREATE DATABASE
+test concurrent_acquirers_cannot_overspend_and_final_failure_can_terminalize ... ignored, requires PostgreSQL and CREATE DATABASE
+test delivery_reports_lost_schedule_and_terminal_ack_without_repeating_or_erasing_primary ... ignored, requires PostgreSQL and CREATE DATABASE
+test exact_budget_boundary_final_completion_and_no_scheduling_bypass ... ignored, requires PostgreSQL and CREATE DATABASE
+test lost_commit_ack_new_transitions_are_observed_independently_never_blindly_retried ... ignored, requires PostgreSQL and CREATE DATABASE
+test maintenance_checks_due_state_revision_live_lease_and_storage_exhaustion ... ignored, requires PostgreSQL and CREATE DATABASE
+test maintenance_competes_safely_and_never_invents_envelope_validity ... ignored, requires PostgreSQL and CREATE DATABASE
+test migration_preserves_all_old_states_leases_and_history_and_isolated_down ... ignored, requires PostgreSQL and CREATE DATABASE
+test owned_transitions_reject_identity_cycle_revision_and_expired_authority ... ignored, requires PostgreSQL and CREATE DATABASE
+test persisted_noninitial_cycle_allowance_and_terminal_reason_evidence_are_enforced ... ignored, requires PostgreSQL and CREATE DATABASE
+test revision_and_counter_storage_boundaries_fail_without_partial_changes ... ignored, requires PostgreSQL and CREATE DATABASE
+test schedule_is_atomic_preserves_history_and_blocks_early_acquisition ... ignored, requires PostgreSQL and CREATE DATABASE
+test scheduling_samples_time_after_lock_and_expired_waiters_are_rejected ... ignored, requires PostgreSQL and CREATE DATABASE
+test schema_rejects_invalid_history_null_evidence_and_terminal_shapes ... ignored, requires PostgreSQL and CREATE DATABASE
+test statement_and_commit_rejections_roll_back_every_new_mutation ... ignored, requires PostgreSQL and CREATE DATABASE
+test terminal_waiters_lose_expired_authority_and_maintenance_skips_completion_lock ... ignored, requires PostgreSQL and CREATE DATABASE
+test terminalization_preserves_event_and_is_not_success_or_repeat_success ... ignored, requires PostgreSQL and CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 18 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/rabbitmq_publisher.rs (/app/target/m52/debug/deps/rabbitmq_publisher-f103b516bcc865f3)
+
+running 2 tests
+test routed_envelope_properties_and_mandatory_return ... ignored, requires a real RabbitMQ broker and explicit credentials
+test withheld_confirmation_timeout_and_cancellation_are_uncertain_without_retry ... ignored, requires a real RabbitMQ broker and explicit credentials
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/replay_application.rs (/app/target/m52/debug/deps/replay_application-b93414f90a624982)
+
+running 2 tests
+test structural_boundaries ... ok
+test deny_every_path_before_io_and_validate_budget ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/replay_http.rs (/app/target/m52/debug/deps/replay_http-b3b922439283c27f)
+
+running 3 tests
+test configuration_is_bounded_and_has_no_client_privilege_fields ... ok
+test replay_admission_rejects_before_body_read_and_releases_on_cancel ... ok
+test actual_bearer_boundary_denies_mutation_repeats_and_lookup ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/retry_policy.rs (/app/target/m52/debug/deps/retry_policy-b33d300bd03a2d60)
+
+running 4 tests
+test budget_counts_acquisitions_preserves_history_and_distinguishes_storage_limit ... ok
+test exponential_ceiling_and_equal_jitter_have_exact_bounded_endpoints ... ok
+test integrated_equal_jitter_has_inclusive_microsecond_endpoints ... ok
+test invalid_bounds_precision_and_timestamp_overflow_are_rejected ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/retry_state.rs (/app/target/m52/debug/deps/retry_state-9c9b003589123482)
+
+running 3 tests
+test delays_reject_precision_range_and_checked_timestamp_overflow ... ok
+test evidence_has_no_free_text_and_requests_validate_identity ... ok
+test history_bounds_consumption_and_revision_never_wrap ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/worker.rs (/app/target/m52/debug/deps/worker-66c853699ab262f8)
+
+running 14 tests
+test bounded_cancellation_and_cleanup_share_absolute_budget ... ok
+test cancelled_maintenance_does_not_admit_delivery_or_followup ... ok
+test config_bounds_and_relations ... ok
+test discovery_proceeds_during_broker_outage_and_has_no_catchup_burst ... ok
+test exhaustive_outcome_policy_and_sanitized_diagnostics ... ok
+test in_flight_operation_drains_and_preserves_outcome ... ok
+test idle_failure_pacing_fresh_tokens_and_interruptible_stop ... ok
+test known_unusable_publisher_is_closed_before_any_acquisition ... ok
+test maintenance_attempts_alternate_with_general_admission_and_never_repeat_stale_candidates ... ok
+test maintenance_configuration_is_bounded_and_validated ... ok
+test no_acquisition_without_publisher_and_reconnect_wait_interrupts ... ok
+test preexisting_shutdown_admits_nothing ... ok
+test publication_replaces_only_warranted_channels_without_replaying_claim ... ok
+test rapid_delivery_admission_does_not_accelerate_discovery ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/worker_smoke.rs (/app/target/m52/debug/deps/worker_smoke-12c0839f0eedafc8)
+
+running 5 tests
+test compiled_worker_confirms_and_completes_then_sigterm_exits ... ignored, requires PostgreSQL CREATE DATABASE and RabbitMQ
+test isolated_supervisor_interactive_control_intentional_stop_and_unexpected_exit ... ignored, requires PostgreSQL CREATE DATABASE, RabbitMQ and Supervisor in app
+test isolated_supervisor_named_program_operation ... ignored, requires PostgreSQL CREATE DATABASE, RabbitMQ and Supervisor in app
+test missing_ownership_schema_fails_before_polling_with_sanitized_error ... ignored, requires PostgreSQL CREATE DATABASE
+test missing_retry_schema_fails_before_polling_with_sanitized_error ... ignored, requires PostgreSQL CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests reliable_event_relay
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.29s
+     Running tests/consumer_runtime.rs (/app/target/m52/debug/deps/consumer_runtime-fdf00086f54a9efc)
+
+running 23 tests
+test compiled_consumer_exports_applied_duplicate_and_quarantine_without_business_labels ... ok
+test compiled_consumer_prefetch_drain_and_buffered_recovery ... ok
+test incompatible_source_declaration_is_sanitized_and_keeps_existing_queue ... ok
+test isolated_supervisor_consumer_is_opt_in_and_named_start_stop_works ... ok
+test lost_database_commit_ack_redelivery_has_one_effect ... ok
+test lost_quarantine_confirmation_retains_source_and_allows_duplicate_preservation ... ok
+test mandatory_return_and_known_database_failure_retain_original ... ok
+test milestone44_boundary_child ... ok
+test milestone44_cancel_after_observed_commit_retains_source ... ok
+test milestone44_concurrent_deliveries_keep_one_effect_per_identity ... ok
+test milestone44_full_quarantine_rejects_without_source_ack ... ok
+test milestone44_kill_after_commit_and_quarantine_before_ack ... ok
+test milestone44_kill_before_commit_rolls_back_and_restart_applies ... ok
+test milestone44_lost_source_ack_redelivers_committed_duplicate ... ok
+test milestone44_missing_quarantine_exchange_retains_source ... ok
+test milestone44_oversize_stops_for_operator_without_source_ack ... ok
+test milestone44_sql_replay_preserves_identity_and_consumer_effect ... ok
+test milestone62_committed_duplicate_observation_survives_lost_ack ... ok
+test missing_consumer_schema_fails_before_subscription ... ok
+test readiness_tracks_subscription_outage_and_recovery_without_messages ... ok
+test real_effect_duplicate_conflict_and_invalid_preservation ... ok
+test runtime_resubscribes_after_server_cancellation_and_shutdown_idle ... ok
+test unavailable_database_and_poisoned_source_ack_keep_primary_and_recover ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 25.47s
+
+     Running tests/delivery_ownership_schema.rs (/app/target/m52/debug/deps/delivery_ownership_schema-005236523d5f8f44)
+
+running 1 test
+test migration_preserves_rows_checks_ownership_and_keeps_reader_observational ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+
+     Running tests/demo_runs.rs (/app/target/m52/debug/deps/demo_runs-d79fb7b74059e91e)
+
+running 12 tests
+test action_concurrent_identity_conflict_and_lost_commit_recovery ... ok
+test atomic_idempotent_concurrent_and_independent_effect ... ok
+test authorized_read_and_csrf_boundaries ... ok
+test cancellation_after_server_commit_recovers_without_new_run ... ok
+test correlated_observation_survives_reprocessing_without_second_effect ... ok
+test finite_admission_preserves_pending_work ... ok
+test interrupted_publication_action_is_unknown_and_never_reissued ... ok
+test lost_commit_ack_recovers_same_identity ... ok
+test multiple_actions_preserve_history_and_refuse_destructive_rollback ... ok
+test rejected_transaction_rolls_back_all_producer_records ... ok
+test retained_capacity_stops_without_eviction ... ok
+test retained_history_pages_include_pending_runs_without_mutation ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.34s
+
+     Running tests/integrated_recovery.rs (/app/target/m52/debug/deps/integrated_recovery-062cbafc80cb6fd0)
+
+running 18 tests
+test authorized_http_replay_new_cycle_confirmed_publication_and_completion ... ok
+test boundary_child ... ok
+test committed_schedule_terminal_and_replay_survive_process_kill_with_final_budget_success ... ok
+test compiled_relay_exports_publication_and_database_completion_separately ... ok
+test configured_worker_maintenance_protects_live_final_owner_and_keeps_general_delivery_possible ... ok
+test confirmed_publication_with_lost_completion_ack_is_not_replayed ... ok
+test crash_before_send_and_after_confirmation_recover_after_real_expiration ... ok
+test database_lock_deadline_fails_completion_without_premature_processed_state ... ok
+test definitive_unroutable_schedules_recovers_original_and_preserves_final_failure ... ok
+test discovered_poison_isolated_before_independent_real_publication ... ok
+test graceful_shutdown_cancels_blocked_completion_then_expired_work_recovers ... ok
+test harness_cleans_exact_resources_after_assertion_failure ... ok
+test integrated_worker_replaces_failed_delivery_connection_before_fresh_acquisition ... ok
+test ordinary_completion_failure_recovers_and_stale_owner_cannot_transition ... ok
+test real_worker_discovers_beyond_unsafe_prefix_and_publishes_valid_identity ... ok
+test real_worker_waits_for_broker_availability_and_shutdown_interrupts_reconnect ... ok
+test two_real_workers_have_distinct_durable_owners_before_completion ... ok
+test uncertain_publication_retains_claim_and_fresh_connection_does_not_replay ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 37.64s
+
+     Running tests/operational_readiness.rs (/app/target/m52/debug/deps/operational_readiness-aeebd9ca957c598f)
+
+running 3 tests
+test enabled_replay_database_degradation_preserves_http_liveness_and_recovers ... ok
+test sampler_lock_failure_recovery_and_single_flight ... ok
+test sampler_overall_deadline_never_reports_success ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 20.06s
+
+     Running tests/postgres_consumer.rs (/app/target/m52/debug/deps/postgres_consumer-88e05b9f1dea30c9)
+
+running 12 tests
+test atomic_effect_history_conflict_scopes_and_overflow ... ok
+test cancellation_before_admission_and_while_waiting_leaves_no_effect ... ok
+test concurrent_identical_conflicting_and_distinct_deliveries ... ok
+test concurrent_loser_reads_winners_completed_receipt_after_wait ... ok
+test consumer_upgrade_preserves_existing_relay_envelope_and_history ... ok
+test lost_ack_and_cancellation_after_observed_commit ... ok
+test restricted_consumer_grants_allow_atomic_adapter_without_receipt_removal ... ok
+test schema_constraints_completeness_immutability_and_down_up ... ok
+test statement_and_deferred_rejections_rollback_both_writes ... ok
+test stored_representation_validation_and_exact_roundtrip ... ok
+test unavailable_pool_retains_typed_diagnostics_without_mutation ... ok
+test waiting_writer_rollback_and_lock_deadline ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.71s
+
+     Running tests/postgres_discovery.rs (/app/target/m52/debug/deps/postgres_discovery-28ed6c1b47a56ce3)
+
+running 7 tests
+test active_final_owner_completion_and_expired_owner_are_distinguished ... ok
+test exact_selection_hint_revalidates_without_repairing_unsafe_prefix ... ok
+test locks_concurrent_scanners_stale_revision_cycle_and_unversioned_repair_are_safe ... ok
+test mixed_candidates_preserve_raw_history_and_allow_independent_delivery ... ok
+test rejected_and_uncertain_commits_and_cancelled_ack_are_observed_independently ... ok
+test traversal_progresses_past_unmanageable_rows_and_wraps_changes_and_insertions ... ok
+test unsupported_versions_timestamps_and_unsafe_metadata_require_repair ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.44s
+
+     Running tests/postgres_ownership.rs (/app/target/m52/debug/deps/postgres_ownership-922322c66bafdd6d)
+
+running 12 tests
+test acquisition_acknowledgement_does_not_promise_remaining_lease_time ... ok
+test acquisition_eligibility_single_row_counter_and_reader_observation ... ok
+test cancelling_a_lock_wait_leaves_fixture_unchanged_and_pool_usable ... ok
+test completion_and_release_sample_time_after_lock_wait_expiration ... ok
+test concurrent_acquirers_are_disjoint_and_skip_locked_does_not_prove_empty_backlog ... ok
+test expired_owner_is_rejected_and_recovery_replaces_token ... ok
+test lost_commit_acknowledgement_returns_uncertain_and_durable_state_is_inspected_separately ... ok
+test malformed_selected_data_and_duration_overflow_do_not_mutate_or_skip ... ok
+test maximum_counter_and_pre_acquisition_time_reject_without_partial_changes ... ok
+test release_reacquisition_and_completion_preserve_identity_and_metadata ... ok
+test server_rejected_commit_is_known_failure_and_rolls_back_all_operations ... ok
+test statement_rejection_before_commit_is_not_commit_uncertainty ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.88s
+
+     Running tests/postgres_replay.rs (/app/target/m52/debug/deps/postgres_replay-52cc7eed14276386)
+
+running 10 tests
+test atomic_preservation_idempotency_authorization_and_fresh_acquisition ... ok
+test audit_terminal_evidence_canonical_fields_and_revision_limits ... ok
+test concurrent_changed_intent_and_deferred_commit_rejection ... ok
+test concurrent_request_identity_and_same_revision ... ok
+test rejected_transaction_and_lock_wait_recheck ... ok
+test rejects_invalid_states_content_and_capacity_without_mutation ... ok
+test replay_competes_with_stale_discovery_isolation_and_acquisition ... ok
+test replay_down_removes_audit_metadata_without_reversing_reenabled_event ... ok
+test supported_interpretation_boundary_delay_and_maintenance_contention ... ok
+test uncertain_commit_and_cancelled_result_have_independent_receipts ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.71s
+
+     Running tests/postgres_repository.rs (/app/target/m52/debug/deps/postgres_repository-c8deca6843faab65)
+
+running 15 tests
+test committed_schema_fixture_validates_constraints_and_rolls_back ... ok
+test eligibility_bounds_and_adapter_tie_breakers ... ok
+test harness_cleans_up_after_assertion_failure - should panic ... ok
+test harness_cleans_up_after_returned_error - should panic ... ok
+test malformed_excluded_rows_do_not_poison_eligible_batch ... ok
+test missing_table_preserves_typed_database_failure ... ok
+test rejects_blank_aggregate_id ... ok
+test rejects_blank_aggregate_type ... ok
+test rejects_blank_event_type ... ok
+test rejects_finite_timestamp_outside_chrono ... ok
+test rejects_negative_infinite_occurrence ... ok
+test rejects_positive_infinite_occurrence ... ok
+test rejects_selected_negative_infinite_availability ... ok
+test repeated_and_independent_readers_observe_without_mutation ... ok
+test restores_every_envelope_field_and_pending_metadata ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 4.15s
+
+     Running tests/postgres_retry.rs (/app/target/m52/debug/deps/postgres_retry-31848736a8888df2)
+
+running 18 tests
+test cancellation_after_server_commit_suppresses_results_but_not_durable_mutations ... ok
+test cancellation_of_owned_lock_waits_leaves_no_partial_changes_and_maintenance_skips_lock ... ok
+test concurrent_acquirers_cannot_overspend_and_final_failure_can_terminalize ... ok
+test delivery_reports_lost_schedule_and_terminal_ack_without_repeating_or_erasing_primary ... ok
+test exact_budget_boundary_final_completion_and_no_scheduling_bypass ... ok
+test lost_commit_ack_new_transitions_are_observed_independently_never_blindly_retried ... ok
+test maintenance_checks_due_state_revision_live_lease_and_storage_exhaustion ... ok
+test maintenance_competes_safely_and_never_invents_envelope_validity ... ok
+test migration_preserves_all_old_states_leases_and_history_and_isolated_down ... ok
+test owned_transitions_reject_identity_cycle_revision_and_expired_authority ... ok
+test persisted_noninitial_cycle_allowance_and_terminal_reason_evidence_are_enforced ... ok
+test revision_and_counter_storage_boundaries_fail_without_partial_changes ... ok
+test schedule_is_atomic_preserves_history_and_blocks_early_acquisition ... ok
+test scheduling_samples_time_after_lock_and_expired_waiters_are_rejected ... ok
+test schema_rejects_invalid_history_null_evidence_and_terminal_shapes ... ok
+test statement_and_commit_rejections_roll_back_every_new_mutation ... ok
+test terminal_waiters_lose_expired_authority_and_maintenance_skips_completion_lock ... ok
+test terminalization_preserves_event_and_is_not_success_or_repeat_success ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.56s
+
+     Running tests/rabbitmq_publisher.rs (/app/target/m52/debug/deps/rabbitmq_publisher-f103b516bcc865f3)
+
+running 2 tests
+test routed_envelope_properties_and_mandatory_return ... ok
+test withheld_confirmation_timeout_and_cancellation_are_uncertain_without_retry ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.67s
+
+     Running tests/worker_smoke.rs (/app/target/m52/debug/deps/worker_smoke-12c0839f0eedafc8)
+
+running 5 tests
+test compiled_worker_confirms_and_completes_then_sigterm_exits ... ok
+test isolated_supervisor_interactive_control_intentional_stop_and_unexpected_exit ... ok
+test isolated_supervisor_named_program_operation ... ok
+test missing_ownership_schema_fails_before_polling_with_sanitized_error ... ok
+test missing_retry_schema_fails_before_polling_with_sanitized_error ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 36.86s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.17s
+     Running unittests src/lib.rs (/app/target/m52/debug/deps/reliable_event_relay-c244f2eff3b6e747)
+
+running 2 tests
+test infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable ... ok
+test infrastructure::rabbitmq::tests::publisher_admission_is_immediate_and_released_after_error_and_cancellation ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.28s
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.81s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.91s
+   Generated /app/target/m52/doc/reliable_event_relay/index.html and 3 other files
+No fixture databases or queues remain before service removal.
+Exact owned containers, anonymous volumes and network removed: relay-m53-45b24864110a45e49fdcc1267a55acb4

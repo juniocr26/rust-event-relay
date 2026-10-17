@@ -1,0 +1,12 @@
+{
+  "pdf_pages": 22,
+  "selectable_text_characters": 36365,
+  "all_text_within_page_bounds": true,
+  "main_private_values_absent_in_deliverables": true,
+  "rendered_all_pages": true,
+  "visual_review": "All page contact sheets reviewed; matrix and mobile/tablet/unknown/stale pages opened enlarged. Screenshot layout enlarged after initial review.",
+  "substantive_test_count": 241,
+  "doc_markdown_files_checked": 127,
+  "local_checker_tests_passed": 4,
+  "diff_check": "passed"
+}

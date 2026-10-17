@@ -1,0 +1,147 @@
+ Network relay-application-test_default Creating 
+ Network relay-application-test_default Created 
+ Volume relay-application-test_test-postgres Creating 
+ Volume relay-application-test_test-postgres Created 
+ Volume relay-application-test_test-rabbitmq Creating 
+ Volume relay-application-test_test-rabbitmq Created 
+ Container relay-application-test-rabbitmq-1 Creating 
+ Container relay-application-test-postgres-1 Creating 
+ Container relay-application-test-postgres-1 Created 
+ Container relay-application-test-rabbitmq-1 Created 
+ Container relay-application-test-rabbitmq-1 Starting 
+ Container relay-application-test-postgres-1 Starting 
+ Container relay-application-test-postgres-1 Started 
+ Container relay-application-test-rabbitmq-1 Started 
+ Container relay-application-test-postgres-1 Waiting 
+ Container relay-application-test-rabbitmq-1 Waiting 
+ Container relay-application-test-postgres-1 Healthy 
+ Container relay-application-test-rabbitmq-1 Healthy 
+ Container relay-application-test-app-run-5604e4574b46 Creating 
+ Container relay-application-test-app-run-5604e4574b46 Created 
+Applied 20261007000000/migrate create relay schema (1.094458ms)
+Applied 20261007175358/migrate create outbox events (3.214583ms)
+Applied 20261009000000/migrate add delivery ownership (1.343167ms)
+Applied 20261012000000/migrate add durable retry (3.910292ms)
+Applied 20261013000000/migrate add audited replay (4.35825ms)
+Applied 20261014000000/migrate add atomic consumer (4.057834ms)
+Applied 20261017000000/migrate add demo runs (4.015ms)
+Applied 20261018000000/migrate add demo actions (7.329ms)
+Applied 20261019000000/migrate multiple duplicate actions (1.470542ms)
+ Volume relay-application-test_test-node Creating 
+ Volume relay-application-test_test-node Created 
+ Container relay-application-test-postgres-1 Running 
+ Container relay-application-test-rabbitmq-1 Running 
+ Container relay-application-test-frontend-1 Creating 
+ Container relay-application-test-app-1 Creating 
+ Container relay-application-test-frontend-1 Created 
+ Container relay-application-test-app-1 Created 
+ Container relay-application-test-frontend-1 Starting 
+ Container relay-application-test-rabbitmq-1 Waiting 
+ Container relay-application-test-postgres-1 Waiting 
+ Container relay-application-test-frontend-1 Started 
+ Container relay-application-test-postgres-1 Healthy 
+ Container relay-application-test-rabbitmq-1 Healthy 
+ Container relay-application-test-app-1 Starting 
+ Container relay-application-test-app-1 Started 
+ Container relay-application-test-app-1 Waiting 
+ Container relay-application-test-frontend-1 Waiting 
+ Container relay-application-test-postgres-1 Waiting 
+ Container relay-application-test-rabbitmq-1 Waiting 
+ Container relay-application-test-rabbitmq-1 Healthy 
+ Container relay-application-test-postgres-1 Healthy 
+ Container relay-application-test-app-1 Healthy 
+ Container relay-application-test-frontend-1 Healthy 
+consumer: stopped
+
+Running 1 test using 1 worker
+
+  ✓  1 tests/live-pending.spec.ts:3:1 › paused test consumer shows pending evidence and closing only stops observation (2.3s)
+
+  1 passed (3.7s)
+consumer: started
+
+Running 24 tests using 1 worker
+
+  ✓   1 tests/experience.spec.ts:3:1 › presentation loads its resources and favicon without runtime errors or API calls (664ms)
+  ✓   2 tests/experience.spec.ts:34:3 › viewport 320: full landing, readable modal, accessible controls (699ms)
+  ✓   3 tests/experience.spec.ts:34:3 › viewport 375: full landing, readable modal, accessible controls (632ms)
+  ✓   4 tests/experience.spec.ts:34:3 › viewport 768: full landing, readable modal, accessible controls (869ms)
+  ✓   5 tests/experience.spec.ts:34:3 › viewport 1024: full landing, readable modal, accessible controls (988ms)
+  ✓   6 tests/experience.spec.ts:34:3 › viewport 1920: full landing, readable modal, accessible controls (1.7s)
+  ✓   7 tests/experience.spec.ts:74:1 › modal contains focus, blocks background and cleans playback on close (614ms)
+  ✓   8 tests/experience.spec.ts:105:3 › crash: coherent states, output and replay (469ms)
+  ✓   9 tests/experience.spec.ts:105:3 › race: coherent states, output and replay (465ms)
+  ✓  10 tests/experience.spec.ts:105:3 › ack: coherent states, output and replay (601ms)
+  ✓  11 tests/experience.spec.ts:139:1 › reduced motion keeps readable progression without animation (407ms)
+  ✓  12 tests/live-delivery.spec.ts:6:1 › real browser → producer → relay → broker → consumer, with persistent inspectable evidence (2.0s)
+  ✓  13 tests/live-delivery.spec.ts:37:1 › real unavailable authorization, safe same-identity recovery and close without stale updates (2.0s)
+  ✓  14 tests/live-delivery.spec.ts:60:3 › real modal 320: keyboard, reduced motion, responsive evidence (1.7s)
+  ✓  15 tests/live-delivery.spec.ts:60:3 › real modal 375: keyboard, reduced motion, responsive evidence (1.7s)
+  ✓  16 tests/live-delivery.spec.ts:60:3 › real modal 768: keyboard, reduced motion, responsive evidence (1.8s)
+  ✓  17 tests/live-delivery.spec.ts:60:3 › real modal 1024: keyboard, reduced motion, responsive evidence (1.9s)
+  ✓  18 tests/live-delivery.spec.ts:60:3 › real modal 1920: keyboard, reduced motion, responsive evidence (2.0s)
+  ✓  19 tests/real-scenarios.spec.ts:6:2 › real dedupe: persisted correlated outcomes and stable request identities (2.9s)
+  ✓  20 tests/real-scenarios.spec.ts:6:2 › real concurrent: persisted correlated outcomes and stable request identities (2.9s)
+  ✓  21 tests/real-scenarios.spec.ts:6:2 › real recovery: persisted correlated outcomes and stable request identities (3.0s)
+  ✓  22 tests/real-scenarios.spec.ts:42:1 › historical run: explicit duplicate, close/reopen and another action preserve original effect (18.4s)
+  ✓  23 tests/real-scenarios.spec.ts:71:1 › concurrent sessions release reserved copies across repeated real actions (6.5s)
+  ✓  24 tests/real-scenarios.spec.ts:87:1 › retained inspection paginates, selects historical actions and never submits work (4.5s)
+
+  24 passed (1.0m)
+
+Running 1 test using 1 worker
+
+  ✓  1 tests/real-scenarios.spec.ts:131:1 › unknown action inspection never republishes or changes retained identities (2.1s)
+
+  1 passed (2.8s)
+ relay-application-test-frontend-1 Copying relay-application-test-frontend-1:/tmp/demo63-unknown.png to /tmp/relay-main-unknown.png
+ relay-application-test-frontend-1 Copied relay-application-test-frontend-1:/tmp/demo63-unknown.png to /tmp/relay-main-unknown.png
+ relay-application-test-frontend-1 Copying relay-application-test-frontend-1:/tmp/demo62-historical.png to /tmp/relay-main-historical.png
+ relay-application-test-frontend-1 Copied relay-application-test-frontend-1:/tmp/demo62-historical.png to /tmp/relay-main-historical.png
+ relay-application-test-frontend-1 Copying relay-application-test-frontend-1:/tmp/demo63-stale.png to /tmp/relay-main-stale.png
+ relay-application-test-frontend-1 Copied relay-application-test-frontend-1:/tmp/demo63-stale.png to /tmp/relay-main-stale.png
+ relay-application-test-frontend-1 Copying relay-application-test-frontend-1:/tmp/demo63-history-320.png to /tmp/relay-main-history-320.png
+ relay-application-test-frontend-1 Copied relay-application-test-frontend-1:/tmp/demo63-history-320.png to /tmp/relay-main-history-320.png
+ relay-application-test-frontend-1 Copying relay-application-test-frontend-1:/tmp/demo63-history-768.png to /tmp/relay-main-history-768.png
+ relay-application-test-frontend-1 Copied relay-application-test-frontend-1:/tmp/demo63-history-768.png to /tmp/relay-main-history-768.png
+ relay-application-test-frontend-1 Copying relay-application-test-frontend-1:/tmp/demo63-history-1920.png to /tmp/relay-main-history-1920.png
+ relay-application-test-frontend-1 Copied relay-application-test-frontend-1:/tmp/demo63-history-1920.png to /tmp/relay-main-history-1920.png
+ relay-application-test-frontend-1 Copying relay-application-test-frontend-1:/tmp/demo61-live-320.png to /tmp/relay-main-live-320.png
+ relay-application-test-frontend-1 Copied relay-application-test-frontend-1:/tmp/demo61-live-320.png to /tmp/relay-main-live-320.png
+ relay-application-test-frontend-1 Copying relay-application-test-frontend-1:/tmp/demo61-live-1920.png to /tmp/relay-main-live-1920.png
+ relay-application-test-frontend-1 Copied relay-application-test-frontend-1:/tmp/demo61-live-1920.png to /tmp/relay-main-live-1920.png
+http: stopped
+
+Running 1 test using 1 worker
+
+  ✓  1 tests/live-dependency.spec.ts:3:1 › dependency unavailable never fabricates producer or consumer success (1.1s)
+
+  1 passed (1.9s)
+http: started
+ Container relay-application-test-app-1 Stopping 
+ Container relay-application-test-frontend-1 Stopping 
+ Container relay-application-test-frontend-1 Stopped 
+ Container relay-application-test-frontend-1 Removing 
+ Container relay-application-test-frontend-1 Removed 
+ Container relay-application-test-app-1 Stopped 
+ Container relay-application-test-app-1 Removing 
+ Container relay-application-test-app-1 Removed 
+ Container relay-application-test-rabbitmq-1 Stopping 
+ Container relay-application-test-postgres-1 Stopping 
+ Container relay-application-test-postgres-1 Stopped 
+ Container relay-application-test-postgres-1 Removing 
+ Container relay-application-test-postgres-1 Removed 
+ Container relay-application-test-rabbitmq-1 Stopped 
+ Container relay-application-test-rabbitmq-1 Removing 
+ Container relay-application-test-rabbitmq-1 Removed 
+ Volume relay-application-test_test-node Removing 
+ Volume relay-application-test_test-postgres Removing 
+ Volume relay-application-test_test-rabbitmq Removing 
+ Network relay-application-test_default Removing 
+ Volume relay-application-test_test-rabbitmq Removed 
+ Volume relay-application-test_test-node Removed 
+ Volume relay-application-test_test-postgres Removed 
+ Network relay-application-test_default Removed 
+Independent SQL verifies normal, duplicate, concurrent duplicate and controlled retry evidence.
+Main Supervisor autostart, intentional stop and named restart verified in disposable environment.
+Exact test resources removed; main and legacy user evidence untouched.

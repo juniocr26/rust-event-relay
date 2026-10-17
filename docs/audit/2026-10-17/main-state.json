@@ -1,0 +1,86 @@
+{
+  "observed_at_utc": "2026-10-17T18:31:32.867484+00:00",
+  "services": [
+    {
+      "Service": "app",
+      "State": "running",
+      "Health": "healthy",
+      "Name": "rust-event-relay-app-1"
+    },
+    {
+      "Service": "frontend",
+      "State": "running",
+      "Health": "healthy",
+      "Name": "rust-event-relay-frontend-1"
+    },
+    {
+      "Service": "postgres",
+      "State": "running",
+      "Health": "healthy",
+      "Name": "rust-event-relay-postgres-1"
+    },
+    {
+      "Service": "rabbitmq",
+      "State": "running",
+      "Health": "healthy",
+      "Name": "rust-event-relay-rabbitmq-1"
+    }
+  ],
+  "supervisor": "consumer                         RUNNING   pid 11, uptime 0:17:22\nhttp                             RUNNING   pid 12, uptime 0:17:22\nrelay                            RUNNING   pid 13, uptime 0:17:22\n",
+  "loaded_binaries_and_readiness": [
+    {
+      "role": "http",
+      "pid": "12",
+      "loaded_sha256": "311964eb05a195ab55805ddaabd407759032588a92c54c1d4ed052b2af427a78",
+      "disk_sha256": "311964eb05a195ab55805ddaabd407759032588a92c54c1d4ed052b2af427a78",
+      "match": true
+    },
+    {
+      "role": "relay",
+      "pid": "13",
+      "loaded_sha256": "8867aa133296af3ee78005fb08fda3ee961912afae82c2625f23d0db13d9f8d6",
+      "disk_sha256": "8867aa133296af3ee78005fb08fda3ee961912afae82c2625f23d0db13d9f8d6",
+      "match": true
+    },
+    {
+      "role": "consumer",
+      "pid": "11",
+      "loaded_sha256": "0a35f61f519ae2704727b5fbd69b73964cf4c6a1fc97414df6b95f9743172347",
+      "disk_sha256": "0a35f61f519ae2704727b5fbd69b73964cf4c6a1fc97414df6b95f9743172347",
+      "match": true
+    },
+    {
+      "readiness_port": 9100,
+      "status": 200
+    },
+    {
+      "readiness_port": 9101,
+      "status": 200
+    },
+    {
+      "readiness_port": 9102,
+      "status": 200
+    }
+  ],
+  "queues": [
+    {
+      "name": "relay.quarantine.inventory",
+      "messages_unacknowledged": 0,
+      "consumers": 0,
+      "messages_ready": 0
+    },
+    {
+      "name": "relay.local",
+      "messages_unacknowledged": 0,
+      "consumers": 1,
+      "messages_ready": 0
+    },
+    {
+      "name": "relay.demo.01a14af3-4b6f-7090-9215-4572e226394b",
+      "messages_unacknowledged": 0,
+      "consumers": 0,
+      "messages_ready": 0
+    }
+  ],
+  "audit_test_containers_remaining": []
+}

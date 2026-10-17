@@ -6,6 +6,8 @@ Projeto de portfólio e estudo em Rust com outbox transacional PostgreSQL, publi
 
 Milestone 6.3 aceito localmente em 17/10/2026; Milestone 6 e o escopo de portfólio acordado concluídos. Instalação limpa, cenários reais, inspeção, recuperação e verificações locais aprovados. CI remoto não verificado; prontidão de produção não estabelecida. Registros históricos preservam seu escopo datado; esta página define o fluxo suportado.
 
+Auditoria final de implementação (17/10/2026): [encerramento e evidências executadas](docs/pt-BR/operations/final-audit.md), com [PDF na raiz](PROJECT_FINAL_AUDIT.pdf).
+
 ## Instalação limpa
 
 Instale Docker Engine/Desktop com Compose v2, Python 3 e Git. O Docker precisa estar ativo, com acesso à internet para imagens/pacotes e espaço para compilar Rust. Rust/Node nativos são opcionais; os comandos abaixo usam containers. Copie o exemplo, substitua os quatro placeholders de credenciais e inicie:

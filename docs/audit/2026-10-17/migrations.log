@@ -1,0 +1,2 @@
+Nine ordered SQLx upgrades/checksums, no-op, demo/consumer/replay down/re-up passed in isolated database.
+Exact isolated migration database removed and absence verified.

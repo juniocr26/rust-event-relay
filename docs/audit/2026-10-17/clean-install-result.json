@@ -1,0 +1,12 @@
+{
+  "candidate_sha256": "c6628fb005f87140b38e0603a238ee7ac4c44147533ddda2630212b45d222de5",
+  "files": 290,
+  "migrations": 9,
+  "persistence": {
+    "runs": 13,
+    "stock": 195,
+    "actions": 7,
+    "receipts": 13
+  },
+  "result": "passed"
+}

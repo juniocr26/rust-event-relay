@@ -6,6 +6,8 @@ A Rust portfolio and study project demonstrating a transactional PostgreSQL outb
 
 Milestone 6.3 is locally accepted (2026-10-17); Milestone 6 and the agreed portfolio scope are complete. Clean installation, real scenarios, inspection, recovery and local checks passed. Remote CI is unverified; production readiness is not established. Historical records retain their dated scope; this page defines the supported workflow.
 
+Final implementation audit (2026-10-17): [current closure and executed evidence](docs/en/operations/final-audit.md), with the root-level [audit PDF](PROJECT_FINAL_AUDIT.pdf).
+
 ## Clean installation
 
 Install Docker Engine/Desktop with Compose v2, Python 3 and Git. Docker must be running, with internet access for image/package downloads and enough disk space for Rust builds. Native Rust/Node are optional; the supported commands below run them in containers. Copy the example, replace the four credential placeholders, then start:

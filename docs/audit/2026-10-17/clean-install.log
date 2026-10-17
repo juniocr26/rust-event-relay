@@ -1,0 +1,1191 @@
+ Network relay-clean-7eb831cd72c6_default Creating 
+ Network relay-clean-7eb831cd72c6_default Created 
+ Volume relay-clean-7eb831cd72c6_rabbitmq-data Creating 
+ Volume relay-clean-7eb831cd72c6_rabbitmq-data Created 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Creating 
+ Container relay-clean-7eb831cd72c6-postgres-1 Creating 
+ Container relay-clean-7eb831cd72c6-postgres-1 Created 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Created 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Starting 
+ Container relay-clean-7eb831cd72c6-postgres-1 Starting 
+ Container relay-clean-7eb831cd72c6-postgres-1 Started 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Started 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Waiting 
+ Container relay-clean-7eb831cd72c6-postgres-1 Waiting 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Healthy 
+ Container relay-clean-7eb831cd72c6-postgres-1 Healthy 
+ Image relay-clean-7eb831cd72c6-app Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 761B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.37kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/rust:1.95.0-bookworm
+#3 DONE 1.7s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 263B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 3.80kB done
+#5 DONE 0.0s
+
+#6 [ 1/12] FROM docker.io/library/rust:1.95.0-bookworm@sha256:6258907abe69656e41cd992e0b705cdcfabcbbe3db374f92ed2d47121282d4a1
+#6 resolve docker.io/library/rust:1.95.0-bookworm@sha256:6258907abe69656e41cd992e0b705cdcfabcbbe3db374f92ed2d47121282d4a1 0.0s done
+#6 DONE 0.0s
+
+#7 [ 3/12] RUN cargo install sqlx-cli --version 0.8.6 --locked       --no-default-features --features rustls,postgres --root /opt/sqlx     && rm -rf /usr/local/cargo/registry /usr/local/cargo/git
+#7 CACHED
+
+#8 [ 7/12] COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/dev-entrypoint
+#8 CACHED
+
+#9 [ 6/12] WORKDIR /app/backend
+#9 CACHED
+
+#10 [ 9/12] COPY --chmod=755 docker/supervisor/supervisor /usr/local/bin/supervisor
+#10 CACHED
+
+#11 [10/12] COPY --chmod=755 docker/supervisor/relay-http /usr/local/bin/relay-http
+#11 CACHED
+
+#12 [ 5/12] RUN groupadd --gid "1000" developer     && useradd --uid "1000" --gid "1000" --create-home --shell /bin/bash developer     && rustup component add rustfmt clippy
+#12 CACHED
+
+#13 [ 8/12] COPY docker/supervisor/normal.conf /etc/supervisor/supervisord.conf
+#13 CACHED
+
+#14 [ 2/12] RUN apt-get update     && apt-get install -y --no-install-recommends python3 supervisor     && rm -rf /var/lib/apt/lists/*
+#14 CACHED
+
+#15 [ 4/12] COPY --chmod=755 docker/sqlx.py /usr/local/bin/sqlx
+#15 CACHED
+
+#16 [11/12] COPY --chmod=755 docker/supervisor/relay-worker /usr/local/bin/relay-worker
+#16 CACHED
+
+#17 [12/12] COPY --chmod=755 docker/supervisor/relay-consumer /usr/local/bin/relay-consumer
+#17 CACHED
+
+#18 exporting to image
+#18 exporting layers done
+#18 exporting manifest sha256:727de06a02e0073ed19149848b852bccbc6ac6fec94aeb518949b15d108cc02f done
+#18 exporting config sha256:7d063a86fffacd4283c1eee0b0f32f7878188b5a93863d61ae3f2bc5499d9745 done
+#18 exporting attestation manifest sha256:f78ca88c6e5fffd1bef711220133f8c19824bd9653620b882a4aae73191e9fa5 done
+#18 exporting manifest list sha256:36da6e9d820a835c9bcb0adbda8832109430e7c53b58e0f4c8468ca15d75385e done
+#18 naming to docker.io/library/relay-clean-7eb831cd72c6-app:latest done
+#18 unpacking to docker.io/library/relay-clean-7eb831cd72c6-app:latest done
+#18 DONE 0.1s
+
+#19 resolving provenance for metadata file
+#19 DONE 0.0s
+ Image relay-clean-7eb831cd72c6-app Built 
+ Container relay-clean-7eb831cd72c6-app-run-d484e321a1ee Creating 
+ Container relay-clean-7eb831cd72c6-app-run-d484e321a1ee Created 
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded crc v3.4.0
+  Downloaded atomic-waker v1.1.2
+  Downloaded cpufeatures v0.2.17
+  Downloaded cfg-if v1.0.5
+  Downloaded async-global-executor v3.1.0
+  Downloaded amq-protocol-tcp v10.6.3
+  Downloaded block-buffer v0.10.4
+  Downloaded amq-protocol-types v10.6.3
+  Downloaded futures-io v0.3.34
+  Downloaded form_urlencoded v1.2.2
+  Downloaded futures-core v0.3.34
+  Downloaded crypto-common v0.1.7
+  Downloaded http-body v1.1.0
+  Downloaded errno v0.3.14
+  Downloaded httpdate v1.0.3
+  Downloaded hex v0.4.3
+  Downloaded idna_adapter v1.2.2
+  Downloaded heck v0.5.0
+  Downloaded futures-task v0.3.34
+  Downloaded generic-array v0.14.7
+  Downloaded futures-macro v0.3.34
+  Downloaded equivalent v1.0.2
+  Downloaded event-listener-strategy v0.5.4
+  Downloaded atoi v2.0.0
+  Downloaded amq-protocol-uri v10.6.3
+  Downloaded async-executor v1.14.0
+  Downloaded async-channel v2.5.0
+  Downloaded tracing-serde v0.2.0
+  Downloaded untrusted v0.9.0
+  Downloaded utf8_iter v1.0.4
+  Downloaded version_check v0.9.5
+  Downloaded yoke-derive v0.8.4
+  Downloaded axum-core v0.5.6
+  Downloaded byteorder v1.5.0
+  Downloaded autocfg v1.5.1
+  Downloaded blocking v1.7.0
+  Downloaded cookie-factory v0.3.3
+  Downloaded critical-section v1.2.0
+  Downloaded crossbeam-queue v0.3.14
+  Downloaded futures-executor v0.3.34
+  Downloaded futures-sink v0.3.34
+  Downloaded displaydoc v0.2.7
+  Downloaded find-msvc-tools v0.1.14
+  Downloaded hashlink v0.10.0
+  Downloaded fastrand v2.5.0
+  Downloaded dotenvy v0.15.7
+  Downloaded http-body-util v0.1.5
+  Downloaded zerofrom-derive v0.1.8
+  Downloaded async-compat v0.2.6
+  Downloaded tracing-log v0.2.0
+  Downloaded tagptr v0.2.0
+  Downloaded whoami v1.6.1
+  Downloaded stable_deref_trait v1.2.1
+  Downloaded serde_urlencoded v0.7.1
+  Downloaded crossbeam-epoch v0.9.21
+  Downloaded event-listener v5.4.2
+  Downloaded iana-time-zone v0.1.65
+  Downloaded tower-service v0.3.3
+  Downloaded getrandom v0.2.17
+  Downloaded httparse v1.10.1
+  Downloaded subtle v2.6.1
+  Downloaded hmac v0.12.1
+  Downloaded async-rs v0.8.13
+  Downloaded unicode-ident v1.0.26
+  Downloaded unicode-properties v0.1.4
+  Downloaded yoke v0.8.3
+  Downloaded zerovec-derive v0.11.6
+  Downloaded zmij v1.0.23
+  Downloaded writeable v0.6.4
+  Downloaded zeroize v1.9.1
+  Downloaded thread_local v1.1.10
+  Downloaded sync_wrapper v1.0.2
+  Downloaded bitflags v2.13.2
+  Downloaded getrandom v0.4.3
+  Downloaded lazy_static v1.5.1
+  Downloaded futures-lite v2.6.1
+  Downloaded futures-channel v0.3.34
+  Downloaded async-task v4.7.1
+  Downloaded amq-protocol v10.6.3
+  Downloaded allocator-api2 v0.2.21
+  Downloaded const-oid v0.9.6
+  Downloaded crossbeam-utils v0.8.23
+  Downloaded crc-catalog v2.5.0
+  Downloaded icu_provider v2.3.1
+  Downloaded async-lock v3.4.2
+  Downloaded mime v0.3.17
+  Downloaded tokio-macros v2.7.2
+  Downloaded md-5 v0.10.6
+  Downloaded zerofrom v0.1.8
+  Downloaded sqlx-macros v0.8.6
+  Downloaded concurrent-queue v2.5.0
+  Downloaded chacha20 v0.10.2
+  Downloaded bytes v1.12.1
+  Downloaded base64ct v1.8.3
+  Downloaded backon v1.6.0
+  Downloaded synstructure v0.14.0
+  Downloaded async-trait v0.1.92
+  Downloaded icu_normalizer_data v2.3.0
+  Downloaded flume v0.11.1
+  Downloaded unicode-bidi v0.3.18
+  Downloaded uuid v1.27.0
+  Downloaded base64 v0.22.1
+  Downloaded nu-ansi-term v0.50.3
+  Downloaded futures-intrusive v0.5.0
+  Downloaded icu_locale_core v2.3.0
+  Downloaded itoa v1.0.18
+  Downloaded icu_collections v2.3.0
+  Downloaded url v2.5.8
+  Downloaded crossbeam-channel v0.5.17
+  Downloaded rand_chacha v0.3.1
+  Downloaded icu_properties v2.3.0
+  Downloaded flume v0.12.0
+  Downloaded der v0.7.10
+  Downloaded zerotrie v0.2.5
+  Downloaded sha1 v0.10.7
+  Downloaded typenum v1.20.1
+  Downloaded percent-encoding v2.3.2
+  Downloaded num-iter v0.1.46
+  Downloaded cc v1.6.0
+  Downloaded hyper-util v0.1.21
+  Downloaded signature v2.2.0
+  Downloaded tower-layer v0.3.3
+  Downloaded unicode-normalization v0.1.25
+  Downloaded potential_utf v0.1.6
+  Downloaded scopeguard v1.2.0
+  Downloaded parking v2.2.1
+  Downloaded http v1.5.0
+  Downloaded zerovec v0.11.8
+  Downloaded idna v1.1.0
+  Downloaded hickory-net v0.26.3
+  Downloaded resolv-conf v0.7.6
+  Downloaded hashbrown v0.15.5
+  Downloaded tcp-stream v0.34.14
+  Downloaded signal-hook-registry v1.4.8
+  Downloaded rand_core v0.10.1
+  Downloaded sha2 v0.10.9
+  Downloaded hkdf v0.12.4
+  Downloaded hickory-resolver v0.26.3
+  Downloaded thiserror-impl v2.0.21
+  Downloaded pin-project-lite v0.2.17
+  Downloaded futures-util v0.3.34
+  Downloaded slab v0.4.12
+  Downloaded tracing-subscriber v0.3.23
+  Downloaded chrono v0.4.45
+  Downloaded vcpkg v0.2.15
+  Downloaded quote v1.0.47
+  Downloaded ppv-lite86 v0.2.21
+  Downloaded zerocopy v0.8.61
+  Downloaded rand_core v0.6.4
+  Downloaded hickory-proto v0.26.3
+  Downloaded sqlx-macros-core v0.8.6
+  Downloaded stringprep v0.1.5
+  Downloaded spki v0.7.3
+  Downloaded num-integer v0.1.47
+  Downloaded shlex v2.0.1
+  Downloaded pkg-config v0.3.34
+  Downloaded aho-corasick v1.1.5
+  Downloaded parking_lot v0.12.5
+  Downloaded thiserror v2.0.21
+  Downloaded tinystr v0.8.4
+  Downloaded icu_normalizer v2.3.0
+  Downloaded spin v0.9.9
+  Downloaded parking_lot_core v0.9.12
+  Downloaded once_cell v1.21.4
+  Downloaded serde_path_to_error v0.1.20
+  Downloaded piper v0.2.5
+  Downloaded pem-rfc7468 v0.7.0
+  Downloaded litemap v0.8.3
+  Downloaded icu_properties_data v2.3.0
+  Downloaded pkcs1 v0.7.5
+  Downloaded lock_api v0.4.14
+  Downloaded hyper v1.12.0
+  Downloaded hashbrown v0.17.1
+  Downloaded axum v0.8.9
+  Downloaded matchit v0.8.4
+  Downloaded matchers v0.2.0
+  Downloaded home v0.5.12
+  Downloaded foldhash v0.1.5
+  Downloaded either v1.19.0
+  Downloaded digest v0.10.7
+  Downloaded data-encoding v2.11.1
+  Downloaded tokio-stream v0.1.19
+  Downloaded smallvec v1.16.2
+  Downloaded pkcs8 v0.10.2
+  Downloaded tracing-attributes v0.1.31
+  Downloaded proc-macro2 v1.0.107
+  Downloaded serde_core v1.0.229
+  Downloaded ipnet v2.12.2
+  Downloaded log v0.4.34
+  Downloaded ryu v1.0.23
+  Downloaded sharded-slab v0.1.7
+  Downloaded num-traits v0.2.19
+  Downloaded sqlx-mysql v0.8.6
+  Downloaded prefix-trie v0.8.4
+  Downloaded serde v1.0.229
+  Downloaded serde_derive v1.0.229
+  Downloaded socket2 v0.6.5
+  Downloaded tracing-core v0.1.36
+  Downloaded sqlx-sqlite v0.8.6
+  Downloaded rsa v0.9.10
+  Downloaded rand v0.8.8
+  Downloaded tinyvec v1.13.3
+  Downloaded memchr v2.8.3
+  Downloaded rand v0.10.3
+  Downloaded tower v0.5.3
+  Downloaded num-bigint-dig v0.8.6
+  Downloaded sqlx-postgres v0.8.6
+  Downloaded serde_json v1.0.151
+  Downloaded sqlx v0.8.6
+  Downloaded portable-atomic v1.15.0
+  Downloaded lapin v4.12.0
+  Downloaded nom v8.0.0
+  Downloaded libm v0.2.16
+  Downloaded sqlx-core v0.8.6
+  Downloaded moka v0.12.16
+  Downloaded mio v1.2.4
+  Downloaded indexmap v2.14.2
+  Downloaded syn v2.0.119
+  Downloaded syn v3.0.6
+  Downloaded regex-syntax v0.8.11
+  Downloaded tracing v0.1.44
+  Downloaded regex-automata v0.4.18
+  Downloaded libc v0.2.190
+  Downloaded tokio v1.53.2
+  Downloaded ring v0.17.14
+  Downloaded libsqlite3-sys v0.30.1
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling libc v0.2.190
+   Compiling serde_core v1.0.229
+   Compiling serde v1.0.229
+   Compiling pin-project-lite v0.2.17
+   Compiling cfg-if v1.0.5
+   Compiling futures-core v0.3.34
+   Compiling stable_deref_trait v1.2.1
+   Compiling bytes v1.12.1
+   Compiling itoa v1.0.18
+   Compiling once_cell v1.21.4
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling memchr v2.8.3
+   Compiling tracing-core v0.1.36
+   Compiling version_check v0.9.5
+   Compiling icu_properties_data v2.3.0
+   Compiling utf8_iter v1.0.4
+   Compiling zmij v1.0.23
+   Compiling icu_normalizer_data v2.3.0
+   Compiling generic-array v0.14.7
+   Compiling log v0.4.34
+   Compiling serde_json v1.0.151
+   Compiling futures-io v0.3.34
+   Compiling percent-encoding v2.3.2
+   Compiling typenum v1.20.1
+   Compiling form_urlencoded v1.2.2
+   Compiling scopeguard v1.2.0
+   Compiling futures-sink v0.3.34
+   Compiling lock_api v0.4.14
+   Compiling subtle v2.6.1
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling autocfg v1.5.1
+   Compiling parking_lot_core v0.9.12
+   Compiling zerocopy v0.8.61
+   Compiling http v1.5.0
+   Compiling errno v0.3.14
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling signal-hook-registry v1.4.8
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling num-traits v0.2.19
+   Compiling digest v0.10.7
+   Compiling equivalent v1.0.2
+   Compiling futures-task v0.3.34
+   Compiling getrandom v0.4.3
+   Compiling slab v0.4.12
+   Compiling crossbeam-utils v0.8.23
+   Compiling http-body v1.1.0
+   Compiling futures-util v0.3.34
+   Compiling getrandom v0.2.17
+   Compiling nom v8.0.0
+   Compiling allocator-api2 v0.2.21
+   Compiling foldhash v0.1.5
+   Compiling parking v2.2.1
+   Compiling httparse v1.10.1
+   Compiling cookie-factory v0.3.3
+   Compiling thiserror v2.0.21
+   Compiling event-listener v5.4.2
+   Compiling hashbrown v0.15.5
+   Compiling synstructure v0.14.0
+   Compiling rand_core v0.6.4
+   Compiling cpufeatures v0.2.17
+   Compiling hashbrown v0.17.1
+   Compiling tinyvec v1.13.3
+   Compiling tower-service v0.3.3
+   Compiling crc-catalog v2.5.0
+   Compiling iana-time-zone v0.1.65
+   Compiling crc v3.4.0
+   Compiling unicode-normalization v0.1.25
+   Compiling hashlink v0.10.0
+   Compiling indexmap v2.14.2
+   Compiling sha2 v0.10.9
+   Compiling uuid v1.27.0
+   Compiling crossbeam-queue v0.3.14
+   Compiling hmac v0.12.1
+   Compiling amq-protocol v10.6.3
+   Compiling tracing-attributes v0.1.31
+   Compiling base64 v0.22.1
+   Compiling httpdate v1.0.3
+   Compiling regex-syntax v0.8.11
+   Compiling atomic-waker v1.1.2
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling tokio-macros v2.7.2
+   Compiling async-trait v0.1.92
+   Compiling thiserror-impl v2.0.21
+   Compiling ppv-lite86 v0.2.21
+   Compiling rand_chacha v0.3.1
+   Compiling tokio v1.53.2
+   Compiling unicode-bidi v0.3.18
+   Compiling unicode-properties v0.1.4
+   Compiling tracing v0.1.44
+   Compiling sync_wrapper v1.0.2
+   Compiling tower-layer v0.3.3
+   Compiling rand v0.8.8
+   Compiling regex-automata v0.4.18
+   Compiling stringprep v0.1.5
+   Compiling hkdf v0.12.4
+   Compiling atoi v2.0.0
+   Compiling http-body-util v0.1.5
+   Compiling md-5 v0.10.6
+   Compiling spin v0.9.9
+   Compiling futures-channel v0.3.34
+   Compiling zerofrom v0.1.8
+   Compiling dotenvy v0.15.7
+   Compiling byteorder v1.5.0
+   Compiling yoke v0.8.3
+   Compiling mime v0.3.17
+   Compiling lapin v4.12.0
+   Compiling bitflags v2.13.2
+   Compiling ryu v1.0.23
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling fastrand v2.5.0
+   Compiling whoami v1.6.1
+   Compiling hex v0.4.3
+   Compiling home v0.5.12
+   Compiling lazy_static v1.5.1
+   Compiling sharded-slab v0.1.7
+   Compiling backon v1.6.0
+   Compiling axum-core v0.5.6
+   Compiling flume v0.12.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling matchers v0.2.0
+   Compiling icu_collections v2.3.0
+   Compiling tracing-log v0.2.0
+   Compiling icu_locale_core v2.3.0
+   Compiling thread_local v1.1.10
+   Compiling matchit v0.8.4
+   Compiling nu-ansi-term v0.50.3
+   Compiling smallvec v1.16.2
+   Compiling amq-protocol-types v10.6.3
+   Compiling chrono v0.4.45
+   Compiling either v1.19.0
+   Compiling tracing-serde v0.2.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling tracing-subscriber v0.3.23
+   Compiling icu_provider v2.3.1
+   Compiling parking_lot v0.12.5
+   Compiling icu_properties v2.3.0
+   Compiling icu_normalizer v2.3.0
+   Compiling futures-intrusive v0.5.0
+   Compiling tokio-stream v0.1.19
+   Compiling async-compat v0.2.6
+   Compiling hyper v1.12.0
+   Compiling tower v0.5.3
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling async-rs v0.8.13
+   Compiling url v2.5.8
+   Compiling tcp-stream v0.34.14
+   Compiling hyper-util v0.1.21
+   Compiling axum v0.8.9
+   Compiling amq-protocol-uri v10.6.3
+   Compiling sqlx-core v0.8.6
+   Compiling amq-protocol-tcp v10.6.3
+   Compiling sqlx-postgres v0.8.6
+   Compiling sqlx v0.8.6
+   Compiling reliable-event-relay v0.1.0 (/app/backend)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 14s
+Protected backups and main disposable restore verified.
+Backup directory: .local-backups/consolidation-20261017T182612Z
+Required forward migrations applied; all resulting versions/checksums verified.
+ Container relay-clean-7eb831cd72c6-frontend-1 Creating 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Running 
+ Container relay-clean-7eb831cd72c6-postgres-1 Running 
+ Container relay-clean-7eb831cd72c6-app-1 Creating 
+ Container relay-clean-7eb831cd72c6-frontend-1 Created 
+ Container relay-clean-7eb831cd72c6-app-1 Created 
+ Container relay-clean-7eb831cd72c6-frontend-1 Starting 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Waiting 
+ Container relay-clean-7eb831cd72c6-postgres-1 Waiting 
+ Container relay-clean-7eb831cd72c6-frontend-1 Started 
+ Container relay-clean-7eb831cd72c6-postgres-1 Healthy 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Healthy 
+ Container relay-clean-7eb831cd72c6-app-1 Starting 
+ Container relay-clean-7eb831cd72c6-app-1 Started 
+ Container relay-clean-7eb831cd72c6-postgres-1 Waiting 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Waiting 
+ Container relay-clean-7eb831cd72c6-app-1 Waiting 
+ Container relay-clean-7eb831cd72c6-frontend-1 Waiting 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Healthy 
+ Container relay-clean-7eb831cd72c6-postgres-1 Healthy 
+ Container relay-clean-7eb831cd72c6-app-1 Healthy 
+ Container relay-clean-7eb831cd72c6-frontend-1 Healthy 
+Main application available. See docs/en/operations/application-scenarios.md. Intentional stops under an unchanged manager remain respected.
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.browser
+#1 transferring dockerfile: 367B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:22-bookworm-slim
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 263B done
+#3 DONE 0.0s
+
+#4 [1/4] FROM docker.io/library/node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+#4 resolve docker.io/library/node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 61.10kB done
+#5 DONE 0.0s
+
+#6 [2/4] WORKDIR /opt/browser
+#6 CACHED
+
+#7 [3/4] COPY frontend/package.json frontend/package-lock.json ./
+#7 CACHED
+
+#8 [4/4] RUN npm ci --cache /tmp/npm-cache     && npx playwright install --with-deps chromium     && rm -rf /tmp/npm-cache /var/lib/apt/lists/*
+#8 CACHED
+
+#9 exporting to image
+#9 exporting layers done
+#9 exporting manifest sha256:19a19e6908b8ce6418d789ce9445b28e0c96c6202103c75757385ab9ccfb15fc done
+#9 exporting config sha256:6abf2f5f6f334b070da3237df16289f7abdbdc690b58e9e5f48d094131ea916c done
+#9 exporting attestation manifest sha256:8c1388166c7bcdcd5aa5443586a2530f939a9455d22c24660ddbbaeaebac4c2e 0.0s done
+#9 exporting manifest list sha256:824fbf606a2e94cb2ec21f483043a8c1e64f170179b093ffe4899d5b632c8b0c
+#9 exporting manifest list sha256:824fbf606a2e94cb2ec21f483043a8c1e64f170179b093ffe4899d5b632c8b0c done
+#9 naming to docker.io/library/relay-clean-7eb831cd72c6-browser:latest done
+#9 unpacking to docker.io/library/relay-clean-7eb831cd72c6-browser:latest done
+#9 DONE 0.1s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/r02ae2v20zbypv46qh8vlnsfj
+
+> reliable-event-relay-frontend@0.1.0 build
+> vue-tsc --noEmit && vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 41 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.42 kB │ gzip:  0.29 kB
+dist/assets/index-DiVSOnF3.css   12.38 kB │ gzip:  3.93 kB
+dist/assets/index-CUrcM4hv.js   102.18 kB │ gzip: 37.47 kB
+
+✓ built in 550ms
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling libc v0.2.190
+   Compiling serde_core v1.0.229
+   Compiling serde v1.0.229
+   Compiling zmij v1.0.23
+   Compiling icu_properties_data v2.3.0
+   Compiling icu_normalizer_data v2.3.0
+   Compiling serde_json v1.0.151
+   Compiling generic-array v0.14.7
+   Compiling parking_lot_core v0.9.12
+   Compiling zerocopy v0.8.61
+   Compiling num-traits v0.2.19
+   Compiling getrandom v0.4.3
+   Compiling crossbeam-utils v0.8.23
+   Compiling httparse v1.10.1
+   Compiling thiserror v2.0.21
+   Compiling lapin v4.12.0
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling crossbeam-queue v0.3.14
+   Compiling digest v0.10.7
+   Compiling atoi v2.0.0
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling hmac v0.12.1
+   Compiling md-5 v0.10.6
+   Compiling errno v0.3.14
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling getrandom v0.2.17
+   Compiling signal-hook-registry v1.4.8
+   Compiling cpufeatures v0.2.17
+   Compiling rand_core v0.6.4
+   Compiling sha2 v0.10.9
+   Compiling hkdf v0.12.4
+   Compiling uuid v1.27.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling ppv-lite86 v0.2.21
+   Compiling rand_chacha v0.3.1
+   Compiling rand v0.8.8
+   Compiling tracing-attributes v0.1.31
+   Compiling synstructure v0.14.0
+   Compiling serde_derive v1.0.229
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling tokio-macros v2.7.2
+   Compiling async-trait v0.1.92
+   Compiling thiserror-impl v2.0.21
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling tokio v1.53.2
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.3
+   Compiling tracing v0.1.44
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling axum-core v0.5.6
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.3.0
+   Compiling icu_locale_core v2.3.0
+   Compiling smallvec v1.16.2
+   Compiling amq-protocol-types v10.6.3
+   Compiling either v1.19.0
+   Compiling chrono v0.4.45
+   Compiling serde_urlencoded v0.7.1
+   Compiling tracing-serde v0.2.0
+   Compiling icu_provider v2.3.1
+   Compiling tracing-subscriber v0.3.23
+   Compiling parking_lot v0.12.5
+   Compiling icu_properties v2.3.0
+   Compiling icu_normalizer v2.3.0
+   Compiling futures-intrusive v0.5.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling tokio-stream v0.1.19
+   Compiling async-compat v0.2.6
+   Compiling hyper v1.12.0
+   Compiling tower v0.5.3
+   Compiling amq-protocol-uri v10.6.3
+   Compiling async-rs v0.8.13
+   Compiling sqlx-core v0.8.6
+   Compiling tcp-stream v0.34.14
+   Compiling hyper-util v0.1.21
+   Compiling amq-protocol-tcp v10.6.3
+   Compiling axum v0.8.9
+   Compiling amq-protocol v10.6.3
+   Compiling sqlx-postgres v0.8.6
+   Compiling sqlx v0.8.6
+   Compiling reliable-event-relay v0.1.0 (/app/backend)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 46s
+     Running unittests src/lib.rs (/app/target/debug/deps/reliable_event_relay-c244f2eff3b6e747)
+
+running 27 tests
+test infrastructure::postgres::tests::checked_limit ... ok
+test config::tests::rejects_invalid_address_and_empty_environment ... ok
+test config::tests::defaults_are_valid ... ok
+test infrastructure::postgres::consumer::tests::failure_sources_are_typed_and_public_formatting_is_sanitized ... ok
+test infrastructure::postgres::ownership::tests::commit_classification_depends_on_acknowledgement ... ok
+test infrastructure::postgres::tests::driver_classification_and_sanitized_sources ... ok
+test infrastructure::postgres::tests::json_preserves_precision_and_rejects_unsupported_representations ... ok
+test infrastructure::postgres::tests::rejects_malformed_values_without_partial_results ... ok
+test infrastructure::postgres::tests::timestamps_reject_infinity_and_chrono_overflow ... ok
+test infrastructure::postgres::tests::faithful_restoration ... ok
+test infrastructure::postgres::tests::sqlstate_classification_is_conservative ... ok
+test infrastructure::rabbitmq::tests::closed_owned_connection_is_unavailable ... ignored, requires real RabbitMQ and explicit credentials
+test infrastructure::rabbitmq::tests::publisher_admission_is_immediate_and_released_after_error_and_cancellation ... ignored, requires real RabbitMQ and explicit credentials
+test infrastructure::rabbitmq::tests::confirms_and_sources_are_sanitized ... ok
+test application::readiness::tests::optional_database_is_required_only_when_enabled ... ok
+test infrastructure::rabbitmq::tests::validates_deadlines_and_redacts_config ... ok
+test infrastructure::rabbitmq::consumer::tests::validates_prefetch_separation_and_configuration_bounds ... ok
+test application::readiness::tests::transitions_degradation_recovery_freshness_and_sticky_shutdown ... ok
+test infrastructure::rabbitmq::consumer::tests::reconnect_pacing_waits_and_is_interruptible ... ok
+test infrastructure::rabbitmq::properties::tests::refuses_size_depth_and_node_excess_without_normalization ... ok
+test telemetry::metrics::tests::validates_all_addresses_and_collision_combinations ... ok
+test telemetry::metrics::tests::fixed_registry_tracks_cancellation_and_cumulative_buckets ... ok
+test telemetry::metrics::tests::exporter_serves_only_metrics_and_releases_listener_on_shutdown ... ok
+test telemetry::metrics::tests::exporter_admits_at_most_four_connections_and_cleans_up_stalled_clients ... ok
+test infrastructure::rabbitmq::properties::tests::preserves_binary_numeric_types_and_nonfinite_bits_with_collision_isolation ... ok
+test infrastructure::rabbitmq::tests::refused_connection_retains_driver_source ... ok
+test infrastructure::rabbitmq::tests::stalled_handshake_is_bounded_and_retains_timeout_source ... ok
+
+test result: ok. 25 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running unittests src/bin/consumer.rs (/app/target/debug/deps/consumer-47e0436089e1c7b6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/demo.rs (/app/target/debug/deps/demo-bf0b1761b59595c3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/relay.rs (/app/target/debug/deps/relay-1cd8f57aac6fa499)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/app/target/debug/deps/reliable_event_relay-54ce76b8e77abaa2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/capacity_measurements.rs (/app/target/debug/deps/capacity_measurements-01760ffad54e5c8a)
+
+running 1 test
+test finite_capacity_and_recovery_campaign ... ignored, dedicated disposable PostgreSQL/RabbitMQ only; explicit protocol required
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/consumer_application.rs (/app/target/debug/deps/consumer_application-ad2c076856518402)
+
+running 9 tests
+test unsupported_preservation_never_truncates_or_acks ... ok
+test cancellation_has_no_compensating_follow_up ... ok
+test committed_and_duplicate_outcomes_precede_ack ... ok
+test phase_timeouts_cannot_authorize_follow_up_ack ... ok
+test invalid_inputs_never_reach_persistence_and_confirm_before_ack ... ok
+test failed_quarantine_never_counts_confirmed_or_ack_success ... ok
+test database_errors_never_quarantine_or_ack ... ok
+test conflict_retains_primary_and_secondary_errors ... ok
+test observations_distinguish_effect_quarantine_and_ack_send_and_uncertainty ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/consumer_contract.rs (/app/target/debug/deps/consumer_contract-09cbd7299a43e2e3)
+
+running 7 tests
+test ack_requires_commit_or_verified_duplicate ... ok
+test preservation_bounds_do_not_truncate_evidence ... ok
+test quantity_and_stock_boundaries ... ok
+test stable_identity_and_identifier_bounds ... ok
+test supported_schema_and_immutable_comparison ... ok
+test crash_or_uncertain_source_ack_can_duplicate_quarantine_publication ... ok
+test quarantine_preflight_bounds_raw_escaped_bytes_nodes_and_depth ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/consumer_runtime.rs (/app/target/debug/deps/consumer_runtime-fdf00086f54a9efc)
+
+running 23 tests
+test compiled_consumer_exports_applied_duplicate_and_quarantine_without_business_labels ... ignored, requires isolated PostgreSQL and RabbitMQ
+test compiled_consumer_prefetch_drain_and_buffered_recovery ... ignored, requires isolated PostgreSQL and RabbitMQ
+test incompatible_source_declaration_is_sanitized_and_keeps_existing_queue ... ignored, requires isolated PostgreSQL and RabbitMQ
+test isolated_supervisor_consumer_is_opt_in_and_named_start_stop_works ... ignored, requires isolated PostgreSQL, RabbitMQ and Supervisor in app
+test lost_database_commit_ack_redelivery_has_one_effect ... ignored, requires isolated PostgreSQL and RabbitMQ
+test lost_quarantine_confirmation_retains_source_and_allows_duplicate_preservation ... ignored, requires isolated PostgreSQL and RabbitMQ
+test mandatory_return_and_known_database_failure_retain_original ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_boundary_child ... ignored, internal child entry; no-op without CONSUMER_BOUNDARY_FILE
+test milestone44_cancel_after_observed_commit_retains_source ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_concurrent_deliveries_keep_one_effect_per_identity ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_full_quarantine_rejects_without_source_ack ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_kill_after_commit_and_quarantine_before_ack ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_kill_before_commit_rolls_back_and_restart_applies ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_lost_source_ack_redelivers_committed_duplicate ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_missing_quarantine_exchange_retains_source ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_oversize_stops_for_operator_without_source_ack ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone44_sql_replay_preserves_identity_and_consumer_effect ... ignored, requires isolated PostgreSQL and RabbitMQ
+test milestone62_committed_duplicate_observation_survives_lost_ack ... ignored, requires isolated PostgreSQL and RabbitMQ
+test missing_consumer_schema_fails_before_subscription ... ignored, requires isolated PostgreSQL and RabbitMQ
+test readiness_tracks_subscription_outage_and_recovery_without_messages ... ignored, requires isolated PostgreSQL and RabbitMQ
+test real_effect_duplicate_conflict_and_invalid_preservation ... ignored, requires isolated PostgreSQL and RabbitMQ
+test runtime_resubscribes_after_server_cancellation_and_shutdown_idle ... ignored, requires isolated PostgreSQL and RabbitMQ
+test unavailable_database_and_poisoned_source_ack_keep_primary_and_recover ... ignored, requires isolated PostgreSQL and RabbitMQ
+
+test result: ok. 0 passed; 0 failed; 23 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/delivery_ownership.rs (/app/target/debug/deps/delivery_ownership-726c6802281b4a52)
+
+running 5 tests
+test lease_validation_and_exact_expiry ... ok
+test release_and_counter_limits_without_partial_mutation ... ok
+test recovery_replaces_authority_and_rejects_expired_and_stale_owners ... ok
+test terminal_and_lease_shape_invariants ... ok
+test contracts_preserve_identity_and_separate_conflicts_from_unknown_commits ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/delivery_ownership_schema.rs (/app/target/debug/deps/delivery_ownership_schema-005236523d5f8f44)
+
+running 1 test
+test migration_preserves_rows_checks_ownership_and_keeps_reader_observational ... ignored, requires PostgreSQL and CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/delivery_use_case.rs (/app/target/debug/deps/delivery_use_case-3934e4fbbed3d897)
+
+running 11 tests
+test completion_waits_for_explicit_publisher_confirmation ... ok
+test empty_or_failed_acquisition_has_no_subsequent_effect ... ok
+test acquisition_observations_do_not_infer_claims_or_publications_on_failure ... ok
+test final_uncertainty_retains_and_scheduling_samples_once_or_reports_policy_failure ... ok
+test confirmed_publication_then_every_completion_result_without_cleanup_or_retry ... ok
+test durable_schedule_and_terminal_metrics_require_acknowledged_applied_transition ... ok
+test final_and_permanent_failures_terminalize_with_independent_results ... ok
+test confirmation_is_required_and_cancellation_stops_subsequent_calls ... ok
+test observations_keep_confirm_even_when_completion_is_uncertain_or_cancelled ... ok
+test every_definitive_final_failure_stops_while_final_acceptance_can_complete ... ok
+test every_publication_failure_preserves_primary_and_handling_outcomes ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/demo_runs.rs (/app/target/debug/deps/demo_runs-d79fb7b74059e91e)
+
+running 12 tests
+test action_concurrent_identity_conflict_and_lost_commit_recovery ... ignored, requires isolated PostgreSQL
+test atomic_idempotent_concurrent_and_independent_effect ... ignored, requires isolated PostgreSQL
+test authorized_read_and_csrf_boundaries ... ignored, requires isolated PostgreSQL
+test cancellation_after_server_commit_recovers_without_new_run ... ignored, requires isolated PostgreSQL
+test correlated_observation_survives_reprocessing_without_second_effect ... ignored, requires isolated PostgreSQL
+test finite_admission_preserves_pending_work ... ignored, requires isolated PostgreSQL
+test interrupted_publication_action_is_unknown_and_never_reissued ... ignored, requires isolated PostgreSQL
+test lost_commit_ack_recovers_same_identity ... ignored, requires isolated PostgreSQL
+test multiple_actions_preserve_history_and_refuse_destructive_rollback ... ignored, requires isolated PostgreSQL
+test rejected_transaction_rolls_back_all_producer_records ... ignored, requires isolated PostgreSQL
+test retained_capacity_stops_without_eviction ... ignored, requires isolated PostgreSQL
+test retained_history_pages_include_pending_runs_without_mutation ... ignored, requires isolated PostgreSQL
+
+test result: ok. 0 passed; 0 failed; 12 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/event_envelope.rs (/app/target/debug/deps/event_envelope-568e7e47d57b2c2f)
+
+running 6 tests
+test creates_event_with_generated_v7_identity_and_utc_time ... ok
+test rejects_empty_and_whitespace_identifiers_and_zero_version ... ok
+test normalizes_offset_timestamps_to_utc ... ok
+test round_trip_preserves_generated_event_and_optional_metadata ... ok
+test restores_identity_and_time_and_serializes_exact_wire_shape ... ok
+test deserialization_enforces_envelope_validation ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/integrated_recovery.rs (/app/target/debug/deps/integrated_recovery-062cbafc80cb6fd0)
+
+running 19 tests
+test authorized_http_replay_new_cycle_confirmed_publication_and_completion ... ignored, requires PostgreSQL/RabbitMQ; isolated resources only
+test boundary_child ... ignored, internal child entry; no-op without RECOVERY_CHILD
+test committed_schedule_terminal_and_replay_survive_process_kill_with_final_budget_success ... ignored, requires PostgreSQL/RabbitMQ; isolated resources only
+test compiled_relay_exports_publication_and_database_completion_separately ... ignored, requires isolated PostgreSQL and RabbitMQ
+test configured_worker_maintenance_protects_live_final_owner_and_keeps_general_delivery_possible ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test confirmed_publication_with_lost_completion_ack_is_not_replayed ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test crash_before_send_and_after_confirmation_recover_after_real_expiration ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test database_lock_deadline_fails_completion_without_premature_processed_state ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test definitive_unroutable_schedules_recovers_original_and_preserves_final_failure ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test discovered_poison_isolated_before_independent_real_publication ... ignored, requires PostgreSQL/RabbitMQ; isolated resources only
+test graceful_shutdown_cancels_blocked_completion_then_expired_work_recovers ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test harness_cleans_exact_resources_after_assertion_failure ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test integrated_worker_replaces_failed_delivery_connection_before_fresh_acquisition ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test ordinary_completion_failure_recovers_and_stale_owner_cannot_transition ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test real_worker_discovers_beyond_unsafe_prefix_and_publishes_valid_identity ... ignored, requires PostgreSQL/RabbitMQ; isolated resources only
+test real_worker_waits_for_broker_availability_and_shutdown_interrupts_reconnect ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test two_real_workers_have_distinct_durable_owners_before_completion ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test uncertain_publication_retains_claim_and_fresh_connection_does_not_replay ... ignored, requires real PostgreSQL CREATE DATABASE and RabbitMQ
+test exited_boundary_child_reports_sanitized_phase_without_waiting_for_deadline ... ok
+
+test result: ok. 1 passed; 0 failed; 18 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/lifecycle.rs (/app/target/debug/deps/lifecycle-a98e27b692dd68a6)
+
+running 2 tests
+test health_and_graceful_shutdown ... ok
+test binary_loads_dotenv_and_handles_signals ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.60s
+
+     Running tests/maintenance.rs (/app/target/debug/deps/maintenance-d9edbb374a7d3f9c)
+
+running 3 tests
+test consumes_observation_before_conflict_or_uncertainty_and_requires_fresh_discovery ... ok
+test discovery_errors_never_authorize_isolation_or_erase_progress ... ok
+test unsafe_and_live_observations_advance_without_mutation ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/operational_readiness.rs (/app/target/debug/deps/operational_readiness-aeebd9ca957c598f)
+
+running 4 tests
+test enabled_replay_database_degradation_preserves_http_liveness_and_recovers ... ignored, requires isolated PostgreSQL
+test sampler_lock_failure_recovery_and_single_flight ... ignored, requires isolated PostgreSQL
+test sampler_overall_deadline_never_reports_success ... ignored, requires isolated PostgreSQL
+test reachable_unready_ready_stopping_and_absence_do_not_poll_dependencies ... ok
+
+test result: ok. 1 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/persistence_contract.rs (/app/target/debug/deps/persistence_contract-ac696bd451240e17)
+
+running 5 tests
+test bounded_requests_reject_zero_without_an_arbitrary_maximum ... ok
+test persistence_errors_keep_classification_and_sources_but_redact_formatting ... ok
+test pending_snapshot_preserves_canonical_identity_and_keeps_metadata_separate ... ok
+test generic_caller_handles_empty_snapshot_and_classified_failure ... ok
+test generic_caller_uses_bounded_contract_on_a_send_future ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_consumer.rs (/app/target/debug/deps/postgres_consumer-88e05b9f1dea30c9)
+
+running 12 tests
+test atomic_effect_history_conflict_scopes_and_overflow ... ignored, requires isolated PostgreSQL
+test cancellation_before_admission_and_while_waiting_leaves_no_effect ... ignored, requires isolated PostgreSQL
+test concurrent_identical_conflicting_and_distinct_deliveries ... ignored, requires isolated PostgreSQL
+test concurrent_loser_reads_winners_completed_receipt_after_wait ... ignored, requires isolated PostgreSQL
+test consumer_upgrade_preserves_existing_relay_envelope_and_history ... ignored, requires isolated PostgreSQL
+test lost_ack_and_cancellation_after_observed_commit ... ignored, requires isolated PostgreSQL
+test restricted_consumer_grants_allow_atomic_adapter_without_receipt_removal ... ignored, requires isolated PostgreSQL and test-owned NOLOGIN role creation
+test schema_constraints_completeness_immutability_and_down_up ... ignored, requires isolated PostgreSQL
+test statement_and_deferred_rejections_rollback_both_writes ... ignored, requires isolated PostgreSQL
+test stored_representation_validation_and_exact_roundtrip ... ignored, requires isolated PostgreSQL
+test unavailable_pool_retains_typed_diagnostics_without_mutation ... ignored, requires isolated PostgreSQL
+test waiting_writer_rollback_and_lock_deadline ... ignored, requires isolated PostgreSQL
+
+test result: ok. 0 passed; 0 failed; 12 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_discovery.rs (/app/target/debug/deps/postgres_discovery-28ed6c1b47a56ce3)
+
+running 7 tests
+test active_final_owner_completion_and_expired_owner_are_distinguished ... ignored, requires PostgreSQL and CREATE DATABASE
+test exact_selection_hint_revalidates_without_repairing_unsafe_prefix ... ignored, requires PostgreSQL and CREATE DATABASE
+test locks_concurrent_scanners_stale_revision_cycle_and_unversioned_repair_are_safe ... ignored, requires PostgreSQL and CREATE DATABASE
+test mixed_candidates_preserve_raw_history_and_allow_independent_delivery ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejected_and_uncertain_commits_and_cancelled_ack_are_observed_independently ... ignored, requires PostgreSQL and CREATE DATABASE
+test traversal_progresses_past_unmanageable_rows_and_wraps_changes_and_insertions ... ignored, requires PostgreSQL and CREATE DATABASE
+test unsupported_versions_timestamps_and_unsafe_metadata_require_repair ... ignored, requires PostgreSQL and CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_ownership.rs (/app/target/debug/deps/postgres_ownership-922322c66bafdd6d)
+
+running 12 tests
+test acquisition_acknowledgement_does_not_promise_remaining_lease_time ... ignored, requires PostgreSQL and CREATE DATABASE
+test acquisition_eligibility_single_row_counter_and_reader_observation ... ignored, requires PostgreSQL and CREATE DATABASE
+test cancelling_a_lock_wait_leaves_fixture_unchanged_and_pool_usable ... ignored, requires PostgreSQL and CREATE DATABASE
+test completion_and_release_sample_time_after_lock_wait_expiration ... ignored, requires PostgreSQL and CREATE DATABASE
+test concurrent_acquirers_are_disjoint_and_skip_locked_does_not_prove_empty_backlog ... ignored, requires PostgreSQL and CREATE DATABASE
+test expired_owner_is_rejected_and_recovery_replaces_token ... ignored, requires PostgreSQL and CREATE DATABASE
+test lost_commit_acknowledgement_returns_uncertain_and_durable_state_is_inspected_separately ... ignored, requires PostgreSQL and CREATE DATABASE
+test malformed_selected_data_and_duration_overflow_do_not_mutate_or_skip ... ignored, requires PostgreSQL and CREATE DATABASE
+test maximum_counter_and_pre_acquisition_time_reject_without_partial_changes ... ignored, requires PostgreSQL and CREATE DATABASE
+test release_reacquisition_and_completion_preserve_identity_and_metadata ... ignored, requires PostgreSQL and CREATE DATABASE
+test server_rejected_commit_is_known_failure_and_rolls_back_all_operations ... ignored, requires PostgreSQL and CREATE DATABASE
+test statement_rejection_before_commit_is_not_commit_uncertainty ... ignored, requires PostgreSQL and CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 12 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_replay.rs (/app/target/debug/deps/postgres_replay-52cc7eed14276386)
+
+running 10 tests
+test atomic_preservation_idempotency_authorization_and_fresh_acquisition ... ignored, requires isolated PostgreSQL
+test audit_terminal_evidence_canonical_fields_and_revision_limits ... ignored, requires isolated PostgreSQL
+test concurrent_changed_intent_and_deferred_commit_rejection ... ignored, requires isolated PostgreSQL
+test concurrent_request_identity_and_same_revision ... ignored, requires isolated PostgreSQL
+test rejected_transaction_and_lock_wait_recheck ... ignored, requires isolated PostgreSQL
+test rejects_invalid_states_content_and_capacity_without_mutation ... ignored, requires isolated PostgreSQL
+test replay_competes_with_stale_discovery_isolation_and_acquisition ... ignored, requires isolated PostgreSQL
+test replay_down_removes_audit_metadata_without_reversing_reenabled_event ... ignored, requires isolated PostgreSQL
+test supported_interpretation_boundary_delay_and_maintenance_contention ... ignored, requires isolated PostgreSQL
+test uncertain_commit_and_cancelled_result_have_independent_receipts ... ignored, requires isolated PostgreSQL fault proxy
+
+test result: ok. 0 passed; 0 failed; 10 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/postgres_repository.rs (/app/target/debug/deps/postgres_repository-c8deca6843faab65)
+
+running 16 tests
+test committed_schema_fixture_validates_constraints_and_rolls_back ... ignored, requires PostgreSQL and CREATE DATABASE
+test eligibility_bounds_and_adapter_tie_breakers ... ignored, requires PostgreSQL and CREATE DATABASE
+test harness_cleans_up_after_assertion_failure ... ignored, requires PostgreSQL and CREATE DATABASE
+test harness_cleans_up_after_returned_error ... ignored, requires PostgreSQL and CREATE DATABASE
+test malformed_excluded_rows_do_not_poison_eligible_batch ... ignored, requires PostgreSQL and CREATE DATABASE
+test missing_table_preserves_typed_database_failure ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_blank_aggregate_id ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_blank_aggregate_type ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_blank_event_type ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_finite_timestamp_outside_chrono ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_negative_infinite_occurrence ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_positive_infinite_occurrence ... ignored, requires PostgreSQL and CREATE DATABASE
+test rejects_selected_negative_infinite_availability ... ignored, requires PostgreSQL and CREATE DATABASE
+test repeated_and_independent_readers_observe_without_mutation ... ignored, requires PostgreSQL and CREATE DATABASE
+test restores_every_envelope_field_and_pending_metadata ... ignored, requires PostgreSQL and CREATE DATABASE
+test closed_pool_and_oversized_limit_fail_through_public_contract ... ok
+
+test result: ok. 1 passed; 0 failed; 15 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/postgres_retry.rs (/app/target/debug/deps/postgres_retry-31848736a8888df2)
+
+running 18 tests
+test cancellation_after_server_commit_suppresses_results_but_not_durable_mutations ... ignored, requires PostgreSQL and CREATE DATABASE
+test cancellation_of_owned_lock_waits_leaves_no_partial_changes_and_maintenance_skips_lock ... ignored, requires PostgreSQL and CREATE DATABASE
+test concurrent_acquirers_cannot_overspend_and_final_failure_can_terminalize ... ignored, requires PostgreSQL and CREATE DATABASE
+test delivery_reports_lost_schedule_and_terminal_ack_without_repeating_or_erasing_primary ... ignored, requires PostgreSQL and CREATE DATABASE
+test exact_budget_boundary_final_completion_and_no_scheduling_bypass ... ignored, requires PostgreSQL and CREATE DATABASE
+test lost_commit_ack_new_transitions_are_observed_independently_never_blindly_retried ... ignored, requires PostgreSQL and CREATE DATABASE
+test maintenance_checks_due_state_revision_live_lease_and_storage_exhaustion ... ignored, requires PostgreSQL and CREATE DATABASE
+test maintenance_competes_safely_and_never_invents_envelope_validity ... ignored, requires PostgreSQL and CREATE DATABASE
+test migration_preserves_all_old_states_leases_and_history_and_isolated_down ... ignored, requires PostgreSQL and CREATE DATABASE
+test owned_transitions_reject_identity_cycle_revision_and_expired_authority ... ignored, requires PostgreSQL and CREATE DATABASE
+test persisted_noninitial_cycle_allowance_and_terminal_reason_evidence_are_enforced ... ignored, requires PostgreSQL and CREATE DATABASE
+test revision_and_counter_storage_boundaries_fail_without_partial_changes ... ignored, requires PostgreSQL and CREATE DATABASE
+test schedule_is_atomic_preserves_history_and_blocks_early_acquisition ... ignored, requires PostgreSQL and CREATE DATABASE
+test scheduling_samples_time_after_lock_and_expired_waiters_are_rejected ... ignored, requires PostgreSQL and CREATE DATABASE
+test schema_rejects_invalid_history_null_evidence_and_terminal_shapes ... ignored, requires PostgreSQL and CREATE DATABASE
+test statement_and_commit_rejections_roll_back_every_new_mutation ... ignored, requires PostgreSQL and CREATE DATABASE
+test terminal_waiters_lose_expired_authority_and_maintenance_skips_completion_lock ... ignored, requires PostgreSQL and CREATE DATABASE
+test terminalization_preserves_event_and_is_not_success_or_repeat_success ... ignored, requires PostgreSQL and CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 18 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/rabbitmq_publisher.rs (/app/target/debug/deps/rabbitmq_publisher-f103b516bcc865f3)
+
+running 2 tests
+test routed_envelope_properties_and_mandatory_return ... ignored, requires a real RabbitMQ broker and explicit credentials
+test withheld_confirmation_timeout_and_cancellation_are_uncertain_without_retry ... ignored, requires a real RabbitMQ broker and explicit credentials
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/replay_application.rs (/app/target/debug/deps/replay_application-b93414f90a624982)
+
+running 2 tests
+test structural_boundaries ... ok
+test deny_every_path_before_io_and_validate_budget ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/replay_http.rs (/app/target/debug/deps/replay_http-b3b922439283c27f)
+
+running 3 tests
+test configuration_is_bounded_and_has_no_client_privilege_fields ... ok
+test replay_admission_rejects_before_body_read_and_releases_on_cancel ... ok
+test actual_bearer_boundary_denies_mutation_repeats_and_lookup ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/retry_policy.rs (/app/target/debug/deps/retry_policy-b33d300bd03a2d60)
+
+running 4 tests
+test budget_counts_acquisitions_preserves_history_and_distinguishes_storage_limit ... ok
+test invalid_bounds_precision_and_timestamp_overflow_are_rejected ... ok
+test exponential_ceiling_and_equal_jitter_have_exact_bounded_endpoints ... ok
+test integrated_equal_jitter_has_inclusive_microsecond_endpoints ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/retry_state.rs (/app/target/debug/deps/retry_state-9c9b003589123482)
+
+running 3 tests
+test history_bounds_consumption_and_revision_never_wrap ... ok
+test delays_reject_precision_range_and_checked_timestamp_overflow ... ok
+test evidence_has_no_free_text_and_requests_validate_identity ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/worker.rs (/app/target/debug/deps/worker-66c853699ab262f8)
+
+running 14 tests
+test config_bounds_and_relations ... ok
+test exhaustive_outcome_policy_and_sanitized_diagnostics ... ok
+test maintenance_configuration_is_bounded_and_validated ... ok
+test known_unusable_publisher_is_closed_before_any_acquisition ... ok
+test in_flight_operation_drains_and_preserves_outcome ... ok
+test idle_failure_pacing_fresh_tokens_and_interruptible_stop ... ok
+test discovery_proceeds_during_broker_outage_and_has_no_catchup_burst ... ok
+test no_acquisition_without_publisher_and_reconnect_wait_interrupts ... ok
+test preexisting_shutdown_admits_nothing ... ok
+test maintenance_attempts_alternate_with_general_admission_and_never_repeat_stale_candidates ... ok
+test bounded_cancellation_and_cleanup_share_absolute_budget ... ok
+test cancelled_maintenance_does_not_admit_delivery_or_followup ... ok
+test rapid_delivery_admission_does_not_accelerate_discovery ... ok
+test publication_replaces_only_warranted_channels_without_replaying_claim ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/worker_smoke.rs (/app/target/debug/deps/worker_smoke-12c0839f0eedafc8)
+
+running 5 tests
+test compiled_worker_confirms_and_completes_then_sigterm_exits ... ignored, requires PostgreSQL CREATE DATABASE and RabbitMQ
+test isolated_supervisor_interactive_control_intentional_stop_and_unexpected_exit ... ignored, requires PostgreSQL CREATE DATABASE, RabbitMQ and Supervisor in app
+test isolated_supervisor_named_program_operation ... ignored, requires PostgreSQL CREATE DATABASE, RabbitMQ and Supervisor in app
+test missing_ownership_schema_fails_before_polling_with_sanitized_error ... ignored, requires PostgreSQL CREATE DATABASE
+test missing_retry_schema_fails_before_polling_with_sanitized_error ... ignored, requires PostgreSQL CREATE DATABASE
+
+test result: ok. 0 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests reliable_event_relay
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+added 67 packages, and audited 68 packages in 9s
+
+14 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> reliable-event-relay-frontend@0.1.0 type-check
+> vue-tsc --noEmit
+
+
+> reliable-event-relay-frontend@0.1.0 build
+> vue-tsc --noEmit && vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 41 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.42 kB │ gzip:  0.29 kB
+dist/assets/index-DiVnCkS4.css   14.16 kB │ gzip:  4.30 kB
+dist/assets/index-BGnefqpp.js   102.18 kB │ gzip: 37.47 kB
+
+✓ built in 435ms
+
+Running 24 tests using 1 worker
+
+  ✓   1 tests/experience.spec.ts:3:1 › presentation loads its resources and favicon without runtime errors or API calls (791ms)
+  ✓   2 tests/experience.spec.ts:34:3 › viewport 320: full landing, readable modal, accessible controls (633ms)
+  ✓   3 tests/experience.spec.ts:34:3 › viewport 375: full landing, readable modal, accessible controls (642ms)
+  ✓   4 tests/experience.spec.ts:34:3 › viewport 768: full landing, readable modal, accessible controls (775ms)
+  ✓   5 tests/experience.spec.ts:34:3 › viewport 1024: full landing, readable modal, accessible controls (830ms)
+  ✓   6 tests/experience.spec.ts:34:3 › viewport 1920: full landing, readable modal, accessible controls (1.2s)
+  ✓   7 tests/experience.spec.ts:74:1 › modal contains focus, blocks background and cleans playback on close (413ms)
+  ✓   8 tests/experience.spec.ts:105:3 › crash: coherent states, output and replay (483ms)
+  ✓   9 tests/experience.spec.ts:105:3 › race: coherent states, output and replay (391ms)
+  ✓  10 tests/experience.spec.ts:105:3 › ack: coherent states, output and replay (356ms)
+  ✓  11 tests/experience.spec.ts:139:1 › reduced motion keeps readable progression without animation (235ms)
+  ✓  12 tests/live-delivery.spec.ts:6:1 › real browser → producer → relay → broker → consumer, with persistent inspectable evidence (2.9s)
+  ✓  13 tests/live-delivery.spec.ts:37:1 › real unavailable authorization, safe same-identity recovery and close without stale updates (1.8s)
+  ✓  14 tests/live-delivery.spec.ts:60:3 › real modal 320: keyboard, reduced motion, responsive evidence (1.7s)
+  ✓  15 tests/live-delivery.spec.ts:60:3 › real modal 375: keyboard, reduced motion, responsive evidence (1.7s)
+  ✓  16 tests/live-delivery.spec.ts:60:3 › real modal 768: keyboard, reduced motion, responsive evidence (1.7s)
+  ✓  17 tests/live-delivery.spec.ts:60:3 › real modal 1024: keyboard, reduced motion, responsive evidence (1.8s)
+  ✓  18 tests/live-delivery.spec.ts:60:3 › real modal 1920: keyboard, reduced motion, responsive evidence (1.9s)
+  ✓  19 tests/real-scenarios.spec.ts:6:2 › real dedupe: persisted correlated outcomes and stable request identities (2.9s)
+  ✓  20 tests/real-scenarios.spec.ts:6:2 › real concurrent: persisted correlated outcomes and stable request identities (2.9s)
+  ✓  21 tests/real-scenarios.spec.ts:6:2 › real recovery: persisted correlated outcomes and stable request identities (2.9s)
+  ✓  22 tests/real-scenarios.spec.ts:42:1 › historical run: explicit duplicate, close/reopen and another action preserve original effect (18.1s)
+  ✓  23 tests/real-scenarios.spec.ts:71:1 › concurrent sessions release reserved copies across repeated real actions (6.2s)
+  ✓  24 tests/real-scenarios.spec.ts:87:1 › retained inspection paginates, selects historical actions and never submits work (2.6s)
+
+  24 passed (57.2s)
+ Container relay-clean-7eb831cd72c6-frontend-1 Stopping 
+ Container relay-clean-7eb831cd72c6-app-1 Stopping 
+ Container relay-clean-7eb831cd72c6-frontend-1 Stopped 
+ Container relay-clean-7eb831cd72c6-app-1 Stopped 
+ Container relay-clean-7eb831cd72c6-frontend-1 Starting 
+ Container relay-clean-7eb831cd72c6-postgres-1 Waiting 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Waiting 
+ Container relay-clean-7eb831cd72c6-frontend-1 Started 
+ Container relay-clean-7eb831cd72c6-postgres-1 Healthy 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Healthy 
+ Container relay-clean-7eb831cd72c6-app-1 Starting 
+ Container relay-clean-7eb831cd72c6-app-1 Started 
+ Container relay-clean-7eb831cd72c6-frontend-1 Stopping 
+ Container relay-clean-7eb831cd72c6-app-1 Stopping 
+ Container relay-clean-7eb831cd72c6-frontend-1 Stopped 
+ Container relay-clean-7eb831cd72c6-frontend-1 Removing 
+ Container relay-clean-7eb831cd72c6-frontend-1 Removed 
+ Container relay-clean-7eb831cd72c6-app-1 Stopped 
+ Container relay-clean-7eb831cd72c6-app-1 Removing 
+ Container relay-clean-7eb831cd72c6-app-1 Removed 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Stopping 
+ Container relay-clean-7eb831cd72c6-postgres-1 Stopping 
+ Container relay-clean-7eb831cd72c6-postgres-1 Stopped 
+ Container relay-clean-7eb831cd72c6-postgres-1 Removing 
+ Container relay-clean-7eb831cd72c6-postgres-1 Removed 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Stopped 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Removing 
+ Container relay-clean-7eb831cd72c6-rabbitmq-1 Removed 
+ Network relay-clean-7eb831cd72c6_default Removing 
+ Volume relay-clean-7eb831cd72c6_rabbitmq-data Removing 
+ Volume relay-clean-7eb831cd72c6_rabbitmq-data Removed 
+ Network relay-clean-7eb831cd72c6_default Removed 
+Independent clean-install SQL verifies every run and correlated action; no secrets in production assets.
+{"candidate_sha256": "c6628fb005f87140b38e0603a238ee7ac4c44147533ddda2630212b45d222de5", "files": 290, "migrations": 9, "persistence": {"runs": 13, "stock": 195, "actions": 7, "receipts": 13}, "result": "passed"}
+Removed exact disposable clean-install resources; main data preserved.
