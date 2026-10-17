@@ -1,5 +1,10 @@
 # Frontend/backend preparation — 2026-10-12
 
+## Milestone 6.1 — current integration — 2026-10-17
+
+Successful delivery now uses the dedicated real demo producer/API, relay and consumer. The other four scenarios remain illustrative. Earlier dated statements below are historical. Use the [6.1 runbook](../operations/milestone-6-1.md), not shared-stack migrations, for the live experience.
+
+
 ## Milestone 4.4 — current verification and closure — 2026-10-16
 
 Milestone 4 is closed with explicit nonblocking limitations. Real inventory/deduplication, ACK/quarantine and recovery evidence is separate from pending shared rollout. Presentation frontend verified; live backend integration is not implemented. Earlier dated sections retain their historical scope. [Verification matrix](../operations/milestone-4-4-review.md) | [Environment inventory](../docker/environment-inventory.md).

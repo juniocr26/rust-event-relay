@@ -13,6 +13,7 @@ test('presentation loads its resources and favicon without runtime errors or API
     if (['fetch', 'xhr'].includes(request.resourceType())) apiCalls.push(request.url())
   })
   await page.goto('/')
+  await page.getByLabel('Choose an experience').selectOption('ack')
   await expect(page.getByRole('button', { name: 'Open experience' })).toBeVisible()
   const favicon = page.locator('link[rel="icon"]')
   await expect(favicon).toHaveAttribute('href', '/favicon.svg')
@@ -23,7 +24,7 @@ test('presentation loads its resources and favicon without runtime errors or API
   await page.getByRole('button', { name: 'Open experience' }).click()
   await page.getByRole('button', { name: 'Run scenario' }).click()
   await page.clock.runFor(14400)
-  await expect(page.locator('.result strong')).toHaveText('✓ Delivery recorded')
+  await expect(page.locator('.result strong')).toHaveText('? Uncertain response · committed outcome observed')
   await page.keyboard.press('Escape')
   expect(errors).toEqual([])
   expect(apiCalls).toEqual([])
@@ -33,6 +34,7 @@ for (const width of [320, 375, 768, 1024, 1920]) {
   test(`viewport ${width}: full landing, readable modal, accessible controls`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await page.goto('/')
+    await page.getByLabel('Choose an experience').selectOption('ack')
     const landing = await page.locator('.landing').boundingBox()
     expect(landing?.width).toBe(width)
     expect(landing!.height).toBeGreaterThanOrEqual(900)
@@ -45,7 +47,7 @@ for (const width of [320, 375, 768, 1024, 1920]) {
       true,
     )
     await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused()
-    await expect(page.getByRole('heading', { name: 'Deliver a message' })).toBeInViewport()
+    await expect(page.getByRole('heading', { name: 'Lose a confirmation' })).toBeInViewport()
     await page.screenshot({ path: `/tmp/relay-modal-top-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: 'Run scenario' }).scrollIntoViewIfNeeded()
     await expect(page.getByRole('button', { name: 'Run scenario' })).toBeInViewport()
@@ -71,6 +73,7 @@ for (const width of [320, 375, 768, 1024, 1920]) {
 
 test('modal contains focus, blocks background and cleans playback on close', async ({ page }) => {
   await page.goto('/')
+  await page.getByLabel('Choose an experience').selectOption('ack')
   await page.clock.install()
   await page.getByRole('button', { name: 'Open experience' }).click()
   await page.keyboard.press('Shift+Tab')
@@ -81,7 +84,7 @@ test('modal contains focus, blocks background and cleans playback on close', asy
   await expect(page.locator('body')).toHaveCSS('overflow', 'hidden')
   await page.getByRole('button', { name: 'Run scenario' }).click()
   await page.clock.runFor(3600)
-  await expect(page.locator('.current')).toHaveText('Message accepted by RabbitMQ')
+  await expect(page.locator('.current')).toHaveText('Broker accepts the event')
   await page.keyboard.press('Escape')
   await page.clock.runFor(30000)
   await page.getByRole('button', { name: 'Open experience' }).click()
@@ -95,7 +98,6 @@ test('modal contains focus, blocks background and cleans playback on close', asy
 })
 
 for (const [id, count, outcome] of [
-  ['normal', 4, '✓ Delivery recorded'],
   ['crash', 5, '↻ Recovered with duplicate publication'],
   ['race', 5, '✓ One live owner in this schedule'],
   ['ack', 4, '? Uncertain response · committed outcome observed'],
@@ -138,13 +140,14 @@ for (const [id, count, outcome] of [
 test('reduced motion keeps readable progression without animation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
+  await page.getByLabel('Choose an experience').selectOption('ack')
   await page.clock.install()
   await page.getByRole('button', { name: 'Open experience' }).click()
   await page.getByRole('button', { name: 'Run scenario' }).click()
   await page.clock.runFor(3600)
   await expect(page.locator('.message').first()).toHaveCSS('animation-name', 'none')
   await expect(page.locator('.pulse')).toHaveCSS('animation-name', 'none')
-  await expect(page.locator('.current')).toHaveText('Message accepted by RabbitMQ')
+  await expect(page.locator('.current')).toHaveText('Broker accepts the event')
   await page.clock.runFor(14400)
   await expect(page.getByRole('button', { name: 'Run again' })).toBeEnabled()
 })

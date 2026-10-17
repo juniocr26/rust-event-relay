@@ -13,3 +13,6 @@ frontend/dist
 backend/target
 
 .local-backups
+
+# Dedicated demo secrets must not enter build contexts.
+.demo.env

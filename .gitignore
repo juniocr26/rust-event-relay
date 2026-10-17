@@ -23,3 +23,6 @@
 
 # Private host backups and rollout evidence (never commit).
 /.local-backups/
+
+# Dedicated local demo credentials (never browser build configuration).
+.demo.env

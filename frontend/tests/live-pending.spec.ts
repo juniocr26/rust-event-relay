@@ -1,0 +1,21 @@
+import { test, expect } from '@playwright/test'
+import { readFileSync, writeFileSync } from 'node:fs'
+test('paused test consumer shows pending evidence and closing only stops observation', async ({ page, request }) => {
+  const token = readFileSync('/tmp/demo61-browser-token','utf8').trim()
+  await page.goto('/'); await page.getByRole('button', { name: 'Open experience' }).click()
+  await page.getByLabel('Local demo token', { exact: true }).fill(token)
+  await page.getByRole('button', { name: 'Run real delivery' }).click()
+  await expect(page.getByText('Producer committed. Observing independent delivery evidence…').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Observing…' })).toBeDisabled()
+  await expect(page.getByText('Consumer receipt: not observed yet.')).toBeVisible()
+  const key=await page.evaluate(()=>sessionStorage.getItem('demo61-request'))
+  await page.keyboard.press('Escape')
+  const result=await request.get(`/demo/runs/${key}`,{headers:{Authorization:`Bearer ${token}`,'X-Demo-Client':'demo61'}})
+  const e=await result.json(); expect(e.receipt).toBeNull();expect(e.stock).toBe(10)
+  writeFileSync('/tmp/demo61-pending-evidence.json',JSON.stringify(e))
+  await page.getByLabel('Choose an experience').selectOption('race')
+  await page.getByRole('button', { name: 'Open experience' }).click()
+  await page.waitForTimeout(1500)
+  await expect(page.getByRole('button',{name:'Copy Run ID'})).toHaveCount(0)
+  await expect(page.getByText('Illustrative scenario',{exact:false}).first()).toBeVisible()
+})

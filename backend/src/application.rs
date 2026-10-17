@@ -50,3 +50,5 @@ pub mod consume;
 pub mod observation;
 
 pub mod readiness;
+
+pub mod demo;

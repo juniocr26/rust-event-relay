@@ -7,13 +7,14 @@ import StageProgress from './StageProgress.vue'
 import MessageFlow from './MessageFlow.vue'
 import EnvelopePreview from './EnvelopePreview.vue'
 import EventOutput from './EventOutput.vue'
+import RealDelivery from './RealDelivery.vue'
 const props = defineProps<{ scenario: Scenario }>()
 defineEmits<{ close: [] }>()
 const { index, running, current, entries, finished, run } = usePlayback(props.scenario)
 </script>
 <template>
   <BaseModal :title="scenario.title" :description="scenario.description" @close="$emit('close')"
-    ><p class="expected">Expected: {{ scenario.expected }}</p>
+    ><RealDelivery v-if="scenario.id === 'normal'" /><template v-else><p class="expected">Illustrative scenario · Expected: {{ scenario.expected }}</p>
     <StageProgress :steps="scenario.steps" :index="index" :running="running" /><MessageFlow
       :active="running && !!current?.activity"
       :title="current?.title ?? 'Ready when you are.'"
@@ -45,6 +46,6 @@ const { index, running, current, entries, finished, run } = usePlayback(props.sc
       <BaseButton :disabled="running" @click="run">{{
         running ? 'Running…' : finished ? 'Run again →' : 'Run scenario →'
       }}</BaseButton>
-    </footer></BaseModal
+    </footer></template></BaseModal
   >
 </template>

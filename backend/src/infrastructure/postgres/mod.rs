@@ -398,3 +398,5 @@ mod replay;
 
 mod consumer;
 pub use consumer::PostgresInventoryProcessor;
+
+pub mod demo;

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import ActivityPulse from './ActivityPulse.vue'
-defineProps<{ active: boolean; title: string; explanation: string; preview: boolean }>()
+defineProps<{ active: boolean; title: string; explanation: string; preview: boolean; live?: boolean }>()
 </script>
 <template>
-  <section class="visual" aria-label="Illustrative message journey">
+  <section class="visual" :aria-label="live ? 'Semantic delivery milestones' : 'Illustrative message journey'">
     <div class="flow">
       <div class="station">{{ preview ? 'RabbitMQ arrivals' : 'PostgreSQL' }}</div>
       <span class="message" :class="{ moving: active }" aria-hidden="true">→</span>
@@ -13,6 +13,6 @@ defineProps<{ active: boolean; title: string; explanation: string; preview: bool
     </div>
     <div class="current" role="status">{{ title }}</div>
     <div class="hint">{{ explanation }}</div>
-    <ActivityPulse :active="active" />
+    <ActivityPulse v-if="!live" :active="active" />
   </section>
 </template>

@@ -1,3 +1,5 @@
+[Milestone 6 preparation — reference comparison and proposed live scope (not approved)](operations/milestone-6-preparation.md).
+
 **Current Milestone 5 closure (2026-10-17):** [5.3 protocol, measurements, acceptance matrix, rollout and decision list](operations/milestone-5-3.md) | [Bounded result data](testing/milestone-5-3-results.json). Closed with explicit nonblocking limitations; Milestone 6 undefined. Earlier dated entries remain historical.
 
 # Documentation catalog: rust-event-relay
@@ -136,3 +138,6 @@ Bounded discovery and fresh-authority isolation are implemented; replay remains 
 [Milestone 4.2 — PostgreSQL](architecture/milestone-4-2.md).
 
 [Milestone 4.3 — consumer runtime and confirmed quarantine](architecture/milestone-4-3.md).
+
+- [Milestone 6.1 — persistent real delivery](operations/milestone-6-1.md)
+- [ADR 011 — persistent demo runs](adr/011-persistent-demo-runs.md)

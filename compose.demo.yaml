@@ -1,0 +1,127 @@
+# Always use: docker compose --env-file .demo.env -p relay-demo61 -f compose.demo.yaml ...
+name: relay-demo61
+x-app: &app
+  image: relay-demo61-toolchain
+  init: true
+  working_dir: /tmp
+  entrypoint: []
+  volumes:
+    - demo-build:/demo-target:ro
+  environment: &environment
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: '5432'
+    POSTGRES_DB: relay_demo61
+    POSTGRES_USER: demo61
+    POSTGRES_PASSWORD: ${DEMO_DB_PASSWORD:?Generate .demo.env}
+    RABBITMQ_HOST: rabbitmq
+    RABBITMQ_PORT: '5672'
+    RABBITMQ_DEFAULT_USER: demo61
+    RABBITMQ_DEFAULT_PASS: ${DEMO_BROKER_PASSWORD:?Generate .demo.env}
+    RABBITMQ_DEFAULT_VHOST: demo61
+    REPLAY_OPERATORS: ''
+    RELAY_MAINTENANCE_CANDIDATES: ''
+    CARGO_HOME: /app/.cargo-cache
+    CARGO_TARGET_DIR: /demo-target
+    HTTP_ADDR: 0.0.0.0:8080
+    RUST_LOG: info
+  depends_on:
+    postgres: {condition: service_healthy}
+    rabbitmq: {condition: service_healthy}
+  mem_limit: 256m
+  cpus: 0.5
+  pids_limit: 128
+  stop_grace_period: 30s
+  logging: &logging
+    driver: json-file
+    options: {max-size: 5m, max-file: '2'}
+services:
+  postgres:
+    image: postgres:18.6-bookworm
+    environment:
+      POSTGRES_DB: relay_demo61
+      POSTGRES_USER: demo61
+      POSTGRES_PASSWORD: ${DEMO_DB_PASSWORD:?Generate .demo.env}
+    command: ['postgres', '-c', 'max_connections=30', '-c', 'shared_buffers=64MB']
+    ports: ['127.0.0.1:5441:5432']
+    volumes: ['demo-postgres:/var/lib/postgresql']
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    logging: *logging
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U demo61 -d relay_demo61']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  rabbitmq:
+    image: rabbitmq:4.3.6-management
+    hostname: demo61-broker
+    environment:
+      RABBITMQ_DEFAULT_USER: demo61
+      RABBITMQ_DEFAULT_PASS: ${DEMO_BROKER_PASSWORD:?Generate .demo.env}
+      RABBITMQ_DEFAULT_VHOST: demo61
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '+S 2:2'
+    ports: ['127.0.0.1:15681:15672']
+    volumes: ['demo-rabbitmq:/var/lib/rabbitmq']
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 256
+    logging: *logging
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'check_running']
+      interval: 3s
+      timeout: 5s
+      retries: 40
+  demo:
+    <<: *app
+    command: ['/demo-target/debug/demo']
+    environment:
+      <<: *environment
+      DEMO_TOKEN: ${DEMO_TOKEN:?Generate .demo.env}
+      DEMO_ORIGIN: http://localhost:5174
+    ports: ['127.0.0.1:8081:8080']
+  relay:
+    <<: *app
+    command: ['/demo-target/debug/relay']
+  consumer:
+    <<: *app
+    command: ['/demo-target/debug/consumer']
+  tools:
+    <<: *app
+    working_dir: /app/backend
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    profiles: [tools]
+    user: root
+    volumes:
+      - .:/app
+      - demo-build:/demo-target
+      - demo-cargo:/cargo-cache
+    environment:
+      <<: *environment
+      CARGO_HOME: /cargo-cache
+    command: ['cargo', 'build', '--locked', '--bins']
+    mem_limit: 3g
+    cpus: 2
+  frontend:
+    image: node:22-bookworm-slim
+    init: true
+    working_dir: /app/frontend
+    environment:
+      DEMO_API_TARGET: http://demo:8080
+    command: ['sh', '-c', 'npm ci --cache /tmp/npm-cache && npm run dev -- --host 0.0.0.0 --port 5174 --strictPort']
+    volumes:
+      - ./frontend:/app/frontend:ro
+      - demo-node:/app/frontend/node_modules
+    ports: ['127.0.0.1:5174:5174']
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 128
+    logging: *logging
+volumes:
+  demo-postgres:
+  demo-rabbitmq:
+  demo-build:
+  demo-cargo:
+  demo-node:

@@ -1,3 +1,5 @@
+[Preparação do Marco 6 — comparação e proposta de escopo live (sem aprovação)](operations/milestone-6-preparation.md).
+
 **Fechamento atual do Marco 5 (17/10/2026):** [5.3 protocolo, medições, matriz, rollout e decisões](operations/milestone-5-3.md) | [Dados finitos](../en/testing/milestone-5-3-results.json). Fechado com limitações explícitas não bloqueantes; Marco 6 indefinido. Entradas datadas anteriores permanecem históricas.
 
 # Catálogo de documentação: rust-event-relay
@@ -136,3 +138,6 @@ Descoberta limitada e isolamento com autoridade atual implementados; replay perm
 [Milestone 4.2 — PostgreSQL](architecture/milestone-4-2.md).
 
 [Marco 4.3 — runtime consumidor e quarentena confirmada](architecture/milestone-4-3.md).
+
+- [Milestone 6.1 — persistent real delivery](operations/milestone-6-1.md)
+- [ADR 011 — persistent demo runs](adr/011-persistent-demo-runs.md)

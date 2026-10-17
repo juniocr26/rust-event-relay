@@ -22,9 +22,9 @@ function contain(event: KeyboardEvent) {
   if (event.key !== 'Tab') return
   const items = [
     ...dialog.value!.querySelectorAll<HTMLElement>(
-      'button:not(:disabled), select:not(:disabled), [tabindex="0"]',
+      'button:not(:disabled), select:not(:disabled), input:not(:disabled), a[href], summary, [tabindex="0"]',
     ),
-  ]
+  ].filter(item => item.getClientRects().length > 0)
   const first = items[0],
     last = items[items.length - 1]
   if (event.shiftKey && document.activeElement === first) {

@@ -1,5 +1,10 @@
 # Preparação frontend/backend — 2026-10-12
 
+## Marco 6.1 — integração atual — 2026-10-17
+
+Entrega bem-sucedida agora usa produtor/API, relay e consumidor reais na stack dedicada. Os outros quatro cenários permanecem ilustrativos. Afirmações datadas abaixo são históricas. Usar o [runbook 6.1](../operations/milestone-6-1.md), sem migrations na stack compartilhada.
+
+
 ## Marco 4.4 — verificação e fechamento atuais — 16/10/2026
 
 Marco 4 fechado com limitações não bloqueantes explícitas. Evidência real de estoque/deduplicação, ACK/quarentena e recuperação é separada do rollout compartilhado pendente. Frontend de apresentação verificado; integração ao vivo com backend não implementada. Seções históricas abaixo mantêm o escopo das respectivas datas. [Matriz de verificação](../operations/milestone-4-4-review.md) | [Inventário de ambiente](../docker/environment-inventory.md).
