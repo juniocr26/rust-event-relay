@@ -1,3 +1,5 @@
+Current duplicate action limits and historical-run selection: [Milestone 6.2](../operations/milestone-6-2.md). The earlier single-action limit below is superseded.
+
 [Português brasileiro](../../pt-BR/adr/012-one-application-real-scenarios.md) | [Catalog](../index.md)
 
 # ADR 012 — one application environment and bounded real scenarios

@@ -29,6 +29,7 @@ async fn setup(p: &PgPool) {
         include_str!("../migrations/20261014000000_add_atomic_consumer.up.sql"),
         include_str!("../migrations/20261017000000_add_demo_runs.up.sql"),
         include_str!("../migrations/20261018000000_add_demo_actions.up.sql"),
+        include_str!("../migrations/20261019000000_multiple_duplicate_actions.up.sql"),
     ] {
         support::checked(sqlx::raw_sql(sql).execute(p).await, "demo test schema");
     }
@@ -306,6 +307,147 @@ async fn interrupted_publication_action_is_unknown_and_never_reissued() {
             .await
             .unwrap();
         assert_eq!(n, 0);
+        Ok(())
+    })
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn multiple_actions_preserve_history_and_refuse_destructive_rollback() {
+    use reliable_event_relay::application::demo::{ActionIntent, Actions};
+    support::isolated(|p| async move {
+        setup(&p).await;
+        let (repo, e) = delivered_fixture(&p, "normal").await;
+        assert_eq!(repo.eligible_runs().await.unwrap().len(), 1);
+        let mut ids = Vec::new();
+        for _ in 0..3 {
+            let intent = ActionIntent {
+                request_id: Uuid::now_v7(),
+                run_id: e.run_id,
+                copies: 1,
+            };
+            let action = repo.submit_action(intent.clone()).await.unwrap();
+            assert_eq!(
+                repo.submit_action(intent).await.unwrap().action_id,
+                action.action_id
+            );
+            ids.push(action.action_id);
+        }
+        assert!(matches!(
+            repo.submit_action(ActionIntent {
+                request_id: Uuid::now_v7(),
+                run_id: e.run_id,
+                copies: 1
+            })
+            .await,
+            Err(Error::Capacity)
+        ));
+        let evidence = repo.evidence(e.request_id).await.unwrap().unwrap();
+        assert_eq!(evidence.actions.len(), 3);
+        assert_eq!(evidence.effect_receipts, 1);
+        assert_eq!(evidence.stock, Some(15));
+        assert!(
+            sqlx::raw_sql(include_str!(
+                "../migrations/20261019000000_multiple_duplicate_actions.down.sql"
+            ))
+            .execute(&p)
+            .await
+            .is_err()
+        );
+        assert_eq!(
+            repo.evidence(e.request_id)
+                .await
+                .unwrap()
+                .unwrap()
+                .actions
+                .len(),
+            3
+        );
+        Ok(())
+    })
+    .await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn correlated_observation_survives_reprocessing_without_second_effect() {
+    use reliable_event_relay::{
+        application::{
+            consumer::{AtomicInventoryProcessor, ProcessingOutcome},
+            demo::{ActionIntent, Actions},
+        },
+        domain::{
+            consumer::{ConsumerName, InventoryEvent},
+            event::EventEnvelope,
+        },
+        infrastructure::postgres::PostgresInventoryProcessor,
+    };
+    support::isolated(|p| async move {
+        setup(&p).await;
+        let (repo, e) = delivered_fixture(&p, "normal").await;
+        let a = repo
+            .submit_action(ActionIntent {
+                request_id: Uuid::now_v7(),
+                run_id: e.run_id,
+                copies: 1,
+            })
+            .await
+            .unwrap();
+        let bytes: Vec<u8> =
+            sqlx::query_scalar("SELECT immutable_content FROM consumer.receipts WHERE event_id=$1")
+                .bind(e.event_id)
+                .fetch_one(&p)
+                .await
+                .unwrap();
+        let envelope: EventEnvelope = serde_json::from_slice(&bytes).unwrap();
+        let event = InventoryEvent::validate(envelope, Some(&e.event_id.to_string())).unwrap();
+        let name = ConsumerName::new("inventory.stock.v1").unwrap();
+        // First commit, then reconstruct processor as after an uncertain ACK/restart.
+        for _ in 0..2 {
+            let processor =
+                PostgresInventoryProcessor::new(p.clone()).for_demo_action(a.action_id, "slot-1");
+            assert!(matches!(
+                processor.process(&name, &event).await.unwrap(),
+                ProcessingOutcome::Duplicate(_)
+            ));
+        }
+        let mut changed: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        changed["payload"]["quantity"] = serde_json::json!(6);
+        let changed = InventoryEvent::validate(
+            serde_json::from_value(changed).unwrap(),
+            Some(&e.event_id.to_string()),
+        )
+        .unwrap();
+        assert!(matches!(
+            PostgresInventoryProcessor::new(p.clone())
+                .for_demo_action(a.action_id, "slot-1")
+                .process(&name, &changed)
+                .await
+                .unwrap(),
+            ProcessingOutcome::IdentityConflict
+        ));
+        let evidence = repo.evidence(e.request_id).await.unwrap().unwrap();
+        assert_eq!(evidence.stock, Some(15));
+        assert_eq!(evidence.effect_receipts, 1);
+        assert_eq!(
+            evidence
+                .observations
+                .iter()
+                .filter(|o| o.action_id == Some(a.action_id) && o.outcome == "Duplicate")
+                .count(),
+            2
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, Vec<u8>>(
+                "SELECT immutable_content FROM consumer.receipts WHERE event_id=$1"
+            )
+            .bind(e.event_id)
+            .fetch_one(&p)
+            .await
+            .unwrap(),
+            bytes
+        );
         Ok(())
     })
     .await;

@@ -1,3 +1,5 @@
+Limites atuais e seleção de execuções históricas: [Marco 6.2](../operations/milestone-6-2.md). O limite anterior de uma ação abaixo foi substituído.
+
 [English](../../en/adr/012-one-application-real-scenarios.md) | [Catálogo](../index.md)
 
 # ADR 012 — ambiente único e cenários reais limitados

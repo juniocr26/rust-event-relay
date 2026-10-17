@@ -17,7 +17,7 @@ def campaign():
   service.pop('ports',None);service.pop('networks',None);service.pop('build',None)
  app=config['services']['app'];app['image']='rust-event-relay-app'
  app['environment'].update({'DEMO_TOKEN':secret,'DEMO_ORIGIN':'http://localhost:5173','POSTGRES_USER':'relay_test','POSTGRES_PASSWORD':password,'POSTGRES_DB':'relay_test','RABBITMQ_DEFAULT_USER':'relay_test','RABBITMQ_DEFAULT_PASS':password,'RABBITMQ_DEFAULT_VHOST':'relay','REPLAY_OPERATORS':'','DEMO_ENABLED':'true'})
- app['volumes']=[{'type':'bind','source':str(ROOT),'target':'/app','read_only':True},{'type':'bind','source':str(ROOT/'target/consolidation'),'target':'/app/target','read_only':True}]
+ app['volumes']=[{'type':'bind','source':str(ROOT),'target':'/app','read_only':True},{'type':'bind','source':str(ROOT/'target'),'target':'/app/target','read_only':True}]
  app.update({'mem_limit':'1g','cpus':2,'pids_limit':256})
  db=config['services']['postgres'];db['environment'].update({'POSTGRES_USER':'relay_test','POSTGRES_PASSWORD':password,'POSTGRES_DB':'relay_test'});db['volumes']=[{'type':'volume','source':'test-postgres','target':'/var/lib/postgresql'}]
  broker=config['services']['rabbitmq'];broker['environment'].update({'RABBITMQ_DEFAULT_USER':'relay_test','RABBITMQ_DEFAULT_PASS':password,'RABBITMQ_DEFAULT_VHOST':'relay','RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS':'+S 2:2'});broker['volumes']=[v for v in broker['volumes'] if v.get('type')=='bind']+[{'type':'volume','source':'test-rabbitmq','target':'/var/lib/rabbitmq'}]
@@ -54,9 +54,10 @@ def campaign():
    run(['exec','-T','frontend','npx','playwright','test','--config','playwright.live.config.ts','--grep-invert','dependency unavailable|paused test consumer'])
    evidence=json.loads(run(['exec','-T','frontend','cat','/tmp/demo61-browser-evidence.json'],capture_output=True,text=True).stdout)
    assert '|processed|10|5|15|15' in sql(f"SELECT r.run_id,o.status,c.stock_before,c.quantity,c.stock_after,s.units FROM demo.runs r JOIN relay.outbox_events o ON o.id=r.event_id JOIN consumer.receipts c ON c.event_id=r.event_id JOIN consumer.stock s ON s.warehouse_id=r.warehouse_id AND s.sku=r.sku WHERE r.run_id='{uuid.UUID(evidence['run_id'])}';")
-   assert sql("SELECT count(*) FROM demo.actions a WHERE state='confirmed' AND (SELECT count(*) FROM demo.consumer_observations o WHERE o.action_id=a.action_id AND o.outcome='Duplicate')>=a.copies;")=='2'
+   assert sql("SELECT count(*) FROM demo.actions a WHERE state='confirmed' AND (SELECT count(*) FROM demo.consumer_observations o WHERE o.action_id=a.action_id AND o.outcome='Duplicate')>=a.copies;")=='7'
    assert sql("SELECT count(*) FROM demo.faults WHERE injected_at IS NOT NULL AND retry_available_at IS NOT NULL;")=='1'
    print('Independent SQL verifies normal, duplicate, concurrent duplicate and controlled retry evidence.')
+   run(['cp','frontend:/tmp/demo62-historical.png','/tmp/relay-main-historical.png'])
    for width in [320,1920]:run(['cp',f'frontend:/tmp/demo61-live-{width}.png',f'/tmp/relay-main-live-{width}.png'])
    run(['exec','-T','app','supervisorctl','stop','http'])
    run(['exec','-T','frontend','npx','playwright','test','--config','playwright.live.config.ts','--grep','dependency unavailable'])

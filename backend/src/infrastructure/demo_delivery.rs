@@ -151,13 +151,16 @@ async fn action_sessions(
         let barrier = tokio::sync::Barrier::new(if second.is_some() { 2 } else { 1 });
         let p1 =
             PostgresInventoryProcessor::new(pool.clone()).for_demo_action(a.action_id, "slot-1");
-        if let Some(second) = second.as_mut() {
+        if let Some(mut session) = second.take() {
             let p2 = PostgresInventoryProcessor::new(pool.clone())
                 .for_demo_action(a.action_id, "slot-2");
-            let (left, right) = tokio::join!(
-                consume_copies(&mut first, &p1, 2, &barrier),
-                consume_copies(second, &p2, 1, &barrier)
-            );
+            let (left, right) = tokio::join!(consume_copies(&mut first, &p1, 2, &barrier), async {
+                let result = consume_copies(&mut session, &p2, 1, &barrier).await;
+                // Prefetch can reserve the third copy here after the first ACK.
+                // Release that reservation before waiting for slot-1 to finish.
+                let _ = session.close().await;
+                result
+            });
             left?;
             right?;
         } else {
@@ -192,7 +195,14 @@ async fn consume_copies(
             Duration::from_secs(3),
         )
         .await;
-        if outcome.recover() || !matches!(outcome.primary, crate::application::consume::PrimaryOutcome::Processing(Ok(crate::application::consumer::ProcessingOutcome::Duplicate(_)))) {
+        if outcome.recover()
+            || !matches!(
+                outcome.primary,
+                crate::application::consume::PrimaryOutcome::Processing(Ok(
+                    crate::application::consumer::ProcessingOutcome::Duplicate(_)
+                ))
+            )
+        {
             return Err(());
         }
     }

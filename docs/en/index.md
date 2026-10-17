@@ -141,3 +141,5 @@ Bounded discovery and fresh-authority isolation are implemented; replay remains 
 
 - [Milestone 6.1 — persistent real delivery](operations/milestone-6-1.md)
 - [ADR 011 — persistent demo runs](adr/011-persistent-demo-runs.md)
+
+- [Milestone 6.2 — durable duplicates](operations/milestone-6-2.md)

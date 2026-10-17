@@ -28,7 +28,7 @@ pub fn router<R: Repository + Actions + 'static>(
     let permits = Arc::new(tokio::sync::Semaphore::new(2));
     let rate = Arc::new(Mutex::new((Instant::now(), 0u32)));
     Ok(Router::new()
-        .route("/demo/runs", post(submit::<R>))
+        .route("/demo/runs", post(submit::<R>).get(eligible::<R>))
         .route("/demo/actions", post(action::<R>))
         .route("/demo/config",get(||async {
             let value=|key:&str,default:&str| std::env::var(key).unwrap_or_else(|_|default.into());
@@ -131,6 +131,13 @@ async fn action<R: Actions>(
 ) -> Response {
     match repo.submit_action(intent).await {
         Ok(a) => (StatusCode::ACCEPTED, Json(a)).into_response(),
+        Err(e) => error(e),
+    }
+}
+
+async fn eligible<R: Repository>(State(repo): State<Arc<R>>) -> Response {
+    match repo.eligible_runs().await {
+        Ok(runs) => Json(runs).into_response(),
         Err(e) => error(e),
     }
 }

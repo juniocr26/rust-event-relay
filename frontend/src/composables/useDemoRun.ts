@@ -8,7 +8,7 @@ export interface Evidence {
   scenario: string; initial_stock: number; quantity: number; accepted_at: string; fact_id: string
   outbox: { status: string; created_at: string; processed_at: string | null; attempt_count: number; available_at: string }
   receipt: { consumer_name: string; event_id: string; quantity: number; stock_before: number; stock_after: number; completed_at: string } | null
-  stock: number | null; observed_at: string; action: Action | null; observations: Observation[]
+  effect_receipts: number; actions: Action[]; stock: number | null; observed_at: string; action: Action | null; observations: Observation[]
   publications: { action_id: string | null; ordinal: number; outcome: string; observed_at: string }[]
   fault: { condition: string; injected_at: string | null; retry_available_at: string | null; retry_revision: number | null } | null
 }
@@ -18,9 +18,11 @@ const pageToken = ref('')
 export function useDemoRun(scenario: string) {
   const storageKey = `relay-request:${scenario}`
   const token = pageToken, requestId = ref<string | null>(sessionStorage.getItem(storageKey)), evidence = ref<Evidence | null>(null)
+  const eligibleRuns = ref<{ run_id: string; request_id: string; event_id: string }[]>([]), selectedRequest = ref(sessionStorage.getItem(`${storageKey}:selected`) ?? '')
   const location = ref<Location | null>(null), state = ref('Ready for real execution'), busy = ref(false), stale = ref(false)
+  let freshnessTimer: ReturnType<typeof setTimeout> | undefined
   let controller: AbortController | undefined, timer: ReturnType<typeof setTimeout> | undefined, generation = 0
-  const stop = () => { generation++; controller?.abort(); clearTimeout(timer); busy.value = false }
+  const stop = () => { generation++; controller?.abort(); clearTimeout(timer); clearTimeout(freshnessTimer); busy.value = false }
   async function call<T>(path: string, signal: AbortSignal, body?: object): Promise<T> {
     const response = await fetch(path, {
       method: body ? 'POST' : 'GET', signal,
@@ -31,7 +33,7 @@ export function useDemoRun(scenario: string) {
     return response.json() as Promise<T>
   }
   const complete = (e: Evidence) => {
-    const effect = !!e.receipt && e.stock === 15 && e.receipt.stock_before === 10 && e.receipt.stock_after === 15 && e.outbox.status === 'processed'
+    const effect = e.effect_receipts === 1 && !!e.receipt && e.stock === 15 && e.receipt.stock_before === 10 && e.receipt.stock_after === 15 && e.outbox.status === 'processed'
     if (!effect) return false
     if (scenario === 'recovery') return !!e.fault?.retry_available_at && e.outbox.attempt_count >= 2
     if (scenario === 'dedupe' || scenario === 'concurrent') {
@@ -42,6 +44,7 @@ export function useDemoRun(scenario: string) {
   }
   async function execute() {
     stop(); const mine = generation; busy.value = true
+    if (selectedRequest.value) { requestId.value = selectedRequest.value; sessionStorage.setItem(`${storageKey}:selected`, selectedRequest.value) }
     requestId.value ??= crypto.randomUUID(); sessionStorage.setItem(storageKey, requestId.value)
     const deadline = Date.now() + 60_000
     async function step(submit: boolean) {
@@ -54,12 +57,17 @@ export function useDemoRun(scenario: string) {
         if (mine !== generation) return
         let result = await call<Evidence>(submit ? '/demo/runs' : `/demo/runs/${requestId.value}`, active.signal, submit ? { request_id: requestId.value, scenario, initial_stock: 10, quantity: 5 } : undefined)
         if (mine !== generation) return
-        if ((scenario === 'dedupe' || scenario === 'concurrent') && result.receipt && result.stock === 15 && result.outbox.status === 'processed' && !result.action) {
-          const action = await call<Action>('/demo/actions', active.signal, { request_id: requestId.value, run_id: result.run_id, copies: scenario === 'dedupe' ? 1 : 3 })
+        const actionKey = `relay-action:${result.run_id}`
+        let actionRequest = sessionStorage.getItem(actionKey)
+        if (selectedRequest.value && !actionRequest) { actionRequest = crypto.randomUUID(); sessionStorage.setItem(actionKey, actionRequest) }
+        if ((scenario === 'dedupe' || scenario === 'concurrent') && result.receipt && result.stock === 15 && result.outbox.status === 'processed' && (!result.action || !!actionRequest && !result.actions.some(a => a.request_id === actionRequest))) {
+          const action = await call<Action>('/demo/actions', active.signal, { request_id: actionRequest ?? requestId.value, run_id: result.run_id, copies: scenario === 'dedupe' ? 1 : 3 })
           if (mine !== generation) return
           result = { ...result, action }
         }
+        if (actionRequest) result = { ...result, action: result.actions.find(a => a.request_id === actionRequest) ?? result.action }
         evidence.value = result; stale.value = false
+        clearTimeout(freshnessTimer); freshnessTimer = setTimeout(() => { stale.value = true }, 15_000)
         if (complete(result)) {
           state.value = scenario === 'normal' ? 'Confirmed: receipt committed and stock 15; relay completion observed.' : scenario === 'recovery' ? 'Recovered: injected before-send rejection, durable retry and stock 15 observed.' : 'Verified: Duplicate processing observed; one effect receipt and stock 15.'
           busy.value = false; return
@@ -74,13 +82,26 @@ export function useDemoRun(scenario: string) {
         state.value = error instanceof Error && error.name !== 'AbortError' ? error.message : 'Observation request timed out. Submission outcome is unknown; recover the same request identity.'
       } finally { clearTimeout(timeout) }
     }
-    await step(true)
+    await step(!selectedRequest.value)
+  }
+  function anotherAction() {
+    if (!evidence.value || busy.value) return
+    selectedRequest.value = evidence.value.request_id
+    sessionStorage.setItem(`relay-action:${evidence.value.run_id}`, crypto.randomUUID())
+    void execute()
+  }
+  async function loadRuns() {
+    const mine = generation, active = new AbortController(); controller = active
+    const timeout = setTimeout(() => active.abort(), 9000)
+    try { const runs = await call<typeof eligibleRuns.value>('/demo/runs', active.signal); if (mine === generation) eligibleRuns.value = runs }
+    catch (error) { if (mine === generation) state.value = error instanceof Error ? error.message : 'Runs unavailable' }
+    finally { clearTimeout(timeout) }
   }
   function newRun() {
     if (!evidence.value || !complete(evidence.value)) return
-    stop(); sessionStorage.removeItem(storageKey); requestId.value = null; evidence.value = null
+    stop(); selectedRequest.value = ''; sessionStorage.removeItem(`${storageKey}:selected`); sessionStorage.removeItem(storageKey); requestId.value = null; evidence.value = null
     state.value = 'Ready for a new real execution'; stale.value = false
   }
   onBeforeUnmount(stop)
-  return { token, requestId, evidence, location, state, busy, stale, execute, newRun, complete }
+  return { anotherAction, eligibleRuns, selectedRequest, loadRuns, token, requestId, evidence, location, state, busy, stale, execute, newRun, complete }
 }

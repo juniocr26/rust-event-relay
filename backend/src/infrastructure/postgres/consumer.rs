@@ -57,6 +57,21 @@ impl PostgresInventoryProcessor {
                 .await
                 .map_err(precommit)?;
         if let Some(run) = run {
+            if let Some(action) = action {
+                let valid: bool = sqlx::query_scalar(
+                    "SELECT EXISTS(SELECT 1 FROM demo.actions WHERE action_id=$1 AND run_id=$2)",
+                )
+                .bind(action)
+                .bind(run)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(precommit)?;
+                if !valid {
+                    return Err(ProcessingFailure::new(
+                        ProcessingFailureKind::InvalidStoredData,
+                    ));
+                }
+            }
             sqlx::query("INSERT INTO demo.consumer_observations(observation_id,run_id,event_id,action_id,context,outcome) SELECT $1,$2,$3,$4,$5,$6 WHERE (SELECT count(*) FROM demo.consumer_observations WHERE run_id=$2)<32").bind(uuid::Uuid::now_v7()).bind(run).bind(event.event_id()).bind(action).bind(context).bind(outcome).execute(&mut **tx).await.map_err(precommit)?;
         }
         Ok(())

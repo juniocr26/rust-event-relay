@@ -54,6 +54,10 @@ pub struct Evidence {
     #[serde(default)]
     pub action: Option<Action>,
     #[serde(default)]
+    pub actions: Vec<Action>,
+    #[serde(default)]
+    pub effect_receipts: i64,
+    #[serde(default)]
     pub observations: Vec<ConsumerObservation>,
     #[serde(default)]
     pub publications: Vec<PublicationObservation>,
@@ -75,6 +79,11 @@ pub struct Evidence {
     pub observed_at: String,
 }
 pub trait Repository: Send + Sync {
+    fn eligible_runs(
+        &self,
+    ) -> impl std::future::Future<Output = Result<Vec<serde_json::Value>, Error>> + Send {
+        async { Ok(vec![]) }
+    }
     fn submit(
         &self,
         intent: Intent,

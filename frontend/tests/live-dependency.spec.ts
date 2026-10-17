@@ -11,5 +11,8 @@ test('dependency unavailable never fabricates producer or consumer success', asy
   const key = await page.evaluate(() => sessionStorage.getItem('relay-request:normal'))
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Open experience' }).click()
   expect(await page.evaluate(() => sessionStorage.getItem('relay-request:normal'))).toBe(key)
+  await expect(page.getByRole('button', { name: 'Recover same request' })).toBeEnabled()
+  await page.reload(); await page.getByRole('button', { name: 'Open experience' }).click()
+  expect(await page.evaluate(() => sessionStorage.getItem('relay-request:normal'))).toBe(key)
   await expect(page.getByRole('button', { name: 'Recover same request' })).toBeDisabled()
 })

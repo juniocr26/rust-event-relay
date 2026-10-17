@@ -141,3 +141,5 @@ Descoberta limitada e isolamento com autoridade atual implementados; replay perm
 
 - [Milestone 6.1 — persistent real delivery](operations/milestone-6-1.md)
 - [ADR 011 — persistent demo runs](adr/011-persistent-demo-runs.md)
+
+- [Marco 6.2 — duplicatas duráveis](operations/milestone-6-2.md)

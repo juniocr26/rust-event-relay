@@ -132,7 +132,11 @@ async fn main() -> Result<(), &'static str> {
         ));
         pool = Some(connected);
     }
-    metrics.configure(u32::from(demo_pool.is_some())*4 + u32::from(pool.is_some())*2,0,pool.is_some());
+    metrics.configure(
+        u32::from(demo_pool.is_some()) * 4 + u32::from(pool.is_some()) * 2,
+        0,
+        pool.is_some(),
+    );
     let http_metrics = metrics.clone();
     router = router.layer(axum::middleware::from_fn(
         move |request: axum::extract::Request, next: axum::middleware::Next| {
@@ -178,8 +182,13 @@ async fn main() -> Result<(), &'static str> {
     metrics.readiness.stop();
     let _ = demo_stop.send(true);
     if let Some(mut task) = demo_task
-        && tokio::time::timeout(Duration::from_secs(4), &mut task).await.is_err() {
-        task.abort(); let _=task.await; cleanup_expired=true;
+        && tokio::time::timeout(Duration::from_secs(4), &mut task)
+            .await
+            .is_err()
+    {
+        task.abort();
+        let _ = task.await;
+        cleanup_expired = true;
     }
     if let Some(observation) = demo_observation {
         observation.shutdown().await;

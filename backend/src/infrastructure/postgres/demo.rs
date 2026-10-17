@@ -23,6 +23,9 @@ pub struct DemoRepository {
     pool: PgPool,
 }
 impl DemoRepository {
+    pub async fn eligible_runs(&self) -> Result<Vec<serde_json::Value>, Error> {
+        sqlx::query_scalar("SELECT jsonb_build_object('run_id',r.run_id,'request_id',r.request_id,'event_id',r.event_id) FROM demo.runs r JOIN relay.outbox_events o ON o.id=r.event_id JOIN consumer.receipts c ON c.event_id=r.event_id AND c.consumer_name='inventory.stock.v1' WHERE o.status='processed' AND c.completed_at IS NOT NULL AND c.stock_after=15 ORDER BY r.accepted_at DESC LIMIT 100").fetch_all(&self.pool).await.map_err(|_|Error::Unavailable)
+    }
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -32,7 +35,9 @@ const EVIDENCE: &str = "SELECT jsonb_build_object(
 'warehouse_id',r.warehouse_id,'sku',r.sku,'scenario',r.scenario,
 'initial_stock',r.initial_stock,'quantity',r.quantity,'accepted_at',r.accepted_at,
 'fact_id',f.fact_id,
-'action',(SELECT to_jsonb(a) FROM demo.actions a WHERE a.run_id=r.run_id),
+'action',(SELECT to_jsonb(a) FROM demo.actions a WHERE a.run_id=r.run_id ORDER BY accepted_at DESC,action_id DESC LIMIT 1),
+'actions',COALESCE((SELECT jsonb_agg(to_jsonb(a) ORDER BY accepted_at,action_id) FROM demo.actions a WHERE a.run_id=r.run_id),'[]'::jsonb),
+'effect_receipts',(SELECT count(*) FROM consumer.receipts c WHERE c.event_id=r.event_id AND c.consumer_name='inventory.stock.v1'),
 'observations',COALESCE((SELECT jsonb_agg(jsonb_build_object('observation_id',v.observation_id,'action_id',v.action_id,'context',v.context,'outcome',v.outcome,'observed_at',v.observed_at) ORDER BY v.observed_at,v.observation_id) FROM demo.consumer_observations v WHERE v.run_id=r.run_id),'[]'::jsonb),
 'publications',COALESCE((SELECT jsonb_agg(jsonb_build_object('action_id',v.action_id,'ordinal',v.ordinal,'outcome',v.outcome,'observed_at',v.observed_at) ORDER BY v.observed_at) FROM demo.publications v WHERE v.run_id=r.run_id),'[]'::jsonb),
 'fault',(SELECT jsonb_build_object('condition',condition,'injected_at',injected_at,'retry_available_at',retry_available_at,'retry_revision',retry_revision) FROM demo.faults v WHERE v.run_id=r.run_id),
@@ -45,6 +50,9 @@ LEFT JOIN consumer.receipts c ON c.event_id=r.event_id AND c.consumer_name='inve
 LEFT JOIN consumer.stock s ON s.warehouse_id=r.warehouse_id AND s.sku=r.sku
 WHERE r.request_id=$1";
 impl Repository for DemoRepository {
+    async fn eligible_runs(&self) -> Result<Vec<serde_json::Value>, Error> {
+        DemoRepository::eligible_runs(self).await
+    }
     async fn evidence(&self, id: Uuid) -> Result<Option<Evidence>, Error> {
         let row = sqlx::query(EVIDENCE)
             .bind(id)
@@ -125,14 +133,12 @@ impl crate::application::demo::Actions for DemoRepository {
             .execute(&mut *tx)
             .await
             .map_err(operation_error)?;
-        let prior: Option<serde_json::Value> = sqlx::query_scalar(
-            "SELECT to_jsonb(a) FROM demo.actions a WHERE request_id=$1 OR run_id=$2 LIMIT 1",
-        )
-        .bind(intent.request_id)
-        .bind(intent.run_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(operation_error)?;
+        let prior: Option<serde_json::Value> =
+            sqlx::query_scalar("SELECT to_jsonb(a) FROM demo.actions a WHERE request_id=$1")
+                .bind(intent.request_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(operation_error)?;
         if let Some(prior) = prior {
             let action: Action = serde_json::from_value(prior).map_err(|_| Error::Unavailable)?;
             if action.request_id != intent.request_id
@@ -147,7 +153,7 @@ impl crate::application::demo::Actions for DemoRepository {
         if intent.request_id.is_nil() || !matches!(intent.copies, 1 | 3) {
             return Err(Error::Invalid);
         }
-        let eligible:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM demo.runs r JOIN relay.outbox_events o ON o.id=r.event_id JOIN consumer.receipts c ON c.event_id=r.event_id AND c.consumer_name='inventory.stock.v1' WHERE r.run_id=$1 AND o.status='processed' AND c.stock_after=15 AND ((r.scenario='dedupe' AND $2=1) OR (r.scenario='concurrent' AND $2=3)))").bind(intent.run_id).bind(intent.copies).fetch_one(&mut *tx).await.map_err(operation_error)?;
+        let eligible:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM demo.runs r JOIN relay.outbox_events o ON o.id=r.event_id JOIN consumer.receipts c ON c.event_id=r.event_id AND c.consumer_name='inventory.stock.v1' WHERE r.run_id=$1 AND o.status='processed' AND c.stock_after=15 AND c.completed_at IS NOT NULL AND ($2=1 OR r.scenario='concurrent'))").bind(intent.run_id).bind(intent.copies).fetch_one(&mut *tx).await.map_err(operation_error)?;
         if !eligible {
             return Err(Error::Invalid);
         }
@@ -157,7 +163,13 @@ impl crate::application::demo::Actions for DemoRepository {
         .fetch_one(&mut *tx)
         .await
         .map_err(operation_error)?;
-        if count >= 4 {
+        let (retained, per_run): (i64, i64) =
+            sqlx::query_as("SELECT count(*),count(*) FILTER(WHERE run_id=$1) FROM demo.actions")
+                .bind(intent.run_id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(operation_error)?;
+        if count >= 4 || retained >= 100 || per_run >= 3 {
             return Err(Error::Capacity);
         }
         let id = Uuid::now_v7();

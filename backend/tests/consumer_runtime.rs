@@ -1486,3 +1486,81 @@ async fn readiness_tracks_subscription_outage_and_recovery_without_messages() {
     })
     .await;
 }
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn milestone62_committed_duplicate_observation_survives_lost_ack() {
+    isolated(|pool| async move {
+        schema(&pool).await;
+        for sql in [
+            include_str!("../migrations/20261017000000_add_demo_runs.up.sql"),
+            include_str!("../migrations/20261018000000_add_demo_actions.up.sql"),
+            include_str!("../migrations/20261019000000_multiple_duplicate_actions.up.sql"),
+        ] { sqlx::raw_sql(sql).execute(&pool).await?; }
+        use reliable_event_relay::application::{demo::{Repository, Actions, Intent, ActionIntent}, consumer::AtomicInventoryProcessor};
+        let repo = reliable_event_relay::infrastructure::postgres::demo::DemoRepository::new(pool.clone());
+        let run=repo.submit(Intent {request_id:uuid::Uuid::now_v7(),scenario:"normal".into(),initial_stock:10,quantity:5}).await.unwrap();
+        let value:serde_json::Value=sqlx::query_scalar("SELECT to_jsonb(o) FROM relay.outbox_events o WHERE id=$1").bind(run.event_id).fetch_one(&pool).await?;
+        let original:EventEnvelope=serde_json::from_value(value)?;
+        let inventory=reliable_event_relay::domain::consumer::InventoryEvent::validate(original.clone(),Some(&run.event_id.to_string())).unwrap();
+        PostgresInventoryProcessor::new(pool.clone()).process(&name(),&inventory).await.unwrap();
+        sqlx::query("UPDATE relay.outbox_events SET status='processed',processed_at=clock_timestamp() WHERE id=$1").bind(run.event_id).execute(&pool).await?;
+        let action=repo.submit_action(ActionIntent {request_id:uuid::Uuid::now_v7(),run_id:run.run_id,copies:1}).await.unwrap();
+        broker(move |b| async move {
+            let p = PostgresInventoryProcessor::new(pool.clone()).for_demo_action(action.action_id,"slot-1");
+            let (uri, observed, task) = faults::dropped_source_ack_proxy().await;
+            let mut proxy = ProxyTask(task);
+            // Session connects its quarantine publisher first: keep that connection
+            // direct, and proxy only source through a manually subscribed channel.
+            let conn = Connection::connect(&uri, ConnectionProperties::default()).await?;
+            let ch = conn.create_channel().await?;
+            ch.basic_qos(1, BasicQosOptions::default()).await?;
+            let mut source = ch
+                .basic_consume(
+                    b.source.queue.clone().into(),
+                    "".into(),
+                    BasicConsumeOptions::default(),
+                    FieldTable::default(),
+                )
+                .await?;
+            let q = RabbitQuarantinePublisher::connect(config(b.uri.clone(), b.quarantine.clone()))
+                .await?;
+            let e = original;
+            b.send_event(&e).await;
+            use futures_util::StreamExt;
+            let d = RabbitDelivery::from_delivery(
+                timeout(WAIT, source.next()).await.unwrap().unwrap()?,
+            );
+            let out = handle_delivery(&d, &p, &q, &name(), WAIT).await;
+            assert!(matches!(out.primary, PrimaryOutcome::Processing(Ok(ProcessingOutcome::Duplicate(_)))));
+            assert_eq!(repo.evidence(run.request_id).await.unwrap().unwrap().observations.iter().filter(|o|o.action_id==Some(action.action_id)).count(),1);
+            assert!(!out.recover()); // Client send success does not acknowledge the ACK.
+            timeout(WAIT, observed).await??;
+            assert_eq!(repo.evidence(run.request_id).await.unwrap().unwrap().stock, Some(15));
+            assert_eq!(receipts(&pool).await, 1);
+            proxy.0.abort();
+            let _ = (&mut proxy.0).await;
+            drop(conn);
+            drop(source);
+            q.close().await?;
+            consumers(&b, 0).await;
+            let mut session = RabbitConsumerSession::connect(b.consumer(1)).await?;
+            let d = timeout(WAIT, session.next()).await??.unwrap();
+            let out = handle_delivery(&d, &p, &session.quarantine, &name(), WAIT).await;
+            assert!(matches!(
+                out.primary,
+                PrimaryOutcome::Processing(Ok(ProcessingOutcome::Duplicate(_)))
+            ));
+            assert!(!out.recover());
+            assert_eq!(repo.evidence(run.request_id).await.unwrap().unwrap().stock, Some(15));
+            assert_eq!(receipts(&pool).await, 1);
+            assert_eq!(repo.evidence(run.request_id).await.unwrap().unwrap().observations.iter().filter(|o|o.action_id==Some(action.action_id)).count(),2);
+            session.close().await?;
+            b.empty(&b.source.queue).await;
+            Ok(())
+        })
+        .await;
+        Ok(())
+    })
+    .await;
+}
