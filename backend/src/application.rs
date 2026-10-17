@@ -48,3 +48,5 @@ pub mod consumer;
 pub mod consume;
 
 pub mod observation;
+
+pub mod readiness;

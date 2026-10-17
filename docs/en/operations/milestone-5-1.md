@@ -4,6 +4,8 @@
 
 Scope: explicit resource boundaries, proportionate admission fixes and process-local instrumentation. No readiness change, dashboard, frontend integration, monitoring containers or capacity campaign. Base `05f0ebbb84722a6bf4e3b68f695d726cc2dd7df3`; initial working tree clean. Delivery remains sequential. No shared migration or runtime restart is part of this change.
 
+[Milestone 5.2 — readiness, freshness and validated 5.1 rollout](milestone-5-2.md).
+
 ## CI gate and historical failure
 
 [Run 38970986836](https://github.com/juniocr26/rust-event-relay/actions/runs/38970986836) completed successfully at the exact base revision: check, integrated-recovery, PostgreSQL, RabbitMQ, documentation and frontend all passed remotely. The revision separates the instrumented child's setup budget from production reconnect deadlines and records sanitized readiness phases/early exits. These are remote results for the base, **not for this uncommitted implementation**.

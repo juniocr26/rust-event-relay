@@ -153,6 +153,7 @@ impl Outcome {
 }
 /// Implementations must be bounded, synchronous and perform no external I/O.
 pub trait Observer: Sync {
+    fn broker_readiness(&self, _usable: bool) {}
     fn event(&self, operation: Operation, outcome: Outcome);
     fn enter(&self, operation: Operation);
     fn exit(&self, operation: Operation, elapsed: Duration);

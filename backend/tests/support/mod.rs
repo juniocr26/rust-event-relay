@@ -168,3 +168,27 @@ pub async fn scrape(address: std::net::SocketAddr) -> String {
     .await
     .expect("bounded metrics scrape")
 }
+
+#[allow(dead_code)]
+pub async fn wait_ready(address: std::net::SocketAddr, role: &str) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    tokio::time::timeout(WAIT, async {
+        loop {
+            if let Ok(mut socket) = tokio::net::TcpStream::connect(address).await {
+                socket
+                    .write_all(b"GET /ready HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                    .await
+                    .unwrap();
+                let mut out = String::new();
+                socket.read_to_string(&mut out).await.unwrap();
+                if out.starts_with("HTTP/1.1 200 OK") {
+                    assert!(out.contains(&format!("\"process\":\"{role}\"")));
+                    break;
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+    .await
+    .expect("role readiness deadline");
+}

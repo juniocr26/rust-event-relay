@@ -2,6 +2,7 @@
 //! Composição dedicada; nunca executa migrations ou altera credenciais.
 use reliable_event_relay::application::observation::{Observer, Operation as Op, Outcome as Obs};
 use reliable_event_relay::telemetry::metrics::{Exporter, ExporterConfig, Metrics, Process};
+use reliable_event_relay::telemetry::readiness::DatabaseObservation;
 use reliable_event_relay::{
     application,
     config::{Config, ConsumerRuntimeConfig},
@@ -50,14 +51,25 @@ async fn main() -> Result<(), &'static str> {
             ("statement_timeout", config.statement_ms.to_string()),
             ("lock_timeout", config.lock_ms.to_string()),
         ]);
-    let mut shutdown = std::pin::pin!(application::shutdown_signal());
-    let pool = tokio::select! {biased; ()=&mut shutdown=>return Ok(()),result=PgPoolOptions::new().max_connections(config.pool_max).acquire_timeout(config.pool_acquire).connect_with(options)=>result.map_err(|_|"consumer PostgreSQL unavailable (source redacted)")?};
+    let mut shutdown = std::pin::pin!(async {
+        application::shutdown_signal().await;
+        metrics.readiness.stop();
+    });
+    let pool = tokio::select! {biased; ()=&mut shutdown=>return Ok(()),result=PgPoolOptions::new().max_connections(config.pool_max).acquire_timeout(config.pool_acquire).connect_with(options.clone())=>result.map_err(|_|"consumer PostgreSQL unavailable (source redacted)")?};
     let schema = tokio::select! {biased; ()=&mut shutdown=>None,result=async {
-        sqlx::query("SELECT warehouse_id,sku,units FROM consumer.stock LIMIT 0").execute(&pool).await?;
-        sqlx::query("SELECT consumer_name,event_id,representation_version,immutable_content,warehouse_id,sku,quantity,stock_before,stock_after,completed_at FROM consumer.receipts LIMIT 0").execute(&pool).await
+        for query in reliable_event_relay::telemetry::readiness::CONSUMER_SCHEMA {
+            sqlx::query(query).execute(&pool).await?;
+        }
+        Ok::<(), sqlx::Error>(())
     }=>Some(result)};
+    let observation = DatabaseObservation::start(
+        options,
+        reliable_event_relay::telemetry::readiness::CONSUMER_SCHEMA,
+        metrics.readiness.clone(),
+    );
     let failed = schema.as_ref().is_some_and(Result::is_err);
     let deadline = if matches!(schema, Some(Ok(_))) {
+        metrics.readiness.admit();
         tracing::info!(
             prefetch = config.prefetch,
             "consumer starting; sequential admission; sources redacted"
@@ -73,6 +85,8 @@ async fn main() -> Result<(), &'static str> {
     } else {
         Instant::now() + config.shutdown
     };
+    metrics.readiness.stop();
+    observation.shutdown().await;
     let cleanup_expired = timeout_at(deadline, pool.close()).await.is_err();
     if cleanup_expired {
         tracing::warn!("consumer pool cleanup deadline exhausted");

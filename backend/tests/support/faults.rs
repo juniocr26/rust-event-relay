@@ -213,3 +213,44 @@ pub async fn dropped_source_ack_proxy() -> (
     });
     (url.into(), observed, task)
 }
+
+/// Test-owned TCP proxy with an explicit online/offline switch. Offline closes only
+/// its own sessions; no broker management calls or shared service interruptions.
+pub async fn switchable_proxy() -> (
+    u16,
+    tokio::sync::watch::Sender<bool>,
+    tokio::task::JoinHandle<()>,
+) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let parsed = url::Url::parse(&uri()).unwrap();
+    let target = (
+        parsed.host_str().unwrap().to_owned(),
+        parsed.port().unwrap_or(5672),
+    );
+    let (tx, mut rx) = tokio::sync::watch::channel(true);
+    let task = tokio::spawn(async move {
+        let mut sessions = tokio::task::JoinSet::new();
+        loop {
+            tokio::select! {biased;
+                changed=rx.changed()=>{
+                    if changed.is_err() { break; }
+                    if !*rx.borrow() {
+                        sessions.abort_all();
+                        while sessions.join_next().await.is_some() {}
+                    }
+                },
+                Some(_)=sessions.join_next(),if !sessions.is_empty()=>{},
+                accepted=listener.accept()=>{
+                    let Ok((mut client,_))=accepted else {break;};
+                    if !*rx.borrow(){drop(client);continue;}
+                    let target=target.clone();
+                    sessions.spawn(async move {if let Ok(mut server)=tokio::net::TcpStream::connect(target).await {let _=tokio::io::copy_bidirectional(&mut client,&mut server).await;}});
+                }
+            }
+        }
+        sessions.abort_all();
+        while sessions.join_next().await.is_some() {}
+    });
+    (port, tx, task)
+}

@@ -47,6 +47,7 @@ struct Timing {
 }
 /// No dynamic labels, registrations, payloads, database calls or remote writes.
 pub struct Metrics {
+    pub readiness: Arc<crate::application::readiness::Readiness>,
     process: Process,
     events: [[AtomicU64; 25]; 16],
     flight: [AtomicU64; 16],
@@ -59,6 +60,10 @@ pub struct Metrics {
 impl Metrics {
     pub fn new(process: Process) -> Arc<Self> {
         Arc::new(Self {
+            readiness: Arc::new(crate::application::readiness::Readiness::new(
+                !matches!(process, Process::Http),
+                !matches!(process, Process::Http),
+            )),
             process,
             events: std::array::from_fn(|_| std::array::from_fn(|_| AtomicU64::new(0))),
             flight: std::array::from_fn(|_| AtomicU64::new(0)),
@@ -156,10 +161,63 @@ impl Metrics {
             )
             .unwrap();
         }
+        let snapshot = self.readiness.snapshot();
+        writeln!(out, "# TYPE relay_readiness_pool_connections_limit gauge\nrelay_readiness_pool_connections_limit{{process=\"{process}\"}} {}", u8::from(snapshot.required[0])).unwrap();
+        out.push_str("# TYPE relay_readiness_reason gauge\n# TYPE relay_dependency_observed gauge\n# TYPE relay_dependency_fresh gauge\n# TYPE relay_dependency_failures_total counter\n# TYPE relay_dependency_last_success_timestamp_seconds gauge\n# TYPE relay_dependency_observation_age_seconds gauge\n# TYPE relay_dependency_observation_duration_seconds gauge\n");
+        for reason in crate::application::readiness::Reason::ALL {
+            writeln!(
+                out,
+                "relay_readiness_reason{{process=\"{process}\",reason=\"{}\"}} {}",
+                reason.label(),
+                u8::from(snapshot.reason == reason)
+            )
+            .unwrap();
+        }
+        writeln!(
+            out,
+            "# TYPE relay_ready gauge\nrelay_ready{{process=\"{process}\"}} {}",
+            u8::from(snapshot.ready())
+        )
+        .unwrap();
+        for (i, dependency) in ["database", "broker"].into_iter().enumerate() {
+            if !snapshot.required[i] {
+                continue;
+            }
+            writeln!(
+                out,
+                "relay_dependency_observed{{process=\"{process}\",dependency=\"{dependency}\"}} {}",
+                u8::from(snapshot.age[i].is_some())
+            )
+            .unwrap();
+            writeln!(
+                out,
+                "relay_dependency_fresh{{process=\"{process}\",dependency=\"{dependency}\"}} {}",
+                u8::from(
+                    snapshot.age[i]
+                        .is_some_and(|age| age <= crate::application::readiness::FRESHNESS)
+                )
+            )
+            .unwrap();
+            writeln!(out,"relay_dependency_failures_total{{process=\"{process}\",dependency=\"{dependency}\"}} {}",snapshot.failures[i]).unwrap();
+            if let Some(at) = snapshot.last_success[i] {
+                writeln!(out,"relay_dependency_last_success_timestamp_seconds{{process=\"{process}\",dependency=\"{dependency}\"}} {at}").unwrap();
+            }
+            if let Some(age) = snapshot.age[i] {
+                writeln!(out,"relay_dependency_observation_age_seconds{{process=\"{process}\",dependency=\"{dependency}\"}} {}",age.as_secs_f64()).unwrap();
+                writeln!(out,"relay_dependency_observation_duration_seconds{{process=\"{process}\",dependency=\"{dependency}\"}} {}",snapshot.duration[i].as_secs_f64()).unwrap();
+            }
+        }
         out
     }
 }
 impl Observer for Metrics {
+    fn broker_readiness(&self, usable: bool) {
+        self.readiness.observe(
+            crate::application::readiness::Dependency::Broker,
+            usable,
+            Duration::ZERO,
+        );
+    }
     fn event(&self, operation: Operation, outcome: Outcome) {
         add(&self.events[operation as usize][outcome as usize], 1);
     }
@@ -310,12 +368,26 @@ async fn serve(mut socket: TcpStream, metrics: Arc<Metrics>) -> io::Result<()> {
             break;
         }
     }
-    let ok = buffer[..used].starts_with(b"GET /metrics HTTP/1.1\r\n")
-        || buffer[..used].starts_with(b"GET /metrics HTTP/1.0\r\n");
-    let body = if ok { metrics.render() } else { String::new() };
-    let status = if ok { "200 OK" } else { "404 Not Found" };
+    let request = buffer[..used]
+        .split(|b| *b == b'\r')
+        .next()
+        .unwrap_or_default();
+    let readiness = request == b"GET /ready HTTP/1.1" || request == b"GET /ready HTTP/1.0";
+    let metrics_path = request == b"GET /metrics HTTP/1.1" || request == b"GET /metrics HTTP/1.0";
+    let (status, content_type, body) = if readiness {
+        let snapshot = metrics.readiness.snapshot();
+        (if snapshot.ready() {"200 OK"} else {"503 Service Unavailable"}, "application/json",serde_json::json!({"process":metrics.process.label(),"state":snapshot.state(),"reason":snapshot.reason.label(),"freshness_seconds":crate::application::readiness::FRESHNESS.as_secs(),"observation_age_seconds":{"database":snapshot.age[0].map(|v|v.as_secs_f64()),"broker":snapshot.age[1].map(|v|v.as_secs_f64())},"last_success_timestamp_seconds":{"database":snapshot.last_success[0],"broker":snapshot.last_success[1]}}).to_string())
+    } else if metrics_path {
+        (
+            "200 OK",
+            "text/plain; version=0.0.4; charset=utf-8",
+            metrics.render(),
+        )
+    } else {
+        ("404 Not Found", "text/plain", String::new())
+    };
     let header = format!(
-        "HTTP/1.1 {status}\r\nContent-Type: text/plain; version=0.0.4; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nCache-Control: no-store\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
         body.len()
     );
     socket.write_all(header.as_bytes()).await?;

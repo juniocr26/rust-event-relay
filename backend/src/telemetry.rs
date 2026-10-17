@@ -10,3 +10,5 @@ pub fn init(filter: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>
 }
 
 pub mod metrics;
+
+pub mod readiness;

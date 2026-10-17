@@ -110,6 +110,18 @@ fn binary_loads_dotenv_and_handles_signals() {
         socket.read_to_string(&mut metrics).unwrap();
         assert!(metrics.starts_with("HTTP/1.1 200 OK"));
         assert!(metrics.contains("process=\"http\""));
+        assert!(metrics.contains("relay_ready{process=\"http\"} 1"));
+        let mut ready = std::net::TcpStream::connect(metrics_address).unwrap();
+        ready
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        ready
+            .write_all(b"GET /ready HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .unwrap();
+        let mut response = String::new();
+        ready.read_to_string(&mut response).unwrap();
+        assert!(response.starts_with("HTTP/1.1 200 OK"));
+        assert!(response.contains("\"state\":\"ready\""));
         assert!(
             Command::new("kill")
                 .args([signal, &child.id().to_string()])

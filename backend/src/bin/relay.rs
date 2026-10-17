@@ -1,4 +1,5 @@
 //! Concrete relay composition; errors exposed by main are sanitized static messages.
+use reliable_event_relay::telemetry::readiness::DatabaseObservation;
 use reliable_event_relay::{
     application::publisher::PublishError,
     application::{
@@ -70,17 +71,26 @@ async fn main() -> Result<(), &'static str> {
             ("statement_timeout", config.statement_ms.to_string()),
             ("lock_timeout", config.lock_ms.to_string()),
         ]);
-    let shutdown = application::shutdown_signal();
+    let shutdown = async {
+        application::shutdown_signal().await;
+        metrics.readiness.stop();
+    };
     tokio::pin!(shutdown);
     let pool = tokio::select! { biased; () = &mut shutdown => return Ok(()),
-    result = PgPoolOptions::new().max_connections(config.pool_max).acquire_timeout(config.pool_acquire).connect_with(options) => result.map_err(|_| "PostgreSQL setup unavailable (source redacted)")? };
+    result = PgPoolOptions::new().max_connections(config.pool_max).acquire_timeout(config.pool_acquire).connect_with(options.clone()) => result.map_err(|_| "PostgreSQL setup unavailable (source redacted)")? };
     // Read-only validation of the columns used by ownership operations; never migrates.
     let schema = tokio::select! { biased; () = &mut shutdown => None,
-    result = sqlx::query("SELECT id, event_type, aggregate_type, aggregate_id, schema_version, occurred_at, correlation_id, causation_id, payload, status, attempt_count, available_at, created_at, processed_at, ownership_token, acquired_at, expires_at, retry_cycle, cycle_baseline, cycle_maximum, state_revision, diagnostic_code, diagnostic_at, failure_evidence, terminal_at, terminal_reason FROM relay.outbox_events LIMIT 0").execute(&pool) => Some(result) };
+    result = sqlx::query(reliable_event_relay::telemetry::readiness::RELAY_SCHEMA).execute(&pool) => Some(result) };
+    let observation = DatabaseObservation::start(
+        options,
+        &[reliable_event_relay::telemetry::readiness::RELAY_SCHEMA],
+        metrics.readiness.clone(),
+    );
     let setup_failed = schema.as_ref().is_some_and(Result::is_err);
     let deadline = if !matches!(schema, Some(Ok(_))) {
         Instant::now() + config.shutdown
     } else {
+        metrics.readiness.admit();
         tracing::info!(config = ?config, "relay started; sequential admission");
         let repository = PostgresOutboxRepository::new(pool.clone());
         worker::run_observed(
@@ -92,6 +102,8 @@ async fn main() -> Result<(), &'static str> {
         )
         .await
     };
+    metrics.readiness.stop();
+    observation.shutdown().await;
     let cleanup_expired = timeout_at(deadline, pool.close()).await.is_err();
     if cleanup_expired {
         tracing::warn!("pool cleanup exhausted shutdown budget");

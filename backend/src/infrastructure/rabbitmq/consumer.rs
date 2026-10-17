@@ -356,6 +356,7 @@ pub async fn run_consumer_observed<P: AtomicInventoryProcessor, O: Observer>(
     observer: &O,
 ) -> Instant {
     loop {
+        observer.broker_readiness(false);
         tokio::select! {biased; ()=&mut *shutdown=>return Instant::now()+config.shutdown,_=std::future::ready(())=>{}}
         let (connected, stop) = crate::application::worker::drain_on_shutdown(
             observe(
@@ -394,10 +395,14 @@ pub async fn run_consumer_observed<P: AtomicInventoryProcessor, O: Observer>(
             close_session(session, deadline, observer).await;
             return deadline;
         }
+        observer.broker_readiness(session.is_usable());
+        let mut check = tokio::time::interval(Duration::from_secs(1));
+        check.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         let mut stop = None;
         loop {
             let delivery = tokio::select! {biased;
                 ()=&mut *shutdown=>{stop=Some(Instant::now()+config.shutdown);break;}
+                _=check.tick()=>{let usable=session.is_usable(); observer.broker_readiness(usable); if !usable {break;} continue;}
                 result=session.next()=>match result {Ok(Some(delivery))=>delivery,_=>break},
             };
             if !session.is_usable() {
@@ -446,6 +451,7 @@ pub async fn run_consumer_observed<P: AtomicInventoryProcessor, O: Observer>(
                 break;
             }
         }
+        observer.broker_readiness(false);
         let deadline = stop.unwrap_or_else(|| Instant::now() + config.shutdown);
         close_session(session, deadline, observer).await;
         if stop.is_some() {

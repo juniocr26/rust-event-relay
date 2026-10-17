@@ -105,3 +105,7 @@ Separate process-local exporters; all optional, with validated source defaults. 
 | CONSUMER_METRICS_ADDR | 127.0.0.1:9102 | loopback IP, port 1..65535 |
 
 All three ports must be distinct and differ from HTTP_ADDR; defaults apply independently of replay. A stopped process has no listener. No additional limit knobs: publisher rejects waiting calls immediately, replay admission is fixed at 2 / 10 seconds / 4096 body bytes, exporter at 4 clients / 2 seconds / 1024 request bytes. These defaults were not installed by restarting shared processes.
+
+## Milestone 5.2 observation budget
+
+No new variables. Each database-dependent role adds a dedicated one-connection read-only sampler: 5 s delay, 2 s whole observation, 1 s statement, 500 ms lock, 15 s freshness. Default total pools: relay 3, consumer 3, HTTP replay 3 (disabled HTTP 0). Existing exporter addresses also serve `/ready`, inside app loopback only. [Contract and deployment](../operations/milestone-5-2.md).

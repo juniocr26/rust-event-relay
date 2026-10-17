@@ -4,6 +4,8 @@
 
 Reading path: purpose/setup → architecture/contracts → security/failures → testing/evidence → operations. For the library, use catalog/dossier → project interview → foundations → failure follow-ups. Historical milestone/refactor/handoff records describe their original dates; current review/checklist explains present scope.
 
+- [Milestone 5.2 — readiness, freshness and validated 5.1 rollout](operations/milestone-5-2.md)
+
 ## Current resource and observability contract
 
 - [Milestone 5.1 — resource boundaries and process-local metrics](operations/milestone-5-1.md)

@@ -1,4 +1,6 @@
 //! Real composition binary; exact database and broker resource ownership.
+#[path = "support/faults.rs"]
+mod faults;
 mod support;
 use lapin::{Connection, ConnectionProperties, options::*};
 use std::{process::Stdio, time::Duration};
@@ -8,19 +10,19 @@ use tokio::time::timeout;
 #[tokio::test]
 #[ignore = "requires PostgreSQL CREATE DATABASE and RabbitMQ"]
 async fn compiled_worker_confirms_and_completes_then_sigterm_exits() {
-    smoke(false, false).await;
+    smoke(false, false, true).await;
 }
 
 #[tokio::test]
 #[ignore = "requires PostgreSQL CREATE DATABASE, RabbitMQ and Supervisor in app"]
 async fn isolated_supervisor_named_program_operation() {
-    smoke(true, false).await;
+    smoke(true, false, false).await;
 }
 
 #[tokio::test]
 #[ignore = "requires PostgreSQL CREATE DATABASE, RabbitMQ and Supervisor in app"]
 async fn isolated_supervisor_interactive_control_intentional_stop_and_unexpected_exit() {
-    smoke(true, true).await;
+    smoke(true, true, false).await;
 }
 
 async fn console(config: &std::path::Path, alias: &str) {
@@ -63,7 +65,7 @@ async fn ctl(config: &std::path::Path, alias: &str, args: &[&str]) -> String {
     String::from_utf8(output.stdout).unwrap()
 }
 
-async fn smoke(supervised: bool, interactive: bool) {
+async fn smoke(supervised: bool, interactive: bool, outage: bool) {
     isolated(move |pool| async move {
         checked(sqlx::raw_sql(include_str!("../migrations/20261009000000_add_delivery_ownership.up.sql")).execute(&pool).await,"ownership migration");
         checked(sqlx::raw_sql(include_str!("../migrations/20261012000000_add_durable_retry.up.sql")).execute(&pool).await,"retry migration");
@@ -87,10 +89,13 @@ async fn smoke(supervised: bool, interactive: bool) {
             // This target owns only HTTP/relay; consumer acceptance has its own opt-in fixture.
             .split("[program:consumer]").next().unwrap()
             .replace("/tmp/relay-supervisor",temp.to_str().unwrap())
-            .replace("command=/usr/local/bin/relay-worker",&format!("command={}/../docker/supervisor/relay-worker",env!("CARGO_MANIFEST_DIR")));
+            .replace("command=/usr/local/bin/relay-worker",&format!("command={}",env!("CARGO_BIN_EXE_relay")))
+            .replace("command=/usr/local/bin/relay-http",&format!("command={}",env!("CARGO_BIN_EXE_reliable-event-relay")));
         std::fs::write(&supervisor_config,physical).unwrap();
         let mut command=tokio::process::Command::new(if supervised {"/usr/bin/supervisord"} else {env!("CARGO_BIN_EXE_relay")});
-        support::metrics_env(&mut command);
+        let addresses=support::metrics_env(&mut command);
+        let (proxy_port,online,proxy)=faults::switchable_proxy().await;
+        if outage {command.env("RABBITMQ_HOST","127.0.0.1").env("RABBITMQ_PORT",proxy_port.to_string()).env("RELAY_RECONNECT_MS","100");}
         if supervised { command.arg("-c").arg(&supervisor_config); }
         let mut child=command.env("POSTGRES_DB",database).env("RABBITMQ_EXCHANGE",&exchange).env("RABBITMQ_QUEUE",&queue)
             .env("HTTP_ADDR","127.0.0.1:0").env("RELAY_IDLE_MS","10").stdout(Stdio::null()).stderr(Stdio::null()).kill_on_drop(true).spawn().unwrap();
@@ -112,6 +117,17 @@ async fn smoke(supervised: bool, interactive: bool) {
                 if processed { break; }
                 tokio::time::sleep(Duration::from_millis(10)).await;
             }
+            if !supervised { support::wait_ready(addresses[1],"relay").await; }
+            if outage {
+                online.send(false).unwrap();
+                timeout(Duration::from_secs(6),async {loop {
+                    let m=support::scrape(addresses[1]).await;
+                    if m.contains("relay_readiness_reason{process=\"relay\",reason=\"broker_unavailable\"} 1") {break;}
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }}).await.expect("relay observes its own unavailable publisher");
+                online.send(true).unwrap();support::wait_ready(addresses[1],"relay").await;
+            }
+            proxy.abort();
             let message=case_channel.basic_get(case_queue.clone().into(),BasicGetOptions::default()).await.unwrap().expect("confirmed test message");
             let envelope: reliable_event_relay::domain::event::EventEnvelope=serde_json::from_slice(&message.data).unwrap();
             assert_eq!(envelope.id(),event_id); assert_eq!(envelope.payload(),&serde_json::json!({"smoke":true}));

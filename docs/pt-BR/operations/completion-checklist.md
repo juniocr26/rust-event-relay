@@ -1,5 +1,7 @@
 **Estado local atual — Marco 4.5 (2026-10-16):** [Rollout verificado e recuperação](milestone-4-5-rollout.md). Seis migrations aplicadas; artefatos atuais HTTP/relay/consumer instalados e ativos; consumer autostart=true. Backup protegido/restore isolado e demonstração real 10 → 15 → 15 verificados. API replay desabilitada; frontend continua simulação. Observações anteriores abaixo preservam suas datas.
 
+Contrato operacional atual (17/10/2026): [5.2 prontidão/atualidade e rollout validado 5.1](milestone-5-2.md). Entradas anteriores abaixo preservam seu escopo histórico.
+
 ## Marco 4.4 — verificação e fechamento atuais — 16/10/2026
 
 Marco 4 fechado com limitações não bloqueantes explícitas. Evidência real de estoque/deduplicação, ACK/quarentena e recuperação é separada do rollout compartilhado pendente. Frontend de apresentação verificado; integração ao vivo com backend não implementada. Seções históricas abaixo mantêm o escopo das respectivas datas. [Matriz de verificação](../operations/milestone-4-4-review.md) | [Inventário de ambiente](../docker/environment-inventory.md).

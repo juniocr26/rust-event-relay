@@ -4,6 +4,8 @@
 
 Escopo: explicitar fronteiras, corrigir admissões justificadas e instrumentar cada processo. Sem readiness, dashboard, integração com frontend, containers de monitoramento ou campanha de capacidade. Base `05f0ebbb84722a6bf4e3b68f695d726cc2dd7df3`; árvore inicial limpa. Entrega e consumo continuam sequenciais. Nenhuma migration compartilhada ou reinicialização faz parte desta alteração.
 
+[Marco 5.2 — prontidão, atualidade e rollout validado do 5.1](milestone-5-2.md).
+
 ## Pré-requisito remoto e falha histórica
 
 O [run 38970986836](https://github.com/juniocr26/rust-event-relay/actions/runs/38970986836) terminou com sucesso na revisão exata da base: check, integrated-recovery, PostgreSQL, RabbitMQ, documentação e frontend. Essa revisão separa o orçamento de setup do filho instrumentado dos deadlines de reconexão de produção, registrando fase sanitizada e saída antecipada nas barreiras. Isso comprova execução remota **da base, não desta implementação ainda não commitada**.

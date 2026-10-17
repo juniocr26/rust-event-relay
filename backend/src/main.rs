@@ -1,3 +1,4 @@
+use reliable_event_relay::telemetry::readiness::DatabaseObservation;
 use reliable_event_relay::{
     application,
     config::Config,
@@ -24,11 +25,13 @@ async fn main() -> Result<(), &'static str> {
         .map_err(|_| "metrics bind failed")?;
     let mut router = application::router();
     let mut pool = None;
+    let mut observation = None;
     // Opt-in only. No connection or migration is required for liveness-only HTTP.
     if let Some(raw) = std::env::var("REPLAY_OPERATORS")
         .ok()
         .filter(|s| !s.is_empty())
     {
+        metrics.readiness.require_database();
         let credentials = OperatorCredentials::parse(&raw)?;
         let required = |key| {
             std::env::var(key)
@@ -51,10 +54,18 @@ async fn main() -> Result<(), &'static str> {
         let connected = PgPoolOptions::new()
             .max_connections(2)
             .acquire_timeout(Duration::from_secs(5))
-            .connect_with(options)
+            .connect_with(options.clone())
             .await
             .map_err(|_| "replay database unavailable (source redacted)")?;
-        sqlx::query("SELECT request_id,actor,scope,event_id,intent,receipt,prior_terminal,recorded_at FROM relay.replay_requests LIMIT 0").execute(&connected).await.map_err(|_| "replay migration/privileges required (source redacted)")?;
+        sqlx::query(reliable_event_relay::telemetry::readiness::REPLAY_SCHEMA)
+            .execute(&connected)
+            .await
+            .map_err(|_| "replay migration/privileges required (source redacted)")?;
+        observation = Some(DatabaseObservation::start(
+            options,
+            &[reliable_event_relay::telemetry::readiness::REPLAY_SCHEMA],
+            metrics.readiness.clone(),
+        ));
         metrics.configure(2, 0, true);
         router = router.merge(operator_http::router_observed(
             PostgresOutboxRepository::new(connected.clone()),
@@ -88,6 +99,7 @@ async fn main() -> Result<(), &'static str> {
         .await
         .map_err(|_| "HTTP bind failed")?;
     tracing::info!(environment = %config.environment, address = %listener.local_addr().map_err(|_| "HTTP address unavailable")?, "application started");
+    metrics.readiness.admit();
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel();
     let server = axum::serve(listener, router).with_graceful_shutdown(async {
         let _ = stop_rx.await;
@@ -99,9 +111,14 @@ async fn main() -> Result<(), &'static str> {
     tokio::select! {
         result=&mut server=>result.map_err(|_| "HTTP server failed")?,
         ()=application::shutdown_signal()=>{
+            metrics.readiness.stop();
             let _=stop_tx.send(());
             if tokio::time::timeout(Duration::from_secs(5), &mut server).await.is_err() { cleanup_expired=true; }
         }
+    }
+    metrics.readiness.stop();
+    if let Some(observation) = observation {
+        observation.shutdown().await;
     }
     if let Some(pool) = pool {
         cleanup_expired |= tokio::time::timeout(Duration::from_secs(5), pool.close())

@@ -105,3 +105,7 @@ Exporters separados por processo; variáveis opcionais com defaults validados. C
 | CONSUMER_METRICS_ADDR | 127.0.0.1:9102 | loopback IP, port 1..65535 |
 
 As três portas precisam ser distintas entre si e de HTTP_ADDR; defaults independem de replay. Processo parado não tem listener. Sem knobs extras: publisher rejeita espera imediatamente, replay fica em 2 requisições/10 segundos/4096 bytes de corpo; exporter em 4 clientes/2 segundos/1024 bytes de request. Processos compartilhados não foram reiniciados para instalar defaults.
+
+## Orçamento de observação 5.2
+
+Sem novas variáveis. Cada papel dependente de banco adiciona sampler read-only com uma conexão: intervalo 5 s após conclusão, observação total 2 s, statement 1 s, lock 500 ms, validade 15 s. Pools totais default: relay 3, consumer 3, HTTP replay 3 (sem replay 0). Mesmos exporters servem `/ready` somente no loopback app. [Contrato e deploy](../operations/milestone-5-2.md).

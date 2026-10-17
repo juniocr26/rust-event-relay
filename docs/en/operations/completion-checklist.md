@@ -1,5 +1,7 @@
 **Current local state — Milestone 4.5 (2026-10-16):** [Verified rollout and recovery](milestone-4-5-rollout.md). Six migrations applied; current HTTP/relay/consumer artifacts installed and running; consumer autostart=true. Protected backup/isolated restore and real 10 → 15 → 15 demonstration verified. Replay API remains disabled; frontend remains simulation. Earlier observations below retain their dates.
 
+Current operational contract (2026-10-17): [5.2 readiness/freshness and validated 5.1 rollout](milestone-5-2.md). Earlier checklist entries below retain historical scope.
+
 ## Milestone 4.4 — current verification and closure — 2026-10-16
 
 Milestone 4 is closed with explicit nonblocking limitations. Real inventory/deduplication, ACK/quarantine and recovery evidence is separate from pending shared rollout. Presentation frontend verified; live backend integration is not implemented. Earlier dated sections retain their historical scope. [Verification matrix](../operations/milestone-4-4-review.md) | [Environment inventory](../docker/environment-inventory.md).

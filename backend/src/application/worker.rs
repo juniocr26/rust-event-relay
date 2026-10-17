@@ -195,6 +195,7 @@ where
             }
         }
         if publisher.is_none() {
+            observer.broker_readiness(false);
             tracing::info!("publisher connecting");
             let (result, stop) = drain_on_shutdown(
                 observe(observer, Op::Connect, lifecycle.connect(), |r| {
@@ -231,6 +232,7 @@ where
                 continue;
             }
         }
+        observer.broker_readiness(publisher.as_ref().is_some_and(|p| lifecycle.usable(p)));
         if publisher.as_ref().is_some_and(|p| !lifecycle.usable(p)) {
             let old = publisher.take().expect("present publisher");
             let (closed, stop) = drain_on_shutdown(
@@ -298,6 +300,7 @@ where
             Decision::Idle => config.idle,
             Decision::Pace => config.failure,
             Decision::Replace => {
+                observer.broker_readiness(false);
                 let old = publisher.take().expect("connected publisher");
                 let (closed, stop) = drain_on_shutdown(
                     observe(observer, Op::Close, lifecycle.close(old), |r| {

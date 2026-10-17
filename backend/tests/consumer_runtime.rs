@@ -1405,6 +1405,7 @@ async fn compiled_consumer_exports_applied_duplicate_and_quarantine_without_busi
             let mut child=command.spawn()?;
             let result=async {
                 consumers(&b,1).await;
+                support::wait_ready(addresses[2],"consumer").await;
                 let e=event();b.send_event(&e).await;b.send_event(&e).await;
                 b.send(b"invalid-json",BasicProperties::default()).await;
                 timeout(WAIT,async {
@@ -1427,4 +1428,61 @@ async fn compiled_consumer_exports_applied_duplicate_and_quarantine_without_busi
             result?;Ok(())
         }).await;Ok(())
     }).await;
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL and RabbitMQ"]
+async fn readiness_tracks_subscription_outage_and_recovery_without_messages() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    isolated(|pool| async move {
+        schema(&pool).await;
+        broker(move |b| async move {
+            let database: String = sqlx::query_scalar("SELECT current_database()")
+                .fetch_one(&pool)
+                .await?;
+            let (port, online, proxy) = faults::switchable_proxy().await;
+            let _proxy = ProxyTask(proxy);
+            let mut command = command(&b, &database);
+            command
+                .env("RABBITMQ_HOST", "127.0.0.1")
+                .env("RABBITMQ_PORT", port.to_string())
+                .env("CONSUMER_RECONNECT_MS", "100");
+            let addresses = support::metrics_env(&mut command);
+            let mut child = command.spawn()?;
+            let result = async {
+                support::wait_ready(addresses[2], "consumer").await;
+                online.send(false).unwrap();
+                timeout(WAIT, async {
+                    loop {
+                        let mut socket =
+                            tokio::net::TcpStream::connect(addresses[2]).await.unwrap();
+                        socket
+                            .write_all(b"GET /ready HTTP/1.1\r\nHost: local\r\n\r\n")
+                            .await
+                            .unwrap();
+                        let mut response = String::new();
+                        socket.read_to_string(&mut response).await.unwrap();
+                        if response.starts_with("HTTP/1.1 503")
+                            && response.contains("broker_unavailable")
+                        {
+                            break;
+                        }
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                    }
+                })
+                .await?;
+                online.send(true).unwrap();
+                support::wait_ready(addresses[2], "consumer").await;
+                Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+            }
+            .await;
+            terminate(&mut child).await;
+            assert!(tokio::net::TcpStream::connect(addresses[2]).await.is_err());
+            result?;
+            Ok(())
+        })
+        .await;
+        Ok(())
+    })
+    .await;
 }
