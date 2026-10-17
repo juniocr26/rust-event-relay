@@ -5,7 +5,7 @@ import BaseButton from './BaseButton.vue'
 import MessageFlow from './MessageFlow.vue'
 import EvidenceProgress from './EvidenceProgress.vue'
 const props = defineProps<{ scenario: string }>()
-const { selectionChanged, inspect, loadHistory, history, historyOffset, historyBusy, selectedAction, anotherAction, eligibleRuns, selectedRequest, loadRuns, token, requestId, evidence, location, state, busy, stale, execute, newRun, complete } = useDemoRun(props.scenario)
+const { verified, verifyAccess, selectionChanged, inspect, loadHistory, history, historyOffset, historyBusy, selectedAction, anotherAction, eligibleRuns, selectedRequest, loadRuns, token, requestId, evidence, location, state, busy, stale, execute, newRun, complete } = useDemoRun(props.scenario)
 const copied = ref('')
 const sqlEvidence = ref<HTMLElement | null>(null)
 async function copy(label: string, value: string) {
@@ -17,7 +17,8 @@ async function copy(label: string, value: string) {
   <p class="expected">Real local pipeline · initial stock 10 + received units 5 → expected stock 15</p>
   <label for="demo-token">Local demo token</label>
   <input id="demo-token" v-model="token" type="password" autocomplete="off" spellcheck="false" :disabled="busy" aria-describedby="token-help" />
-  <p id="token-help">Use DEMO_TOKEN from your private .env. It authorizes scenario execution and evidence in this application.</p>
+  <p id="token-help">Enter the active DEMO_TOKEN from your private .env, then verify access.</p>
+  <BaseButton v-if="!verified" :disabled="busy || token.length !== 64" @click="verifyAccess">Verify access</BaseButton>
   <fieldset v-if="scenario === 'dedupe'"><legend>Duplicate an existing successful run</legend>
     <p>Republish the original event. The consumer should verify Duplicate and retain one business effect.</p>
     <BaseButton secondary :disabled="busy || token.length !== 64" @click="loadRuns">Load successful runs</BaseButton>
@@ -106,8 +107,8 @@ SELECT units FROM consumer.stock WHERE warehouse_id = '{{ evidence.warehouse_id 
     <p>SQL dead_letter retains a terminal relay event. RabbitMQ quarantine preserves rejected consumer messages before source ACK. They are separate mechanisms.</p>
   </details>
   <p role="status">{{ copied }}</p>
-  <footer class="experience-footer"><p>Closing stops browser observation. Durable execution and evidence remain. The request identity is retained in this tab for safe recovery; the token stays in memory.</p>
-    <BaseButton :disabled="busy || token.length !== 64" @click="requestId ? inspect() : execute()">{{ busy ? 'Observing…' : requestId ? 'Recover same request →' : 'Run real delivery →' }}</BaseButton>
+  <footer class="experience-footer"><details class="recovery-details"><summary>Recovery details</summary><p>Closing stops browser observation. Durable execution and evidence remain. The request identity is retained in this tab for safe recovery; the token stays in memory. If a submission outcome is unknown, inspect this identity before submitting again.</p></details>
+    <BaseButton :disabled="busy || !verified || token.length !== 64" @click="requestId ? inspect() : execute()">{{ busy ? 'Observing…' : requestId ? 'Recover same request →' : 'Run real delivery →' }}</BaseButton>
     <BaseButton v-if="(scenario === 'dedupe' || scenario === 'concurrent') && evidence && !busy && evidence.actions.length < 3" secondary @click="anotherAction">Request another duplicate</BaseButton>
     <BaseButton v-if="requestId && !evidence && !busy" secondary :disabled="token.length !== 64" @click="execute()">Submit same producer intent</BaseButton>
     <p v-if="requestId && !evidence">Inspect first. Explicit submission reuses the same request identity and fixed intent; an absent query result cannot rule out a pending commit.</p>
@@ -118,4 +119,10 @@ SELECT units FROM consumer.stock WHERE warehouse_id = '{{ evidence.warehouse_id 
 input { display:block; width:min(100%,32rem); padding:.6rem; border:1px solid #5388c8; border-radius:.4rem; }
 code, pre { overflow-wrap:anywhere; white-space:pre-wrap; }
 details { margin-block:1rem; } summary { cursor:pointer; } button { cursor:pointer; } .copy-control { padding:.2rem .5rem; font-size:.8rem; margin-left:.4rem; } p { margin-block:.7rem; }
+</style>
+
+<style scoped>
+.experience-footer { display:flex; flex-wrap:wrap; }
+.experience-footer > p, .recovery-details { flex-basis:100%; min-width:0; }
+@media(max-width:900px) { .experience-footer { flex-direction:column; align-items:stretch; } }
 </style>

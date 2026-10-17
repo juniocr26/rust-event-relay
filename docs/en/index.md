@@ -1,8 +1,8 @@
-[Milestone 6 preparation — reference comparison and proposed live scope (not approved)](operations/milestone-6-preparation.md).
+[Historical Milestone 6 preparation — reference comparison and proposed scope](operations/milestone-6-preparation.md).
 
 [Current application guide](operations/application-scenarios.md) · [Milestone 6.3 acceptance](operations/milestone-6-3.md)
 
-**Current Milestone 5 closure (2026-10-17):** [5.3 protocol, measurements, acceptance matrix, rollout and decision list](operations/milestone-5-3.md) | [Bounded result data](testing/milestone-5-3-results.json). Closed with explicit nonblocking limitations; Milestone 6 undefined. Earlier dated entries remain historical.
+**Historical Milestone 5 closure (2026-10-17):** [5.3 protocol, measurements, acceptance matrix, rollout and decision list](operations/milestone-5-3.md) | [Bounded result data](testing/milestone-5-3-results.json). Closed with explicit nonblocking limitations; Milestone 6 was undefined at that point. Earlier dated entries remain historical.
 
 # Documentation catalog: rust-event-relay
 
@@ -93,6 +93,8 @@ Verified boundaries and explicit non-integrations.
 - [Verified publisher integration](integrations/rabbitmq-contract.md)
 
 ## operations
+
+- [Token and connectivity](operations/demo-token-connectivity.md)
 
 - [Milestone 2 acceptance review](operations/milestone-2-review.md)
 

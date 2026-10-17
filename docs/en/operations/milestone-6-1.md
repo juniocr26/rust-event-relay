@@ -1,3 +1,5 @@
+**Current workflow:** run `python3 scripts/start-local.py` from the root. Rollout commands, dedicated-stack instructions and older observations below are historical; they do not replace current installation. See [application](../operations/application-scenarios.md) and [token/connectivity](../operations/demo-token-connectivity.md).
+
 [Historical record: current installation and addresses](../operations/application-scenarios.md)
 
 [Português brasileiro](../../pt-BR/operations/milestone-6-1.md) | [Catalog](../index.md)

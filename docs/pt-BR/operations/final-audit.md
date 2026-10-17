@@ -4,7 +4,7 @@
 
 Decisão: aceito no escopo local de portfólio acordado. Esta campanha final reexecutou as verificações na base Git `18893c865eba506e7d4a2124864920d82ce6237d`; os relatórios anteriores foram tratados como histórico. Nenhum novo defeito funcional ou bloqueador obrigatório foi confirmado. Código de runtime e migrações não precisaram de alteração. CI remoto permanece não verificado; prontidão de produção não foi estabelecida.
 
-O entregável permanente é [PROJECT_FINAL_AUDIT.pdf](../../../PROJECT_FINAL_AUDIT.pdf), em português brasileiro, com matriz de requisitos, fronteiras de falha, identificadores reais, capturas anotadas, instalação limpa, comandos e limites. As [evidências persistentes](../../audit/2026-10-17/manifest.json) registram logs, SQL, capturas e hashes desta campanha. Documentação e relatório são alterações candidatas não commitadas; não existe um novo commit final declarado. Não houve stage, commit ou push.
+O PDF foi um artefato temporário de comunicação, sem requisito de instalação. As informações de aceite mantidas estão neste documento e na matriz 6.3.
 
 ## Execução atual
 

@@ -1,8 +1,8 @@
-[Preparação do Marco 6 — comparação e proposta de escopo live (sem aprovação)](operations/milestone-6-preparation.md).
+[Preparação histórica do Marco 6 — comparação e proposta de escopo](operations/milestone-6-preparation.md).
 
-[Current application guide](operations/application-scenarios.md) · [Milestone 6.3 acceptance](operations/milestone-6-3.md)
+[Guia atual da aplicação](operations/application-scenarios.md) · [Aceite do Marco 6.3](operations/milestone-6-3.md)
 
-**Fechamento atual do Marco 5 (17/10/2026):** [5.3 protocolo, medições, matriz, rollout e decisões](operations/milestone-5-3.md) | [Dados finitos](../en/testing/milestone-5-3-results.json). Fechado com limitações explícitas não bloqueantes; Marco 6 indefinido. Entradas datadas anteriores permanecem históricas.
+**Fechamento histórico do Marco 5 (17/10/2026):** [5.3 protocolo, medições, matriz, rollout e decisões](operations/milestone-5-3.md) | [Dados finitos](../en/testing/milestone-5-3-results.json). Fechado com limitações explícitas não bloqueantes; Marco 6 ainda indefinido naquele momento. Entradas datadas anteriores permanecem históricas.
 
 # Catálogo de documentação: rust-event-relay
 
@@ -93,6 +93,8 @@ Fronteiras verificadas e ausência de integrações.
 - [Integração verificada do publisher](integrations/rabbitmq-contract.md)
 
 ## operations
+
+- [Token e conectividade](operations/demo-token-connectivity.md)
 
 - [Revisão de aceitação do Marco 2](operations/milestone-2-review.md)
 

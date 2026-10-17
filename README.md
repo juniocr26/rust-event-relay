@@ -6,7 +6,7 @@ A Rust portfolio and study project demonstrating a transactional PostgreSQL outb
 
 Milestone 6.3 is locally accepted (2026-10-17); Milestone 6 and the agreed portfolio scope are complete. Clean installation, real scenarios, inspection, recovery and local checks passed. Remote CI is unverified; production readiness is not established. Historical records retain their dated scope; this page defines the supported workflow.
 
-Final implementation audit (2026-10-17): [current closure and executed evidence](docs/en/operations/final-audit.md), with the root-level [audit PDF](PROJECT_FINAL_AUDIT.pdf).
+Final implementation audit (2026-10-17): [current closure and executed evidence](docs/en/operations/final-audit.md).
 
 ## Clean installation
 
@@ -77,3 +77,7 @@ Source changes require rebuilding binaries and deliberately restarting the relev
 This is a bounded local engineering demonstration, not production readiness or exactly-once transport. SQL and AMQP cannot commit atomically. Unknown outcomes require inspection; confirms, consumer completion and broker receipt of ACK are distinct. TLS/HA, unrestricted chaos, automatic retention, generalized repair and larger worker pools are outside the agreed local scope.
 
 MIT — [LICENSE](LICENSE).
+
+[Token, persistent activation and troubleshooting](docs/en/operations/demo-token-connectivity.md).
+
+Inside the app container: `python3 /app/scripts/demo-token.py rotate`.

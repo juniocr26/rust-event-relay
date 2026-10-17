@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 test('paused test consumer shows pending evidence and closing only stops observation', async ({ page, request }) => {
   const token = readFileSync('/tmp/demo61-browser-token','utf8').trim()
   await page.goto('/'); await page.getByRole('button', { name: 'Open experience' }).click()
-  await page.getByLabel('Local demo token', { exact: true }).fill(token)
+  await page.getByLabel('Local demo token', { exact: true }).fill(token); await page.getByRole('button', { name: 'Verify access' }).click()
   await page.getByRole('button', { name: 'Run real delivery' }).click()
   await expect(page.getByText('Producer committed. Observing independent delivery evidence…').first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Observing…' })).toBeDisabled()

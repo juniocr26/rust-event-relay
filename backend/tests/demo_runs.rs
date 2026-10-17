@@ -127,6 +127,13 @@ async fn authorized_read_and_csrf_boundaries() {
             (true, Some("http://evil.test"), true, StatusCode::FORBIDDEN),
             (true, None, false, StatusCode::FORBIDDEN),
             (true, Some("http://localhost:5174"), true, StatusCode::OK),
+            (true, Some("http://127.0.0.1:5174"), true, StatusCode::OK),
+            (
+                true,
+                Some("http://127.0.0.1:5173"),
+                true,
+                StatusCode::FORBIDDEN,
+            ),
         ] {
             let mut req = Request::builder().uri(format!("/demo/runs/{id}"));
             if auth {

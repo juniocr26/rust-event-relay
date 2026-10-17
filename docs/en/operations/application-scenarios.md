@@ -1,3 +1,5 @@
+[Token and connectivity](demo-token-connectivity.md)
+
 [Português brasileiro](../../pt-BR/operations/application-scenarios.md) | [Catalog](../index.md)
 
 # Application guide

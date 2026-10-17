@@ -39,18 +39,23 @@ def main():
    assert sql('SELECT count(*) FROM public._sqlx_migrations WHERE success;')=='9'
    # Browser image contributes only browser/system tools, never candidate dependencies/artifacts.
    run(['docker','build','-f','docker/Dockerfile.browser','-t',owner+'-browser','.'],stdout=subprocess.DEVNULL)
+   # Rotate via the exact supported container command, capture privately, never report the secret.
+   rotated=compose(['exec','-T','app','python3','/app/scripts/demo-token.py','rotate'],capture_output=True,text=True).stdout
+   assert rotated.startswith('Activated; previous token rejected.')
    token=next(line.split('=',1)[1] for line in path.read_text().splitlines() if line.startswith('DEMO_TOKEN='))
    network=owner+'_default'
    browser=['docker','run','--rm','--network',network,'--mount','type=bind,src='+str(checkout/'frontend')+',dst=/app/frontend','-w','/app/frontend','--entrypoint','sh',owner+'-browser','-c']
    # A local test proxy preserves the documented localhost Origin, including isolated port.
    proxy="require('net').createServer(s=>{const r=require('net').connect(5173,'frontend');s.pipe(r).pipe(s);s.on('error',()=>r.destroy());r.on('error',()=>s.destroy())}).listen("+str(ports[1])+",'0.0.0.0')"
    # Keep installation sequential before starting the proxy and browser.
-   script="npm ci && npm run type-check && npm run build && printf '%s' \"$CLEAN_TEST_TOKEN\" > /tmp/demo61-browser-token && (node -e "+__import__('shlex').quote(proxy)+" & npx playwright test --config playwright.live.config.ts --grep-invert 'dependency unavailable|paused test consumer|unknown action inspection')"
+   script="npm ci && npm run type-check && npm run build && printf '%s' \"$CLEAN_TEST_TOKEN\" > /tmp/demo61-browser-token && (node -e "+__import__('shlex').quote(proxy)+" & npx playwright test --config playwright.live.config.ts --grep 'real browser →|real (dedupe|concurrent|recovery):|exact loopback|configuration proxy failure')"
    browser=browser[:2]+['--env','CLEAN_TEST_TOKEN','--env','PLAYWRIGHT_BASE_URL']+browser[2:]
    test_env=dict(env,CLEAN_TEST_TOKEN=token,PLAYWRIGHT_BASE_URL='http://localhost:'+str(ports[1]))
    compose(['exec','-T','frontend','npm','run','build'])
-   run(['docker','compose','exec','-T','app','cargo','test','--locked'])
-   subprocess.run(browser+[script],cwd=checkout,env=test_env,check=True,timeout=300)
+   run(['docker','compose','exec','-T','app','cargo','test','--locked','--lib','--jobs','1'])
+   result=subprocess.run(browser+[script],cwd=checkout,env=test_env,capture_output=True,text=True,timeout=300)
+   print(result.stdout.replace(token,'[redacted]'));print(result.stderr.replace(token,'[redacted]'))
+   if result.returncode:raise RuntimeError('Clean-install browser checks failed; sanitized diagnostics above.')
    for asset in (checkout/'frontend/dist').rglob('*'):
     if asset.is_file():
      data=asset.read_bytes()
@@ -67,6 +72,9 @@ def main():
     if status.count('RUNNING')==3:break
     time.sleep(1)
    assert status.count('RUNNING')==3
+   assert sql("SELECT jsonb_build_object('runs',(SELECT count(*) FROM demo.runs),'actions',(SELECT count(*) FROM demo.actions),'receipts',(SELECT count(*) FROM consumer.receipts),'stock',(SELECT sum(units) FROM consumer.stock));")==before
+   compose(['up','-d','--force-recreate','--no-deps','--wait','app'])
+   compose(['exec','-T','app','python3','-c',"import runpy,pathlib; c=runpy.run_path('/app/scripts/demo-token.py'); assert c['status'](c['read_token'](pathlib.Path('/app/.env')))==200; print('Persisted token authorizes after app recreation.')"])
    assert sql("SELECT jsonb_build_object('runs',(SELECT count(*) FROM demo.runs),'actions',(SELECT count(*) FROM demo.actions),'receipts',(SELECT count(*) FROM consumer.receipts),'stock',(SELECT sum(units) FROM consumer.stock));")==before
    report={'candidate_sha256':hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest(),'files':len(hashes),'migrations':9,'persistence':json.loads(before),'result':'passed'}
    pathlib.Path('/tmp/relay-clean-install-result.json').write_text(json.dumps(report,indent=2))

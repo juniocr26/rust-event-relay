@@ -4,4 +4,4 @@ if [ ! -x /app/target/debug/reliable-event-relay ]; then
   echo 'Missing Rust binary: run docker compose run --rm --no-deps app cargo build --locked, then supervisorctl start http' >&2
   exit 1
 fi
-exec /app/target/debug/reliable-event-relay
+exec python3 /app/scripts/demo-token.py launch

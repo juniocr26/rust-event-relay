@@ -1,3 +1,5 @@
+**Current workflow:** run `python3 scripts/start-local.py` from the root. Rollout commands, dedicated-stack instructions and older observations below are historical; they do not replace current installation. See [application](../operations/application-scenarios.md) and [token/connectivity](../operations/demo-token-connectivity.md).
+
 Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](frontend-backend.md).
 
 [Português brasileiro](../../pt-BR/guides/dependencies.md) | [README](../../../README.md)

@@ -6,7 +6,7 @@ Projeto de portfólio e estudo em Rust com outbox transacional PostgreSQL, publi
 
 Milestone 6.3 aceito localmente em 17/10/2026; Milestone 6 e o escopo de portfólio acordado concluídos. Instalação limpa, cenários reais, inspeção, recuperação e verificações locais aprovados. CI remoto não verificado; prontidão de produção não estabelecida. Registros históricos preservam seu escopo datado; esta página define o fluxo suportado.
 
-Auditoria final de implementação (17/10/2026): [encerramento e evidências executadas](docs/pt-BR/operations/final-audit.md), com [PDF na raiz](PROJECT_FINAL_AUDIT.pdf).
+Auditoria final de implementação (17/10/2026): [encerramento e evidências executadas](docs/pt-BR/operations/final-audit.md).
 
 ## Instalação limpa
 
@@ -77,3 +77,7 @@ Alterações de código exigem recompilar e reiniciar deliberadamente o processo
 Esta é uma demonstração local limitada, sem aceite de produção ou transporte exatamente uma vez. SQL e AMQP não confirmam atomicamente. Resultados desconhecidos exigem inspeção; confirms, conclusão do consumidor e recebimento de ACK pelo broker são fatos distintos. TLS/HA, caos irrestrito, retenção automática, reparo genérico e pools maiores estão fora do escopo local acordado.
 
 MIT — [LICENSE](LICENSE).
+
+[Token, ativação persistente e diagnóstico](docs/pt-BR/operations/demo-token-connectivity.md).
+
+Dentro do contêiner app: `python3 /app/scripts/demo-token.py rotate`.

@@ -23,6 +23,19 @@ export function useDemoRun(scenario: string) {
   const selectedAction = ref(sessionStorage.getItem(`${storageKey}:action`) ?? '')
   watch(selectedAction, value => sessionStorage.setItem(`${storageKey}:action`, value))
   const location = ref<Location | null>(null), state = ref('Ready for real execution'), busy = ref(false), stale = ref(false)
+  const verified = ref(false)
+  watch(token, () => { verified.value = false; location.value = null })
+  async function verifyAccess() {
+    stop(); busy.value = true
+    const mine = generation, active = new AbortController(); controller = active
+    const timeout = setTimeout(() => active.abort(), 9000)
+    try {
+      const config = await call<Location>('/demo/config', active.signal)
+      if (mine === generation) { location.value = config; verified.value = true; state.value = 'Connected. Access verified; ready to run.' }
+    } catch (error) {
+      if (mine === generation) { verified.value = false; state.value = error instanceof Error ? error.message : 'Configuration unavailable' }
+    } finally { clearTimeout(timeout); if (mine === generation) busy.value = false }
+  }
   let freshnessTimer: ReturnType<typeof setTimeout> | undefined
   let controller: AbortController | undefined, timer: ReturnType<typeof setTimeout> | undefined, generation = 0
   const stop = () => { generation++; controller?.abort(); clearTimeout(timer); clearTimeout(freshnessTimer); busy.value = false; if (evidence.value) stale.value = true }
@@ -31,8 +44,8 @@ export function useDemoRun(scenario: string) {
       method: body ? 'POST' : 'GET', signal,
       headers: { Authorization: `Bearer ${token.value}`, 'X-Demo-Client': 'demo61', ...(body ? { 'Content-Type': 'application/json' } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}),
-    })
-    if (!response.ok) throw new Error(response.status === 404 ? 'No committed run is visible for this request. An in-progress transaction may still commit. Inspection creates no work.' : response.status === 401 ? 'Authorization required. Check the demo token.' : response.status === 422 ? 'Transaction rejected. Inspect the same request identity.' : response.status === 409 ? 'Request identity conflicts with the submitted intent.' : response.status === 429 ? 'Application budget exhausted or read rate exceeded.' : `Observation unavailable (HTTP ${response.status}). Submission outcome may be unknown.`)
+    }).catch(() => { throw new Error(body ? 'Backend unreachable. Submission outcome unknown; inspect the same identity.' : 'Backend unreachable. This read submitted no work.') })
+    if (!response.ok) throw new Error(response.status === 404 ? 'No committed run is visible for this request. An in-progress transaction may still commit. Inspection creates no work.' : response.status === 401 ? 'Authorization required. Check the demo token.' : response.status === 403 ? 'Browser Origin forbidden. Use the documented localhost or 127.0.0.1 address.' : response.status === 422 ? 'Transaction rejected. Inspect the same request identity.' : response.status === 409 ? 'Request identity conflicts with the submitted intent.' : response.status === 429 ? 'Application budget exhausted or read rate exceeded.' : `${response.status === 502 || response.status === 504 ? 'Backend unreachable or proxy failure' : path === '/demo/config' ? 'Configuration unavailable' : 'Observation unavailable'} (HTTP ${response.status}). ${body ? 'Submission outcome may be unknown; inspect the same identity.' : 'This read submitted no work.'}`)
     return response.json() as Promise<T>
   }
   const complete = (e: Evidence) => {
@@ -125,5 +138,5 @@ export function useDemoRun(scenario: string) {
     state.value = 'Ready for a new real execution'; stale.value = false
   }
   onBeforeUnmount(stop)
-  return { selectionChanged, inspect, loadHistory, history, historyOffset, historyBusy, selectedAction, anotherAction, eligibleRuns, selectedRequest, loadRuns, token, requestId, evidence, location, state, busy, stale, execute, newRun, complete }
+  return { verified, verifyAccess, selectionChanged, inspect, loadHistory, history, historyOffset, historyBusy, selectedAction, anotherAction, eligibleRuns, selectedRequest, loadRuns, token, requestId, evidence, location, state, busy, stale, execute, newRun, complete }
 }

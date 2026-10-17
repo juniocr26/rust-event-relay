@@ -1,3 +1,5 @@
+**Fluxo atual:** execute `python3 scripts/start-local.py` na raiz. Os comandos de rollout, stack dedicada e observações antigas abaixo são históricos; não substituem a instalação atual. Consulte [aplicação](../operations/application-scenarios.md) e [token/conectividade](../operations/demo-token-connectivity.md).
+
 [Registro histórico: instalação e endereços atuais](../operations/application-scenarios.md)
 
 [English](../../en/operations/milestone-6-1.md) | [Catálogo](../index.md)

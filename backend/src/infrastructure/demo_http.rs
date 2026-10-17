@@ -25,6 +25,7 @@ pub fn router<R: Repository + Actions + 'static>(
     {
         return Err("invalid demo credentials/origin (redacted)");
     }
+    let loopback_origin = origin.replacen("http://localhost:", "http://127.0.0.1:", 1);
     let permits = Arc::new(tokio::sync::Semaphore::new(2));
     let rate = Arc::new(Mutex::new((Instant::now(), 0u32)));
     Ok(Router::new()
@@ -43,6 +44,7 @@ pub fn router<R: Repository + Actions + 'static>(
                 let rate = rate.clone();
                 let token = token.clone();
                 let origin = origin.clone();
+                let loopback_origin = loopback_origin.clone();
                 async move {
                     let headers = req.headers();
                     let supplied = headers
@@ -58,7 +60,7 @@ pub fn router<R: Repository + Actions + 'static>(
                     }
                     if headers
                         .get("origin")
-                        .is_some_and(|v| v.as_bytes() != origin.as_bytes())
+                        .is_some_and(|v| v.as_bytes() != origin.as_bytes() && v.as_bytes() != loopback_origin.as_bytes())
                         || headers.get("x-demo-client").and_then(|v| v.to_str().ok())
                             != Some("demo61")
                     {

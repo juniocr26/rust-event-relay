@@ -1,3 +1,5 @@
+**Fluxo atual:** execute `python3 scripts/start-local.py` na raiz. Os comandos de rollout, stack dedicada e observações antigas abaixo são históricos; não substituem a instalação atual. Consulte [aplicação](../operations/application-scenarios.md) e [token/conectividade](../operations/demo-token-connectivity.md).
+
 Comandos Cargo nativos rodam em `backend/`; comandos no app Docker usam `/app/backend`. Consulte [frontend/backend](../guides/frontend-backend.md).
 
 [English](../../en/testing/strategy.md) | [README](../../../README.pt-BR.md)

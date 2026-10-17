@@ -1,3 +1,5 @@
+**Current workflow:** run `python3 scripts/start-local.py` from the root. Rollout commands, dedicated-stack instructions and older observations below are historical; they do not replace current installation. See [application](../operations/application-scenarios.md) and [token/connectivity](../operations/demo-token-connectivity.md).
+
 [Historical record: current installation and addresses](../operations/application-scenarios.md)
 
 **Current local state — Milestone 4.5 (2026-10-16):** [Verified rollout and recovery](../operations/milestone-4-5-rollout.md). Six migrations applied; current HTTP/relay/consumer artifacts installed and running; consumer autostart=true. Protected backup/isolated restore and real 10 → 15 → 15 demonstration verified. Replay API remains disabled; frontend remains simulation. Earlier observations below retain their dates.

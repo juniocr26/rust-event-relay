@@ -16,7 +16,7 @@ def campaign():
  for service in config['services'].values():
   service.pop('ports',None);service.pop('networks',None);service.pop('build',None)
  app=config['services']['app'];app['image']='rust-event-relay-app'
- app['environment'].update({'DEMO_TOKEN':secret,'DEMO_ORIGIN':'http://localhost:5173','POSTGRES_USER':'relay_test','POSTGRES_PASSWORD':password,'POSTGRES_DB':'relay_test','RABBITMQ_DEFAULT_USER':'relay_test','RABBITMQ_DEFAULT_PASS':password,'RABBITMQ_DEFAULT_VHOST':'relay','REPLAY_OPERATORS':'','DEMO_ENABLED':'true'})
+ app['environment'].update({'DEMO_ORIGIN':'http://localhost:5173','POSTGRES_USER':'relay_test','POSTGRES_PASSWORD':password,'POSTGRES_DB':'relay_test','RABBITMQ_DEFAULT_USER':'relay_test','RABBITMQ_DEFAULT_PASS':password,'RABBITMQ_DEFAULT_VHOST':'relay','REPLAY_OPERATORS':'','DEMO_ENABLED':'true'})
  app['volumes']=[{'type':'bind','source':str(ROOT),'target':'/app','read_only':True},{'type':'bind','source':str(ROOT/'target'),'target':'/app/target','read_only':True}]
  app.update({'mem_limit':'1g','cpus':2,'pids_limit':256})
  db=config['services']['postgres'];db['environment'].update({'POSTGRES_USER':'relay_test','POSTGRES_PASSWORD':password,'POSTGRES_DB':'relay_test'});db['volumes']=[{'type':'volume','source':'test-postgres','target':'/var/lib/postgresql'}]
@@ -24,9 +24,17 @@ def campaign():
  frontend=config['services']['frontend'];frontend.update({'image':'relay-application-browser','user':'root','mem_limit':'2g','cpus':2,'pids_limit':512});frontend['volumes']=[{'type':'bind','source':str(ROOT/'frontend'),'target':'/app/frontend','read_only':True},{'type':'volume','source':'test-node','target':'/app/frontend/node_modules'}]
  config['volumes']={key:{'name':PROJECT+'_'+key} for key in ['test-postgres','test-rabbitmq','test-node']}
  with tempfile.TemporaryDirectory(prefix='relay-application-test-') as directory:
+  private=pathlib.Path(directory)/'.env';private.write_text('DEMO_TOKEN='+secret+'\n');private.chmod(0o600)
+  app['volumes'].append({'type':'bind','source':str(private),'target':'/app/.env','read_only':True})
   path=pathlib.Path(directory)/'compose.json';path.write_text(json.dumps(config));path.chmod(0o600)
   command=['docker','compose','-p',PROJECT,'-f',str(path)]
-  def run(args,**kw):return subprocess.run(command+args,cwd=ROOT,check=True,timeout=180,**kw)
+  def run(args,**kw):
+   if 'playwright' in args:
+    result=subprocess.run(command+args,cwd=ROOT,capture_output=True,text=True,timeout=180,**kw)
+    print(result.stdout.replace(secret,'[redacted]'));print(result.stderr.replace(secret,'[redacted]'))
+    if result.returncode:raise RuntimeError('Browser check failed; sanitized diagnostics above.')
+    return result
+   return subprocess.run(command+args,cwd=ROOT,check=True,timeout=180,**kw)
   def sql(query):return run(['exec','-T','postgres','sh','-c','PGPASSWORD="$POSTGRES_PASSWORD" psql -X -h postgres -U relay_test -d relay_test -At -v ON_ERROR_STOP=1'],input=query,text=True,capture_output=True).stdout.strip()
   try:
    run(['up','-d','--wait','postgres','rabbitmq'])

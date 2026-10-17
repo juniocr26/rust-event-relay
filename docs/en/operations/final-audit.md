@@ -4,7 +4,7 @@
 
 Decision: accepted for the agreed local portfolio scope. This independent final campaign re-executed the checks on Git base `18893c865eba506e7d4a2124864920d82ce6237d`; previous milestone reports were historical inputs. No new functional defect or mandatory blocker was confirmed. Runtime source and migrations did not require changes. Remote CI remains unverified; production readiness is not established.
 
-The permanent deliverable is [PROJECT_FINAL_AUDIT.pdf](../../../PROJECT_FINAL_AUDIT.pdf), in Brazilian Portuguese, with requirements traceability, fault boundaries, real identifiers, annotated screenshots, clean-install proof, commands and limitations. [Persistent evidence](../../audit/2026-10-17/manifest.json) records this campaign's logs, SQL, screenshots and hashes. These documentation/report additions are uncommitted candidate changes; no final commit is claimed. No stage, commit or push was performed.
+The PDF was a temporary communication artifact, not an installation requirement. Maintained acceptance information is in this document and the 6.3 matrix.
 
 ## Current execution
 
