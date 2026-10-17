@@ -1,3 +1,5 @@
+[Historical record: current installation and addresses](../operations/application-scenarios.md)
+
 # Frontend/backend preparation — 2026-10-12
 
 ## Milestone 6.1 — current integration — 2026-10-17

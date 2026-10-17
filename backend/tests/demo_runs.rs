@@ -452,3 +452,50 @@ async fn correlated_observation_survives_reprocessing_without_second_effect() {
     })
     .await;
 }
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn retained_history_pages_include_pending_runs_without_mutation() {
+    support::isolated(|p| async move {
+        setup(&p).await;
+        let repo = DemoRepository::new(p.clone());
+        let mut ids = Vec::new();
+        for _ in 0..3 {
+            let id = Uuid::now_v7();
+            repo.submit(Intent {
+                request_id: id,
+                scenario: "normal".into(),
+                initial_stock: 10,
+                quantity: 5,
+            })
+            .await
+            .unwrap();
+            ids.push(id);
+        }
+        let first = repo.retained_runs(2, 0).await.unwrap();
+        let second = repo.retained_runs(2, 2).await.unwrap();
+        assert_eq!(first.len(), 2);
+        assert_eq!(second.len(), 1);
+        assert_eq!(first[0]["request_id"], ids[2].to_string());
+        assert_eq!(second[0]["request_id"], ids[0].to_string());
+        assert!(repo.retained_runs(21, 0).await.is_err());
+        assert!(repo.retained_runs(1, 101).await.is_err());
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM demo.actions")
+                .fetch_one(&p)
+                .await
+                .unwrap(),
+            0
+        );
+        assert!(
+            repo.evidence(ids[0])
+                .await
+                .unwrap()
+                .unwrap()
+                .receipt
+                .is_none()
+        );
+        Ok(())
+    })
+    .await;
+}

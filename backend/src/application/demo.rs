@@ -79,6 +79,14 @@ pub struct Evidence {
     pub observed_at: String,
 }
 pub trait Repository: Send + Sync {
+    fn retained_runs(
+        &self,
+        limit: u32,
+        offset: u32,
+    ) -> impl std::future::Future<Output = Result<Vec<serde_json::Value>, Error>> + Send {
+        let _ = (limit, offset);
+        async { Err(Error::Unavailable) }
+    }
     fn eligible_runs(
         &self,
     ) -> impl std::future::Future<Output = Result<Vec<serde_json::Value>, Error>> + Send {

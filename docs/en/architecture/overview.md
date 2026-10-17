@@ -1,3 +1,5 @@
+[Historical record: current application guide and acceptance](../operations/milestone-6-3.md)
+
 Current schema/contracts: [Milestone 3.2](milestone-3-2.md). Earlier milestone sections below describe their original scope.
 
 [Português brasileiro](../../pt-BR/architecture/overview.md) | [README](../../../README.md)

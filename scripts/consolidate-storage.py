@@ -15,7 +15,7 @@ def main():
  target=ROOT/'.local-backups'/('consolidation-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
  target.mkdir(parents=True,mode=0o700)
  fingerprints={}
- targets=[(MAIN,'main','rust-event-relay')]
+ targets=[(MAIN,'main',os.environ.get('COMPOSE_PROJECT_NAME','rust-event-relay'))]
  if '--apply' not in sys.argv and (ROOT/'compose.demo.yaml').exists(): targets.append((LEGACY,'legacy','relay-demo61'))
  for base,label,expected in targets:
   config=json.loads(run(base,['config','--format','json']))

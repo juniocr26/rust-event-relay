@@ -82,7 +82,7 @@ def main():
             (pg, "measure-pg", "postgres:18.6-bookworm", "512m", "/var/lib/postgresql:rw,size=256m", {
                 "POSTGRES_USER": "relay_test", "POSTGRES_PASSWORD": "disposable_measurement_only", "POSTGRES_DB": "relay_test_admin"}),
             (rabbit, "measure-rabbit", "rabbitmq:4.3.6-management", "768m", "/var/lib/rabbitmq:rw,size=256m", {
-                "RABBITMQ_DEFAULT_USER": "relay_test", "RABBITMQ_DEFAULT_PASS": "disposable_measurement_only", "RABBITMQ_DEFAULT_VHOST": "relay"}),
+                "RABBITMQ_DEFAULT_USER": "relay_test", "RABBITMQ_DEFAULT_PASS": "disposable_measurement_only", "RABBITMQ_DEFAULT_VHOST": "relay", "RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS": "+S 2:2"}),
         ]:
             command = ["docker", "run", "-d", "--name", name, "--label", "relay.measure.owner=" + owner,
                        "--network", network, "--network-alias", alias, "--cpus", "1", "--memory", memory,
@@ -93,7 +93,7 @@ def main():
             created.append(name)
         deadline = time.monotonic() + 100
         for name, probe in [(pg, ["pg_isready", "-U", "relay_test", "-d", "relay_test_admin"]),
-                            (rabbit, ["rabbitmq-diagnostics", "-q", "check_running"])]:
+                            (rabbit, ["gosu", "rabbitmq", "rabbitmq-diagnostics", "-q", "check_running"])]:
             while True:
                 ready = subprocess.run(["docker", "exec", name, *probe], capture_output=True, timeout=15)
                 if ready.returncode == 0:
@@ -106,7 +106,7 @@ def main():
                 "cargo fmt --check",
                 "cargo clippy --locked --all-targets --all-features -- -D warnings",
                 "cargo test --locked",
-                "cargo test --locked --test postgres_repository --test delivery_ownership_schema --test postgres_ownership --test postgres_retry --test postgres_discovery --test postgres_replay --test postgres_consumer --test operational_readiness --test rabbitmq_publisher --test integrated_recovery --test consumer_runtime --test worker_smoke -- --ignored --test-threads=1",
+                "cargo test --locked --test demo_runs --test postgres_repository --test delivery_ownership_schema --test postgres_ownership --test postgres_retry --test postgres_discovery --test postgres_replay --test postgres_consumer --test operational_readiness --test rabbitmq_publisher --test integrated_recovery --test consumer_runtime --test worker_smoke -- --ignored --test-threads=1",
                 "cargo test --locked --lib infrastructure::rabbitmq::tests:: -- --ignored --test-threads=1",
                 "cargo build --locked --bins",
                 "RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps",

@@ -1,3 +1,5 @@
+[Registro histórico: instalação e endereços atuais](../operations/application-scenarios.md)
+
 # Preparação frontend/backend — 2026-10-12
 
 ## Marco 6.1 — integração atual — 2026-10-17

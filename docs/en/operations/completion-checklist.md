@@ -1,3 +1,5 @@
+[Historical record: current application guide and acceptance](../operations/milestone-6-3.md)
+
 **Current 5.3 acceptance — 2026-10-17:** [Full matrix and Milestone 5 closure](milestone-5-3.md). Remote 5.2 selected and deliberately deployed; finite isolated measurements/final checks passed. Project production readiness not established; Milestone 6 undefined. Entries below retain their dated scope.
 
 **Current local state — Milestone 4.5 (2026-10-16):** [Verified rollout and recovery](milestone-4-5-rollout.md). Six migrations applied; current HTTP/relay/consumer artifacts installed and running; consumer autostart=true. Protected backup/isolated restore and real 10 → 15 → 15 demonstration verified. Replay API remains disabled; frontend remains simulation. Earlier observations below retain their dates.

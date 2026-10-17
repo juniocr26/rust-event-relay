@@ -1,3 +1,5 @@
+[Historical record: current installation and addresses](../operations/application-scenarios.md)
+
 [Português brasileiro](../../pt-BR/operations/milestone-6-1.md) | [Catalog](../index.md)
 
 # Milestone 6.1 — real delivery with persistent evidence

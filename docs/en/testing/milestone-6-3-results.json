@@ -1,0 +1,111 @@
+{
+  "date": "2026-10-17",
+  "decision": "accepted for the agreed local portfolio scope; Milestone 6 closed",
+  "remote_ci": "not executed or verified",
+  "production_readiness": "not established",
+  "rust": {
+    "standard": {
+      "command": "cargo test --locked",
+      "passed": 102,
+      "ignored_in_that_invocation": 141
+    },
+    "integration": {
+      "command": "python3 -B scripts/measure-isolated.py verification",
+      "reported_passes": 138,
+      "substantive": 136,
+      "subprocess_dispatchers": 2
+    },
+    "broker_library_opt_ins": {
+      "passed": 2
+    },
+    "capacity": {
+      "command": "python3 -B scripts/measure-isolated.py campaign",
+      "passed": 1,
+      "trials": 22,
+      "unexplained": 0
+    },
+    "unique_reported_passes": 243,
+    "unique_substantive_tests": 241,
+    "format": "passed",
+    "strict_clippy": "passed",
+    "binary_build": "passed",
+    "rustdoc_warnings_denied": "passed"
+  },
+  "browser": {
+    "command": "python3 -B scripts/test-application.py",
+    "passed": 27,
+    "mocked_live_pipeline": false,
+    "independent_sql": true,
+    "settled_action_queues": 7,
+    "temporary_consumers_after_actions": 0,
+    "viewports": [
+      320,
+      375,
+      768,
+      1024,
+      1920
+    ],
+    "rendered_history_unknown_stale_inspected": true
+  },
+  "clean_install": {
+    "command": "python3 -B scripts/test-clean-install.py",
+    "candidate_sha256": "06905b42520df88c35b7ee2deb5b3a72a4e4a0301020e4db7e93dccf338f4077",
+    "files": 289,
+    "migrations": 9,
+    "persistence": {
+      "runs": 13,
+      "stock": 195,
+      "actions": 7,
+      "receipts": 13
+    },
+    "result": "passed",
+    "standard_rust_passed": 102,
+    "standard_rust_ignored": 141,
+    "browser_passed": 24,
+    "locked_frontend_install_typecheck_build": "passed",
+    "production_assets_secret_scan": "passed",
+    "independent_sql": "all 13 runs processed with 10+5=15 and all 7 actions confirmed with correlated Duplicate evidence",
+    "stop_start_preserved": true,
+    "cleanup": "completed"
+  },
+  "migrations": {
+    "command": "python3 -B scripts/check-migrations.py",
+    "upgrades": 9,
+    "checksums_noop_supported_rollback_reapply": "passed",
+    "main_migration_needed": false
+  },
+  "documentation": {
+    "local_markdown_files": 125,
+    "unresolved_local_links": 0,
+    "checker_tests_passed": 4,
+    "heading_anchors_and_remote_links_checked": false
+  },
+  "configuration_negative_checks": [
+    "missing .env",
+    "malformed token",
+    "credential placeholders"
+  ],
+  "main": {
+    "fingerprint": "227e045692aae560b23fe417d47106467f350481faa40de33eb53b2e698bdd1a",
+    "runs": 1,
+    "actions": 1,
+    "stock": 15,
+    "effect_receipts": 1,
+    "preserved": true,
+    "global_receipts": 2,
+    "migration_versions": 9,
+    "processes_running": [
+      "http",
+      "relay",
+      "consumer"
+    ],
+    "all_readiness_http_status": 200,
+    "loaded_binaries_match_disk": true,
+    "source_consumers": 1,
+    "action_consumers": 0,
+    "all_queues_ready": 0,
+    "all_queues_unacknowledged": 0
+  },
+  "git": "no stage, commit or push; baseline was clean",
+  "evidence_note": "The candidate digest describes the Git-visible snapshot at test start, including then-current documentation. This results ledger and final documentation status were written after execution. Runtime source was unchanged after that snapshot."
+}

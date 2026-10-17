@@ -1,3 +1,5 @@
+[Registro histórico: instalação e endereços atuais](../operations/application-scenarios.md)
+
 [English](../../en/operations/milestone-6-1.md) | [Catálogo](../index.md)
 
 # Marco 6.1 — entrega real com evidência persistente

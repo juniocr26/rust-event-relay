@@ -1,3 +1,5 @@
+[Registro histórico: instalação e endereços atuais](../operations/application-scenarios.md)
+
 **Deploy/evidência atual — 17/10/2026:** [5.3](milestone-5-3.md) registra CI remoto exato 5.2, rollout nominal controlado, hashes carregados, medições isoladas finitas e demonstração preservada. 5.3 é trabalho local de testes/docs/comentário, sem deploy. Registros anteriores mantêm seu escopo original.
 
 ## Marco 4.4 — verificação e fechamento atuais — 16/10/2026

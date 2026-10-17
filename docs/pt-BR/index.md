@@ -1,5 +1,7 @@
 [Preparação do Marco 6 — comparação e proposta de escopo live (sem aprovação)](operations/milestone-6-preparation.md).
 
+[Current application guide](operations/application-scenarios.md) · [Milestone 6.3 acceptance](operations/milestone-6-3.md)
+
 **Fechamento atual do Marco 5 (17/10/2026):** [5.3 protocolo, medições, matriz, rollout e decisões](operations/milestone-5-3.md) | [Dados finitos](../en/testing/milestone-5-3-results.json). Fechado com limitações explícitas não bloqueantes; Marco 6 indefinido. Entradas datadas anteriores permanecem históricas.
 
 # Catálogo de documentação: rust-event-relay

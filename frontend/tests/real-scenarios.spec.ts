@@ -47,7 +47,9 @@ test('historical run: explicit duplicate, close/reopen and another action preser
  await page.getByLabel('Local demo token',{exact:true}).fill(token)
  await page.getByRole('button',{name:'Load successful runs'}).click()
  await page.getByLabel('Successful run',{exact:true}).selectOption(run.request_id)
+ const admitted=page.waitForResponse(r=>r.url().endsWith('/demo/actions')&&r.request().method()==='POST')
  await page.getByRole('button',{name:/Run real delivery|Recover same request/}).click()
+ expect((await admitted).status()).toBe(202)
  await page.keyboard.press('Escape')
  await page.getByRole('button',{name:'Open experience'}).click()
  await page.getByRole('button',{name:'Recover same request'}).click()
@@ -62,6 +64,8 @@ test('historical run: explicit duplicate, close/reopen and another action preser
  expect(after.observations.some((o:{action_id:string;outcome:string})=>o.action_id===after.action.action_id&&o.outcome==='Duplicate')).toBe(true)
  await page.screenshot({path:'/tmp/demo62-historical.png',fullPage:true})
  await expect(page.getByText('Last evidence is stale.',{exact:false})).toBeVisible({timeout:18000})
+ await page.getByText('Last evidence is stale.',{exact:false}).scrollIntoViewIfNeeded()
+ await page.screenshot({path:'/tmp/demo63-stale.png',fullPage:true})
 })
 
 test('concurrent sessions release reserved copies across repeated real actions',async({request})=>{
@@ -78,4 +82,76 @@ test('concurrent sessions release reserved copies across repeated real actions',
   expect(e.stock).toBe(15);expect(e.effect_receipts).toBe(1)
   expect(e.observations.filter((o:{action_id:string;outcome:string})=>o.action_id===e.action.action_id&&o.outcome==='Duplicate').length).toBeGreaterThanOrEqual(3)
  }
+})
+
+test('retained inspection paginates, selects historical actions and never submits work', async ({page, request}) => {
+ const first = await request.get('/demo/history?limit=2&offset=0', {headers})
+ expect(first.ok()).toBe(true)
+ const rows = await first.json(); expect(rows.length).toBe(2)
+ const next = await (await request.get('/demo/history?limit=2&offset=2', {headers})).json()
+ expect(next.some((r:{run_id:string})=>r.run_id===rows[0].run_id)).toBe(false)
+ expect((await request.get('/demo/history?limit=21&offset=0', {headers})).status()).toBe(400)
+ const runs = await (await request.get('/demo/runs', {headers})).json()
+ let chosen
+ for (const r of runs) {
+  const e = await (await request.get(`/demo/runs/${r.request_id}`, {headers})).json()
+  if (e.actions.length >= 2) {chosen=e;break}
+ }
+ expect(chosen).toBeTruthy()
+ // Setup queries share the application's 10/s quota with the browser.
+ await new Promise(resolve => setTimeout(resolve, 1100))
+ const posts:string[]=[];page.on('request', r=>{if(r.method()==='POST')posts.push(r.url())})
+ await page.goto('/');await page.getByRole('button',{name:'Open experience'}).click()
+ await page.getByLabel('Local demo token',{exact:true}).fill(token)
+ await page.getByText('Inspect retained runs and actions',{exact:true}).click()
+ await page.getByRole('button',{name:'Load retained runs',exact:true}).click()
+ await expect(page.getByText('Retained runs loaded.',{exact:false})).toBeVisible()
+ await page.getByLabel('Retained run',{exact:true}).selectOption(chosen.request_id)
+ await page.getByRole('button',{name:'Inspect existing evidence',exact:true}).click()
+ await expect(page.getByRole('button',{name:'Copy Run ID',exact:true})).toBeVisible()
+ await page.getByLabel('Historical action',{exact:true}).selectOption(chosen.actions[0].action_id)
+ await page.getByRole('button',{name:'Inspect selected action',exact:true}).click()
+ await expect(page.getByText(chosen.actions[0].action_id,{exact:true})).toBeVisible()
+ for(const width of [320,768,1920]) {
+  await page.setViewportSize({width,height:900})
+  await page.getByText(chosen.actions[0].action_id,{exact:true}).scrollIntoViewIfNeeded()
+  expect(await page.locator('.modal').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true)
+  await page.screenshot({path:`/tmp/demo63-history-${width}.png`,fullPage:true})
+ }
+ await page.reload();await page.getByRole('button',{name:'Open experience'}).click()
+ await expect(page.getByLabel('Local demo token',{exact:true})).toHaveValue('')
+ await page.getByLabel('Local demo token',{exact:true}).fill(token)
+ await page.getByRole('button',{name:'Recover same request'}).click()
+ await expect(page.getByText(chosen.actions[0].action_id,{exact:true})).toBeVisible()
+ expect(posts).toEqual([])
+ const after=await (await request.get(`/demo/runs/${chosen.request_id}`,{headers})).json()
+ expect(after.actions).toEqual(chosen.actions);expect(after.effect_receipts).toBe(1);expect(after.stock).toBe(15)
+})
+
+test('unknown action inspection never republishes or changes retained identities', async ({page,request}) => {
+ const runs=await (await request.get('/demo/history?limit=10&offset=0',{headers})).json()
+ let chosen
+ for (const r of runs) {
+  const e=await (await request.get(`/demo/runs/${r.request_id}`,{headers})).json()
+  if(e.actions.some((a:{state:string})=>a.state==='unknown')) {chosen=e;break}
+ }
+ expect(chosen).toBeTruthy()
+ const action=chosen.actions.find((a:{state:string})=>a.state==='unknown')
+ await new Promise(resolve=>setTimeout(resolve,1100))
+ await page.goto('/')
+ await page.evaluate(({id,action})=>{sessionStorage.setItem('relay-request:dedupe',id);sessionStorage.setItem('relay-request:dedupe:action',action)}, {id:chosen.request_id,action:action.action_id})
+ const posts:string[]=[];page.on('request',r=>{if(r.method()==='POST')posts.push(r.url())})
+ await page.getByLabel('Choose an experience').selectOption('dedupe');await page.getByRole('button',{name:'Open experience'}).click()
+ await page.getByLabel('Local demo token',{exact:true}).fill(token)
+ await page.getByRole('button',{name:'Recover same request'}).click()
+ await expect(page.getByText('Action outcome is unknown or incomplete.',{exact:false})).toBeVisible()
+ await expect(page.getByText(action.action_id,{exact:true})).toBeVisible()
+ await page.setViewportSize({width:768,height:900})
+ await page.screenshot({path:'/tmp/demo63-unknown.png',fullPage:true})
+ await page.keyboard.press('Escape');await page.getByRole('button',{name:'Open experience'}).click()
+ await page.getByRole('button',{name:'Recover same request'}).click()
+ await expect(page.getByText('Action outcome is unknown or incomplete.',{exact:false})).toBeVisible()
+ expect(posts).toEqual([])
+ const after=await (await request.get(`/demo/runs/${chosen.request_id}`,{headers})).json()
+ expect(after.actions).toEqual(chosen.actions);expect(after.stock).toBe(15);expect(after.effect_receipts).toBe(1)
 })

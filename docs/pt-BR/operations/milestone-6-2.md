@@ -1,3 +1,5 @@
+[Registro histórico: instalação e endereços atuais](../operations/application-scenarios.md)
+
 [English](../../en/operations/milestone-6-2.md) | [Catálogo](../index.md)
 
 # Marco 6.2 — entrega duplicada com evidência durável

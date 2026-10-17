@@ -1,3 +1,5 @@
+[Historical record: current application guide and acceptance](../operations/milestone-6-3.md)
+
 [Português brasileiro](../../pt-BR/testing/validation-results.md) | [README](../../../README.md)
 
 # Validation results

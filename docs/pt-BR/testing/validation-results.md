@@ -1,3 +1,5 @@
+[Registro histórico: guia e aceite atuais](../operations/milestone-6-3.md)
+
 [English](../../en/testing/validation-results.md) | [README](../../../README.pt-BR.md)
 
 # Resultados de validação

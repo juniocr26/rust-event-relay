@@ -34,7 +34,7 @@ def campaign():
    label=subprocess.check_output(['docker','inspect','--format','{{index .Config.Labels "com.docker.compose.project"}}',cid],text=True).strip()
    assert label==PROJECT and sql('SELECT current_database();')=='relay_test'
    run(['run','--rm','--no-deps','app','sqlx','migrate','run','--no-dotenv'])
-   run(['up','-d','app','frontend'])
+   run(['up','-d','--wait','app','frontend'])
    for _ in range(60):
     status=run(['exec','-T','app','supervisorctl','status'],capture_output=True,text=True).stdout
     if status.count('RUNNING')==3:break
@@ -51,13 +51,23 @@ def campaign():
     if result=='15':break
     time.sleep(1)
    assert result=='15'
-   run(['exec','-T','frontend','npx','playwright','test','--config','playwright.live.config.ts','--grep-invert','dependency unavailable|paused test consumer'])
+   run(['exec','-T','frontend','npx','playwright','test','--config','playwright.live.config.ts','--grep-invert','dependency unavailable|paused test consumer|unknown action inspection'])
    evidence=json.loads(run(['exec','-T','frontend','cat','/tmp/demo61-browser-evidence.json'],capture_output=True,text=True).stdout)
    assert '|processed|10|5|15|15' in sql(f"SELECT r.run_id,o.status,c.stock_before,c.quantity,c.stock_after,s.units FROM demo.runs r JOIN relay.outbox_events o ON o.id=r.event_id JOIN consumer.receipts c ON c.event_id=r.event_id JOIN consumer.stock s ON s.warehouse_id=r.warehouse_id AND s.sku=r.sku WHERE r.run_id='{uuid.UUID(evidence['run_id'])}';")
    assert sql("SELECT count(*) FROM demo.actions a WHERE state='confirmed' AND (SELECT count(*) FROM demo.consumer_observations o WHERE o.action_id=a.action_id AND o.outcome='Duplicate')>=a.copies;")=='7'
    assert sql("SELECT count(*) FROM demo.faults WHERE injected_at IS NOT NULL AND retry_available_at IS NOT NULL;")=='1'
+   queues=json.loads(run(['exec','-T','rabbitmq','rabbitmqctl','-q','list_queues','-p','relay','name','consumers','messages_ready','messages_unacknowledged','--formatter','json'],capture_output=True,text=True).stdout)
+   action_queues=[q for q in queues if q['name'].startswith('relay.demo.')]
+   assert len(action_queues)==7 and all(q['consumers']==0 and q['messages_ready']==0 and q['messages_unacknowledged']==0 for q in action_queues)
    print('Independent SQL verifies normal, duplicate, concurrent duplicate and controlled retry evidence.')
+   # Test-owned fixture: retained unknown state, not a claim of a newly injected crash.
+   sql("UPDATE demo.actions SET state='unknown' WHERE action_id=(SELECT action_id FROM demo.actions ORDER BY accepted_at DESC LIMIT 1);")
+   run(['exec','-T','frontend','npx','playwright','test','--config','playwright.live.config.ts','--grep','unknown action inspection'])
+   run(['cp','frontend:/tmp/demo63-unknown.png','/tmp/relay-main-unknown.png'])
+
    run(['cp','frontend:/tmp/demo62-historical.png','/tmp/relay-main-historical.png'])
+   run(['cp','frontend:/tmp/demo63-stale.png','/tmp/relay-main-stale.png'])
+   for width in [320,768,1920]:run(['cp',f'frontend:/tmp/demo63-history-{width}.png',f'/tmp/relay-main-history-{width}.png'])
    for width in [320,1920]:run(['cp',f'frontend:/tmp/demo61-live-{width}.png',f'/tmp/relay-main-live-{width}.png'])
    run(['exec','-T','app','supervisorctl','stop','http'])
    run(['exec','-T','frontend','npx','playwright','test','--config','playwright.live.config.ts','--grep','dependency unavailable'])

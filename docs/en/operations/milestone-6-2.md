@@ -1,3 +1,5 @@
+[Historical record: current installation and addresses](../operations/application-scenarios.md)
+
 [Português brasileiro](../../pt-BR/operations/milestone-6-2.md) | [Catalog](../index.md)
 
 # Milestone 6.2 — durable duplicate delivery

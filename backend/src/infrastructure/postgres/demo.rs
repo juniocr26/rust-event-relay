@@ -50,6 +50,17 @@ LEFT JOIN consumer.receipts c ON c.event_id=r.event_id AND c.consumer_name='inve
 LEFT JOIN consumer.stock s ON s.warehouse_id=r.warehouse_id AND s.sku=r.sku
 WHERE r.request_id=$1";
 impl Repository for DemoRepository {
+    async fn retained_runs(
+        &self,
+        limit: u32,
+        offset: u32,
+    ) -> Result<Vec<serde_json::Value>, Error> {
+        if !(1..=20).contains(&limit) || offset > 100 {
+            return Err(Error::Invalid);
+        }
+        sqlx::query_scalar("SELECT jsonb_build_object('run_id',run_id,'request_id',request_id,'event_id',event_id,'scenario',scenario,'accepted_at',accepted_at) FROM demo.runs ORDER BY accepted_at DESC,run_id DESC LIMIT $1 OFFSET $2")
+            .bind(i64::from(limit)).bind(i64::from(offset)).fetch_all(&self.pool).await.map_err(|_| Error::Unavailable)
+    }
     async fn eligible_runs(&self) -> Result<Vec<serde_json::Value>, Error> {
         DemoRepository::eligible_runs(self).await
     }

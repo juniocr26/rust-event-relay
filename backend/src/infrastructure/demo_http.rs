@@ -3,7 +3,7 @@
 use crate::application::demo::{self, ActionIntent, Actions, Error, Intent, Repository};
 use axum::{
     Json, Router,
-    extract::{DefaultBodyLimit, Path, State},
+    extract::{DefaultBodyLimit, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -30,9 +30,10 @@ pub fn router<R: Repository + Actions + 'static>(
     Ok(Router::new()
         .route("/demo/runs", post(submit::<R>).get(eligible::<R>))
         .route("/demo/actions", post(action::<R>))
+        .route("/demo/history", get(history::<R>))
         .route("/demo/config",get(||async {
             let value=|key:&str,default:&str| std::env::var(key).unwrap_or_else(|_|default.into());
-            Json(serde_json::json!({"database":value("POSTGRES_DB","reliable_event_relay"),"database_user":value("POSTGRES_USER",""),"database_host":"localhost","database_port":value("DEMO_DB_PORT","5433"),"management_url":format!("http://localhost:{}",value("DEMO_MANAGEMENT_PORT","15672")),"vhost":value("RABBITMQ_DEFAULT_VHOST","relay"),"exchange":value("RABBITMQ_EXCHANGE","relay.events"),"queue":value("RABBITMQ_QUEUE","relay.local")}))
+            Json(serde_json::json!({"database":value("POSTGRES_DB","reliable_event_relay"),"database_user":value("POSTGRES_USER",""),"database_host":"localhost","database_port":value("DEMO_DB_PORT","5433"),"management_url":format!("http://localhost:{}",value("DEMO_MANAGEMENT_PORT","15672")),"vhost":value("RABBITMQ_DEFAULT_VHOST","relay"),"exchange":value("RABBITMQ_EXCHANGE","relay.events"),"queue":value("RABBITMQ_QUEUE","relay.local"),"routing_key":value("RABBITMQ_ROUTING_KEY","event")}))
         }))
         .route("/demo/runs/{request_id}", get(evidence::<R>))
         .layer(DefaultBodyLimit::max(1024))
@@ -137,6 +138,25 @@ async fn action<R: Actions>(
 
 async fn eligible<R: Repository>(State(repo): State<Arc<R>>) -> Response {
     match repo.eligible_runs().await {
+        Ok(runs) => Json(runs).into_response(),
+        Err(e) => error(e),
+    }
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HistoryQuery {
+    limit: u32,
+    offset: u32,
+}
+async fn history<R: Repository>(
+    State(repo): State<Arc<R>>,
+    Query(page): Query<HistoryQuery>,
+) -> Response {
+    if !(1..=20).contains(&page.limit) || page.offset > 100 {
+        return error(Error::Invalid);
+    }
+    match repo.retained_runs(page.limit, page.offset).await {
         Ok(runs) => Json(runs).into_response(),
         Err(e) => error(e),
     }

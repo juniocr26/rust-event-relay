@@ -1,3 +1,5 @@
+[Registro histórico: guia e aceite atuais](../operations/milestone-6-3.md)
+
 Schema/contratos atuais: [Marco 3.2](milestone-3-2.md). Seções de marcos anteriores abaixo descrevem o escopo original.
 
 [English](../../en/architecture/overview.md) | [README](../../../README.pt-BR.md)

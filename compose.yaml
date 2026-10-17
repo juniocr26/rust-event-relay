@@ -10,6 +10,12 @@ services:
     # Three children have 30s each; allow sequential Supervisor shutdown plus margin.
     stop_grace_period: 95s
     working_dir: /app/backend
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import os,urllib.request; [urllib.request.urlopen('http://'+os.environ[k]+'/ready',timeout=2).read() for k in ('HTTP_METRICS_ADDR','RELAY_METRICS_ADDR','CONSUMER_METRICS_ADDR')]"]
+      interval: 5s
+      timeout: 8s
+      retries: 12
+      start_period: 15s
     environment:
       DEMO_ENABLED: "true"
       DEMO_TOKEN: ${DEMO_TOKEN:?Run scripts/start-local.py to initialize the local demo token}
@@ -75,6 +81,12 @@ services:
       - "127.0.0.1:${HOST_HTTP_PORT:-8080}:8080"
   frontend:
     image: node:22-bookworm-slim
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
     init: true
     user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     working_dir: /app/frontend
@@ -117,7 +129,7 @@ services:
       - rabbitmq-data:/var/lib/rabbitmq
       - ./docker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      test: ["CMD", "gosu", "rabbitmq", "rabbitmq-diagnostics", "-q", "check_running"]
       interval: 5s
       timeout: 5s
       retries: 24

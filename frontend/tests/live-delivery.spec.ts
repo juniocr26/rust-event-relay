@@ -50,6 +50,8 @@ test('real unavailable authorization, safe same-identity recovery and close with
   await page.getByRole('button', { name: 'Open experience' }).click()
   await page.getByLabel('Local demo token', { exact: true }).fill(token)
   await page.getByRole('button', { name: 'Recover same request' }).click()
+  await expect(page.getByText('No committed run is visible', {exact:false}).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Submit same producer intent' }).click()
   await expect(page.getByText('Confirmed: receipt committed and stock 15; relay completion observed.').first()).toBeVisible({ timeout: 20000 })
   expect(await page.evaluate(() => sessionStorage.getItem('relay-request:normal'))).toBe(key)
 })
