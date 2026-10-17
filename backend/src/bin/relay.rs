@@ -16,17 +16,23 @@ use reliable_event_relay::{
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use tokio::time::{Instant, timeout_at};
 
-struct RabbitLifecycle(RabbitMqConfig);
+struct RabbitLifecycle(RabbitMqConfig, Option<sqlx::PgPool>);
 impl PublisherLifecycle for RabbitLifecycle {
-    type Publisher = RabbitMqPublisher;
-    async fn connect(&self) -> Result<RabbitMqPublisher, PublishError> {
-        RabbitMqPublisher::connect(self.0.clone()).await
+    type Publisher =
+        reliable_event_relay::infrastructure::demo_delivery::DemoPublisher<RabbitMqPublisher>;
+    async fn connect(&self) -> Result<Self::Publisher, PublishError> {
+        Ok(
+            reliable_event_relay::infrastructure::demo_delivery::DemoPublisher {
+                inner: RabbitMqPublisher::connect(self.0.clone()).await?,
+                pool: self.1.clone(),
+            },
+        )
     }
-    fn usable(&self, publisher: &RabbitMqPublisher) -> bool {
-        publisher.is_usable()
+    fn usable(&self, publisher: &Self::Publisher) -> bool {
+        publisher.inner.is_usable()
     }
-    async fn close(&self, publisher: RabbitMqPublisher) -> Result<(), PublishError> {
-        publisher.close().await
+    async fn close(&self, publisher: Self::Publisher) -> Result<(), PublishError> {
+        publisher.inner.close().await
     }
 }
 
@@ -95,7 +101,10 @@ async fn main() -> Result<(), &'static str> {
         let repository = PostgresOutboxRepository::new(pool.clone());
         worker::run_observed(
             &repository,
-            &RabbitLifecycle(rabbit),
+            &RabbitLifecycle(
+                rabbit,
+                (std::env::var("DEMO_ENABLED").as_deref() == Ok("true")).then(|| pool.clone()),
+            ),
             &config,
             &mut shutdown,
             metrics.as_ref(),

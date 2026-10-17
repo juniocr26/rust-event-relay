@@ -222,7 +222,7 @@ pub fn publication(result: &Result<(), super::publisher::PublishError>) -> Outco
             Uncertain => Outcome::Uncertain,
             Unavailable => Outcome::Unavailable,
             Serialization => Outcome::Serialization,
-            Rejected => Outcome::Rejected,
+            Rejected | RejectedBeforeSend => Outcome::Rejected,
             Unroutable => Outcome::Unroutable,
         },
     }

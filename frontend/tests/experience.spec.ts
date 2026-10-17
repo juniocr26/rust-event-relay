@@ -47,7 +47,7 @@ for (const width of [320, 375, 768, 1024, 1920]) {
       true,
     )
     await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeFocused()
-    await expect(page.getByRole('heading', { name: 'Lose a confirmation' })).toBeInViewport()
+    await expect(page.getByRole('heading', { name: 'Illustrative · Lose a confirmation' })).toBeInViewport()
     await page.screenshot({ path: `/tmp/relay-modal-top-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: 'Run scenario' }).scrollIntoViewIfNeeded()
     await expect(page.getByRole('button', { name: 'Run scenario' })).toBeInViewport()
@@ -101,7 +101,6 @@ for (const [id, count, outcome] of [
   ['crash', 5, '↻ Recovered with duplicate publication'],
   ['race', 5, '✓ One live owner in this schedule'],
   ['ack', 4, '? Uncertain response · committed outcome observed'],
-  ['dedupe', 4, '◇ Illustrated inventory deduplication'],
 ] as const) {
   test(`${id}: coherent states, output and replay`, async ({ page }) => {
     const calls: string[] = []

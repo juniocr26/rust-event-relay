@@ -26,6 +26,64 @@ async fn main() -> Result<(), &'static str> {
     let mut router = application::router();
     let mut pool = None;
     let mut observation = None;
+    let mut demo_pool = None;
+    let mut demo_observation = None;
+    let (demo_stop, demo_rx) = tokio::sync::watch::channel(false);
+    let mut demo_task = None;
+    if std::env::var("DEMO_ENABLED").as_deref() == Ok("true") {
+        use reliable_event_relay::infrastructure::{
+            demo_delivery, demo_http, postgres::demo::DemoRepository,
+        };
+        let required = |key| {
+            std::env::var(key)
+                .ok()
+                .filter(|s| !s.is_empty())
+                .ok_or("missing demo configuration")
+        };
+        let options = PgConnectOptions::new()
+            .host(&required("POSTGRES_HOST")?)
+            .port(
+                required("POSTGRES_PORT")?
+                    .parse()
+                    .map_err(|_| "invalid demo DB port")?,
+            )
+            .username(&required("POSTGRES_USER")?)
+            .password(&required("POSTGRES_PASSWORD")?)
+            .database(&required("POSTGRES_DB")?)
+            .options([("statement_timeout", "3000"), ("lock_timeout", "1000")]);
+        let connected = PgPoolOptions::new()
+            .max_connections(2)
+            .acquire_timeout(Duration::from_secs(2))
+            .connect_with(options.clone())
+            .await
+            .map_err(|_| "demo database unavailable")?;
+        sqlx::query("SELECT action_id FROM demo.actions LIMIT 0")
+            .execute(&connected)
+            .await
+            .map_err(|_| "demo forward migration required")?;
+        router = router.merge(demo_http::router(
+            DemoRepository::new(connected.clone()),
+            required("DEMO_TOKEN")?,
+            required("DEMO_ORIGIN")?,
+        )?);
+        demo_observation = Some(DatabaseObservation::start(
+            options.clone(),
+            &["SELECT action_id FROM demo.actions LIMIT 0"],
+            metrics.readiness.clone(),
+        ));
+        let worker_pool = PgPoolOptions::new()
+            .max_connections(2)
+            .acquire_timeout(Duration::from_secs(2))
+            .connect_with(options)
+            .await
+            .map_err(|_| "demo action pool unavailable")?;
+        demo_task = Some(tokio::spawn(demo_delivery::action_worker(
+            worker_pool,
+            demo_rx,
+        )));
+        metrics.readiness.require_database();
+        demo_pool = Some(connected);
+    }
     // Opt-in only. No connection or migration is required for liveness-only HTTP.
     if let Some(raw) = std::env::var("REPLAY_OPERATORS")
         .ok()
@@ -74,6 +132,7 @@ async fn main() -> Result<(), &'static str> {
         ));
         pool = Some(connected);
     }
+    metrics.configure(u32::from(demo_pool.is_some())*4 + u32::from(pool.is_some())*2,0,pool.is_some());
     let http_metrics = metrics.clone();
     router = router.layer(axum::middleware::from_fn(
         move |request: axum::extract::Request, next: axum::middleware::Next| {
@@ -117,6 +176,17 @@ async fn main() -> Result<(), &'static str> {
         }
     }
     metrics.readiness.stop();
+    let _ = demo_stop.send(true);
+    if let Some(mut task) = demo_task
+        && tokio::time::timeout(Duration::from_secs(4), &mut task).await.is_err() {
+        task.abort(); let _=task.await; cleanup_expired=true;
+    }
+    if let Some(observation) = demo_observation {
+        observation.shutdown().await;
+    }
+    if let Some(pool) = demo_pool {
+        pool.close().await;
+    }
     if let Some(observation) = observation {
         observation.shutdown().await;
     }

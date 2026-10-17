@@ -23,7 +23,7 @@ export const scenarios: Scenario[] = [
   },
   {
     id: 'crash',
-    title: 'Crash and recover',
+    title: 'Illustrative · Crash and recover',
     description:
       'RabbitMQ accepts the message, but the worker stops before saving completion. Recovery can publish the same event again.',
     expected: 'Recovery records completion; two acceptances share the same event ID.',
@@ -91,7 +91,7 @@ export const scenarios: Scenario[] = [
   },
   {
     id: 'race',
-    title: 'Two workers, one event',
+    title: 'Illustrative · Two workers, one event',
     description:
       'Two workers compete for one message. PostgreSQL decides which worker owns the live lease in this schedule.',
     expected: 'A gets the lease; B skips this event. Only A publishes in this schedule.',
@@ -158,7 +158,7 @@ export const scenarios: Scenario[] = [
   },
   {
     id: 'ack',
-    title: 'Lose a confirmation',
+    title: 'Illustrative · Lose a confirmation',
     description:
       'A database completion acknowledgement is lost. The caller cannot infer commit or rollback; stored state is inspected separately.',
     expected: 'In this modeled scenario, independent inspection finds that completion committed.',
@@ -213,62 +213,7 @@ export const scenarios: Scenario[] = [
       ),
     ],
   },
-  {
-    id: 'dedupe',
-    title: 'Duplicate message · inventory model',
-    description:
-      'Model the implemented inventory consumer receiving the same identity twice, 2 ms apart. This presentation does not call the backend.',
-    expected: 'Illustration: two arrivals, one atomic local inventory effect.',
-    outcome: '◇ Illustrated inventory deduplication',
-    result:
-      'Deduplication and a local database effect share a modeled transaction. An external business effect does not automatically share that atomicity.',
-    steps: [
-      step(
-        'First arrival',
-        'Receive the first message',
-        'The implemented consumer checks stable identity and complete content. No live consumer executes here.',
-        'Illustration receives demo-001 for inventory item SKU-1.',
-        '0 ms',
-        'preview',
-        'Illustration · first arrival',
-        'Illustration · no effect yet',
-        'event_id: demo-001 · arrivals: 1',
-        true,
-      ),
-      step(
-        'Atomic local commit',
-        'Commit one local effect',
-        'The deduplication record and local database effect commit in one modeled transaction.',
-        'Illustration commits receipt demo-001 and stock together: 10 + 5 = 15.',
-        '1 ms',
-        'preview',
-        'Illustration · first arrival',
-        'Illustration · stock 15 and receipt committed',
-        'event_id: demo-001 · local_effects: 1',
-      ),
-      step(
-        'Duplicate arrival',
-        'Same identity, 2 ms later',
-        'The identity is already recorded; the second effect is skipped. Reading time is independent of modeled arrival time.',
-        'Illustration receives demo-001 again, 2 ms after its first arrival; duplicate effect is skipped.',
-        '2 ms',
-        'preview',
-        'Illustration · 2 arrivals',
-        'Illustration · stock remains 15',
-        'event_id: demo-001 · arrivals: 2 · second_effect: skipped',
-        true,
-      ),
-      step(
-        'Inspect inventory model',
-        'One modeled local effect',
-        'This is an illustration of the implemented local transaction, not a live run or a guarantee for external effects.',
-        'Illustrated result: two arrivals with demo-001 and one atomic local effect.',
-        '3 ms',
-        'preview',
-        'Illustration · 2 arrivals',
-        'Illustration · stock remains 15',
-        'event_id: demo-001 · local_effects: 1 · live_run: false',
-      ),
-    ],
-  },
+  { id: 'dedupe', title: 'Duplicate delivery', description: 'Deliver one event, then republish the same immutable event and observe actual Duplicate processing.', expected: 'One business effect, one receipt, stock 15.', outcome: '', result: '', steps: [] },
+  { id: 'concurrent', title: 'Concurrent duplicate delivery', description: 'Republish three bounded copies through two temporary consumers and inspect persisted classifications.', expected: 'Atomic deduplication, one receipt, stock 15.', outcome: '', result: '', steps: [] },
+  { id: 'recovery', title: 'Controlled failure and recovery', description: 'Reject one run-owned publication before sending, then observe the real durable retry and recovery.', expected: 'The same Event ID recovers and stock reaches 15.', outcome: '', result: '', steps: [] },
 ]

@@ -19,6 +19,8 @@ pub enum PublishErrorKind {
     Serialization,
     /// Definitive negative confirmation; no required acceptance established.
     Rejected,
+    /// Explicit bounded rejection before transport send; eligible for durable retry.
+    RejectedBeforeSend,
     /// Definitive failure of required routing; topology may be repairable.
     Unroutable,
     /// Sending may have begun; acceptance is unknown. Never compensate blindly.

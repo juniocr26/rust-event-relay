@@ -10,7 +10,7 @@ test('real browser → producer → relay → broker → consumer, with persiste
   await page.getByLabel('Local demo token', { exact: true }).fill(token)
   await page.getByRole('button', { name: 'Run real delivery' }).click()
   await expect(page.getByText('Confirmed: receipt committed and stock 15; relay completion observed.').first()).toBeVisible({ timeout: 20000 })
-  const key = await page.evaluate(() => sessionStorage.getItem('demo61-request'))
+  const key = await page.evaluate(() => sessionStorage.getItem('relay-request:normal'))
   const response = await request.get(`/demo/runs/${key}`, { headers })
   expect(response.ok()).toBeTruthy(); const e = await response.json()
   expect(e.outbox.status).toBe('processed'); expect(e.stock).toBe(15)
@@ -39,7 +39,7 @@ test('real unavailable authorization, safe same-identity recovery and close with
   await page.getByLabel('Local demo token', { exact: true }).fill('0'.repeat(64))
   await page.getByRole('button', { name: 'Run real delivery' }).click()
   await expect(page.getByText('Authorization required. Check the demo token.').first()).toBeVisible()
-  const key = await page.evaluate(() => sessionStorage.getItem('demo61-request'))
+  const key = await page.evaluate(() => sessionStorage.getItem('relay-request:normal'))
   await page.keyboard.press('Escape')
   await page.getByLabel('Choose an experience').selectOption('crash')
   await page.getByRole('button', { name: 'Open experience' }).click()
@@ -51,7 +51,7 @@ test('real unavailable authorization, safe same-identity recovery and close with
   await page.getByLabel('Local demo token', { exact: true }).fill(token)
   await page.getByRole('button', { name: 'Recover same request' }).click()
   await expect(page.getByText('Confirmed: receipt committed and stock 15; relay completion observed.').first()).toBeVisible({ timeout: 20000 })
-  expect(await page.evaluate(() => sessionStorage.getItem('demo61-request'))).toBe(key)
+  expect(await page.evaluate(() => sessionStorage.getItem('relay-request:normal'))).toBe(key)
 })
 
 for (const width of [320, 375, 768, 1024, 1920]) {

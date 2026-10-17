@@ -28,6 +28,7 @@ async fn setup(p: &PgPool) {
         include_str!("../migrations/20261013000000_add_audited_replay.up.sql"),
         include_str!("../migrations/20261014000000_add_atomic_consumer.up.sql"),
         include_str!("../migrations/20261017000000_add_demo_runs.up.sql"),
+        include_str!("../migrations/20261018000000_add_demo_actions.up.sql"),
     ] {
         support::checked(sqlx::raw_sql(sql).execute(p).await, "demo test schema");
     }
@@ -199,4 +200,113 @@ async fn retained_capacity_stops_without_eviction() {
         let n:i64=sqlx::query_scalar("SELECT count(*) FROM demo.runs").fetch_one(&p).await.unwrap();assert_eq!(n,100);
         Ok(())
     }).await;
+}
+
+async fn delivered_fixture(
+    p: &PgPool,
+    scenario: &str,
+) -> (
+    DemoRepository,
+    reliable_event_relay::application::demo::Evidence,
+) {
+    use reliable_event_relay::{
+        application::consumer::AtomicInventoryProcessor,
+        domain::{
+            consumer::{ConsumerName, InventoryEvent},
+            event::EventEnvelope,
+        },
+        infrastructure::postgres::PostgresInventoryProcessor,
+    };
+    let repo = DemoRepository::new(p.clone());
+    let mut i = intent();
+    i.scenario = scenario.into();
+    let e = demo::submit(&repo, i).await.unwrap();
+    let value: serde_json::Value =
+        sqlx::query_scalar("SELECT to_jsonb(o) FROM relay.outbox_events o WHERE id=$1")
+            .bind(e.event_id)
+            .fetch_one(p)
+            .await
+            .unwrap();
+    let envelope: EventEnvelope = serde_json::from_value(value).unwrap();
+    let event = InventoryEvent::validate(envelope, Some(&e.event_id.to_string())).unwrap();
+    PostgresInventoryProcessor::new(p.clone())
+        .with_demo_evidence()
+        .process(&ConsumerName::new("inventory.stock.v1").unwrap(), &event)
+        .await
+        .unwrap();
+    // Explicit SQL-only admission prerequisite; real relay completion is verified separately in browser tests.
+    sqlx::query("UPDATE relay.outbox_events SET status='processed',processed_at=clock_timestamp() WHERE id=$1").bind(e.event_id).execute(p).await.unwrap();
+    (repo, e)
+}
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn action_concurrent_identity_conflict_and_lost_commit_recovery() {
+    use reliable_event_relay::application::demo::{ActionIntent, Actions};
+    support::isolated(|p|async move {
+        setup(&p).await;let (repo,e)=delivered_fixture(&p,"concurrent").await;
+        let action=ActionIntent{request_id:Uuid::now_v7(),run_id:e.run_id,copies:3};
+        let (a,b)=tokio::join!(repo.submit_action(action.clone()),repo.submit_action(action.clone()));
+        let a=a.unwrap();assert_eq!(a.action_id,b.unwrap().action_id);
+        let mut changed=action.clone();changed.copies=1;assert!(matches!(repo.submit_action(changed).await,Err(Error::Conflict)));
+        let count:(i64,i64,i64)=sqlx::query_as("SELECT (SELECT count(*) FROM demo.goods_receipts),(SELECT count(*) FROM relay.outbox_events),(SELECT count(*) FROM consumer.receipts)").fetch_one(&p).await.unwrap();assert_eq!(count,(1,1,1));
+        let (_,other)=delivered_fixture(&p,"dedupe").await;
+        let intent=ActionIntent{request_id:Uuid::now_v7(),run_id:other.run_id,copies:1};
+        let (proxy,task)=faults::lost_commit_ack_pool(&p).await;
+        let result=DemoRepository::new(proxy.clone()).submit_action(intent.clone()).await;
+        assert!(matches!(result,Err(Error::CommitUnknown)));assert!(task.await.unwrap());proxy.close().await;
+        let recovered=repo.submit_action(intent.clone()).await.unwrap();let repeated=repo.submit_action(intent).await.unwrap();assert_eq!(recovered.action_id,repeated.action_id);
+        assert_eq!(repo.evidence(e.request_id).await.unwrap().unwrap().stock,Some(15));
+        Ok(())
+    }).await;
+}
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL"]
+async fn interrupted_publication_action_is_unknown_and_never_reissued() {
+    use reliable_event_relay::application::demo::{ActionIntent, Actions};
+    support::isolated(|p| async move {
+        setup(&p).await;
+        let (repo, e) = delivered_fixture(&p, "dedupe").await;
+        let i = ActionIntent {
+            request_id: Uuid::now_v7(),
+            run_id: e.run_id,
+            copies: 1,
+        };
+        let a = repo.submit_action(i.clone()).await.unwrap();
+        sqlx::query("UPDATE demo.actions SET state='executing' WHERE action_id=$1")
+            .bind(a.action_id)
+            .execute(&p)
+            .await
+            .unwrap();
+        let worker_pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(2)
+            .connect_with((*p.connect_options()).clone())
+            .await
+            .unwrap();
+        let (stop, rx) = tokio::sync::watch::channel(false);
+        let task = tokio::spawn(
+            reliable_event_relay::infrastructure::demo_delivery::action_worker(worker_pool, rx),
+        );
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            loop {
+                if repo.submit_action(i.clone()).await.unwrap().state == "unknown" {
+                    break;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        stop.send(true).unwrap();
+        task.await.unwrap();
+        let repeated = repo.submit_action(i).await.unwrap();
+        assert_eq!(repeated.action_id, a.action_id);
+        assert_eq!(repeated.state, "unknown");
+        let n: i64 = sqlx::query_scalar("SELECT count(*) FROM demo.publications")
+            .fetch_one(&p)
+            .await
+            .unwrap();
+        assert_eq!(n, 0);
+        Ok(())
+    })
+    .await;
 }

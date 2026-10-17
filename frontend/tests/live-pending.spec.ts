@@ -8,7 +8,7 @@ test('paused test consumer shows pending evidence and closing only stops observa
   await expect(page.getByText('Producer committed. Observing independent delivery evidence…').first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Observing…' })).toBeDisabled()
   await expect(page.getByText('Consumer receipt: not observed yet.')).toBeVisible()
-  const key=await page.evaluate(()=>sessionStorage.getItem('demo61-request'))
+  const key=await page.evaluate(()=>sessionStorage.getItem('relay-request:normal'))
   await page.keyboard.press('Escape')
   const result=await request.get(`/demo/runs/${key}`,{headers:{Authorization:`Bearer ${token}`,'X-Demo-Client':'demo61'}})
   const e=await result.json(); expect(e.receipt).toBeNull();expect(e.stock).toBe(10)

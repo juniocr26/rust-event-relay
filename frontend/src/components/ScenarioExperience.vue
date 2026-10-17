@@ -14,7 +14,7 @@ const { index, running, current, entries, finished, run } = usePlayback(props.sc
 </script>
 <template>
   <BaseModal :title="scenario.title" :description="scenario.description" @close="$emit('close')"
-    ><RealDelivery v-if="scenario.id === 'normal'" /><template v-else><p class="expected">Illustrative scenario · Expected: {{ scenario.expected }}</p>
+    ><RealDelivery v-if="['normal','dedupe','concurrent','recovery'].includes(scenario.id)" :scenario="scenario.id" /><template v-else><p class="expected">Illustrative scenario · Expected: {{ scenario.expected }}</p>
     <StageProgress :steps="scenario.steps" :index="index" :running="running" /><MessageFlow
       :active="running && !!current?.activity"
       :title="current?.title ?? 'Ready when you are.'"

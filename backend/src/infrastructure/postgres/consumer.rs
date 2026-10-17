@@ -20,12 +20,46 @@ const MAX_CONTENT: usize = 16384;
 #[derive(Clone)]
 pub struct PostgresInventoryProcessor {
     pool: PgPool,
+    demo_context: Option<(Option<uuid::Uuid>, &'static str)>,
 }
 impl PostgresInventoryProcessor {
     /// Construction performs no I/O; the caller owns pool lifecycle/deadlines.
     /// Construção sem I/O; o chamador controla ciclo de vida e prazos do pool.
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self {
+            pool,
+            demo_context: None,
+        }
+    }
+    /// Durable classification only for demo-owned events; legacy processing stays unchanged.
+    /// Classificação durável apenas para eventos demo; preserva processamento anterior.
+    pub fn with_demo_evidence(mut self) -> Self {
+        self.demo_context = Some((None, "main"));
+        self
+    }
+    pub fn for_demo_action(mut self, id: uuid::Uuid, slot: &'static str) -> Self {
+        self.demo_context = Some((Some(id), slot));
+        self
+    }
+    async fn observe_demo(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        event: &InventoryEvent,
+        outcome: &str,
+    ) -> Result<(), ProcessingFailure> {
+        let Some((action, context)) = self.demo_context else {
+            return Ok(());
+        };
+        let run: Option<uuid::Uuid> =
+            sqlx::query_scalar("SELECT run_id FROM demo.runs WHERE event_id=$1 FOR UPDATE")
+                .bind(event.event_id())
+                .fetch_optional(&mut **tx)
+                .await
+                .map_err(precommit)?;
+        if let Some(run) = run {
+            sqlx::query("INSERT INTO demo.consumer_observations(observation_id,run_id,event_id,action_id,context,outcome) SELECT $1,$2,$3,$4,$5,$6 WHERE (SELECT count(*) FROM demo.consumer_observations WHERE run_id=$2)<32").bind(uuid::Uuid::now_v7()).bind(run).bind(event.event_id()).bind(action).bind(context).bind(outcome).execute(&mut **tx).await.map_err(precommit)?;
+        }
+        Ok(())
     }
 }
 fn precommit(error: sqlx::Error) -> ProcessingFailure {
@@ -117,7 +151,14 @@ impl AtomicInventoryProcessor for PostgresInventoryProcessor {
                 ContentMatch::Duplicate => ProcessingOutcome::Duplicate(receipt),
                 _ => ProcessingOutcome::IdentityConflict,
             };
-            tx.rollback().await.map_err(precommit)?;
+            if matches!(outcome, ProcessingOutcome::Duplicate(_)) && self.demo_context.is_some() {
+                self.observe_demo(&mut tx, event, "Duplicate").await?;
+                tx.commit()
+                    .await
+                    .map_err(|error| ProcessingFailure::from(map_commit_error(error)))?;
+            } else {
+                tx.rollback().await.map_err(precommit)?;
+            }
             return Ok(outcome);
         }
         sqlx::query("INSERT INTO consumer.stock(warehouse_id,sku,units) VALUES($1,$2,0) ON CONFLICT DO NOTHING")
@@ -147,6 +188,7 @@ impl AtomicInventoryProcessor for PostgresInventoryProcessor {
             .map_err(precommit)?;
         sqlx::query("UPDATE consumer.receipts SET stock_before=$3,stock_after=$4,completed_at=clock_timestamp() WHERE consumer_name=$1 AND event_id=$2")
             .bind(consumer.as_str()).bind(event.event_id()).bind(before.units()).bind(after.units()).execute(&mut *tx).await.map_err(precommit)?;
+        self.observe_demo(&mut tx, event, "Applied").await?;
         tx.commit()
             .await
             .map_err(|error| ProcessingFailure::from(map_commit_error(error)))?;

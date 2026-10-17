@@ -11,6 +11,11 @@ services:
     stop_grace_period: 95s
     working_dir: /app/backend
     environment:
+      DEMO_ENABLED: "true"
+      DEMO_TOKEN: ${DEMO_TOKEN:?Run scripts/start-local.py to initialize the local demo token}
+      DEMO_ORIGIN: http://localhost:${HOST_FRONTEND_PORT:-5173}
+      DEMO_DB_PORT: ${POSTGRES_HOST_PORT:-5433}
+      DEMO_MANAGEMENT_PORT: ${RABBITMQ_MANAGEMENT_PORT:-15672}
       HTTP_METRICS_ADDR: ${HTTP_METRICS_ADDR:-127.0.0.1:9100}
       RELAY_METRICS_ADDR: ${RELAY_METRICS_ADDR:-127.0.0.1:9101}
       CONSUMER_METRICS_ADDR: ${CONSUMER_METRICS_ADDR:-127.0.0.1:9102}
@@ -75,6 +80,7 @@ services:
     working_dir: /app/frontend
     environment:
       npm_config_cache: /tmp/npm-cache
+      DEMO_API_TARGET: http://app:8080
     command: ["sh", "-c", "npm ci && npm run dev -- --host 0.0.0.0 --port 5173 --strictPort"]
     volumes:
       - ./frontend:/app/frontend

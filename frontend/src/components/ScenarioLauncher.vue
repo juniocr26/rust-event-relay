@@ -26,7 +26,7 @@ defineEmits<{ 'update:modelValue': [value: string]; open: [] }>()
         :options="scenarios"
         @update:model-value="$emit('update:modelValue', $event)"
       /><BaseButton @click="$emit('open')">Open experience →</BaseButton>
-      <div class="caption">{{ modelValue === 'normal' ? 'Real delivery · dedicated local stack required' : 'Illustrative scenario · no real fault execution' }}</div>
+      <div class="caption">{{ ['normal','dedupe','concurrent','recovery'].includes(modelValue) ? 'Real execution · persistent evidence' : 'Illustrative scenario · no real fault execution' }}</div>
     </section>
   </main>
 </template>

@@ -5,3 +5,5 @@ pub mod rabbitmq;
 pub mod operator_http;
 
 pub mod demo_http;
+
+pub mod demo_delivery;

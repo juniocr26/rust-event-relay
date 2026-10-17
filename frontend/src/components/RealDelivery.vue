@@ -4,7 +4,8 @@ import { useDemoRun } from '../composables/useDemoRun'
 import BaseButton from './BaseButton.vue'
 import MessageFlow from './MessageFlow.vue'
 import EvidenceProgress from './EvidenceProgress.vue'
-const { token, requestId, evidence, state, busy, stale, execute, newRun } = useDemoRun()
+const props = defineProps<{ scenario: string }>()
+const { token, requestId, evidence, location, state, busy, stale, execute, newRun, complete } = useDemoRun(props.scenario)
 const copied = ref('')
 async function copy(label: string, value: string) {
   try { await navigator.clipboard.writeText(value); copied.value = `${label} copied` }
@@ -15,7 +16,7 @@ async function copy(label: string, value: string) {
   <p class="expected">Real local pipeline · initial stock 10 + received units 5 → expected stock 15</p>
   <label for="demo-token">Local demo token</label>
   <input id="demo-token" v-model="token" type="password" autocomplete="off" spellcheck="false" :disabled="busy" aria-describedby="token-help" />
-  <p id="token-help">Use DEMO_TOKEN from your private .demo.env. This credential only authorizes the dedicated demo stack.</p>
+  <p id="token-help">Use DEMO_TOKEN from your private .env. It authorizes scenario execution and evidence in this application.</p>
   <EvidenceProgress :producer="!!evidence" :publication="evidence?.outbox.status === 'processed'" :receipt="!!evidence?.receipt" :stock="evidence?.stock === 15" />
   <MessageFlow live :preview="false" :active="false" title="Persistent delivery evidence" explanation="Each milestone reflects durable database evidence. Diagram arrows do not measure broker activity." />
   <p role="status">{{ state }} <span v-if="stale">{{ evidence ? 'Last evidence is stale.' : 'No fresh evidence is available.' }}</span></p>
@@ -33,23 +34,36 @@ async function copy(label: string, value: string) {
       <p v-if="evidence.receipt">Consumer receipt: {{ evidence.receipt.consumer_name }} · {{ evidence.receipt.completed_at }}<br />Receipt effect: {{ evidence.receipt.stock_before }} → {{ evidence.receipt.stock_after }}</p>
       <p v-else>Consumer receipt: not observed yet.</p>
       <p>Current stock: {{ evidence.stock ?? 'unavailable' }} · observed at {{ evidence.observed_at }}</p>
+      <p>Consumer classifications observed: Applied {{ evidence.observations.filter(o => o.outcome === 'Applied').length }} · Duplicate {{ evidence.observations.filter(o => o.outcome === 'Duplicate').length }}<span v-if="evidence.observations.length >= 32"> · observation cap reached; counts are lower bounds</span>.</p>
+      <p>Broker confirmations recorded: {{ evidence.publications.filter(p => p.outcome === 'confirmed').length }}. Local observation times are not exact broker timestamps.</p>
+      <template v-if="evidence.action">
+        <p>Action ID: <code>{{ evidence.action.action_id }}</code> <BaseButton secondary class="copy-control" @click="copy('Action ID', evidence.action.action_id)">Copy Action ID</BaseButton></p>
+        <p>Action request: {{ evidence.action.request_id }} · state {{ evidence.action.state }} · bounded publication calls {{ evidence.action.copies }} · queue <code>{{ evidence.action.queue_name }}</code></p>
+        <p>Observed action contexts: {{ [...new Set(evidence.observations.filter(o => o.action_id === evidence?.action?.action_id).map(o => o.context))].join(', ') || 'not observed' }}. Arrival count and order are not guaranteed.</p>
+      </template>
+      <p v-if="evidence.fault">Controlled condition: {{ evidence.fault.condition }} · injected {{ evidence.fault.injected_at ?? 'not observed' }} · retry due {{ evidence.fault.retry_available_at ?? 'not observed' }} · retry revision {{ evidence.fault.retry_revision ?? 'not observed' }}. This is not an infrastructure outage.</p>
+      <details><summary>Recorded observations</summary><ul><li v-for="o in evidence.observations" :key="o.observation_id">{{ o.outcome }} · {{ o.context }} · {{ o.observed_at }}</li></ul></details>
       <p>Publication and consumer completion are independent. Exact broker-confirm and ACK-receipt times are unavailable.</p>
     </details>
     <details><summary>Where to verify</summary>
-      <p>PostgreSQL: localhost:5441 · database relay_demo61 · user demo61. Use your private .demo.env credentials.</p>
-      <p><a href="http://localhost:15681" target="_blank" rel="noopener noreferrer">RabbitMQ management</a> · vhost demo61 · exchange relay.events → queue relay.local (routing key event). Queue statistics are aggregate.</p>
+      <p>PostgreSQL: {{ location?.database_host }}:{{ location?.database_port }} · database {{ location?.database }} · user {{ location?.database_user }}. Use your private .env credentials.</p>
+      <p><a :href="location?.management_url" target="_blank" rel="noopener noreferrer">RabbitMQ management</a> · vhost {{ location?.vhost }} · exchange {{ location?.exchange }} → queue {{ location?.queue }} (routing key event). Queue statistics are aggregate.</p>
       <p>relay: publication, retry and replay state. consumer: processing receipts and inventory effect. public: migration metadata. demo: runs and producer business records.</p>
       <pre>SELECT * FROM demo.runs WHERE run_id = '{{ evidence.run_id }}';
 SELECT * FROM demo.goods_receipts WHERE run_id = '{{ evidence.run_id }}';
 SELECT id,status,attempt_count,processed_at FROM relay.outbox_events WHERE id = '{{ evidence.event_id }}';
 SELECT consumer_name,event_id,stock_before,quantity,stock_after,completed_at FROM consumer.receipts WHERE event_id = '{{ evidence.event_id }}';
+SELECT * FROM demo.actions WHERE run_id = '{{ evidence.run_id }}';
+SELECT * FROM demo.consumer_observations WHERE run_id = '{{ evidence.run_id }}';
+SELECT * FROM demo.publications WHERE run_id = '{{ evidence.run_id }}';
+SELECT * FROM demo.faults WHERE run_id = '{{ evidence.run_id }}';
 SELECT units FROM consumer.stock WHERE warehouse_id = '{{ evidence.warehouse_id }}' AND sku = '{{ evidence.sku }}';</pre>
     </details>
   </template>
   <p role="status">{{ copied }}</p>
   <footer class="experience-footer"><p>Closing stops browser observation. Durable execution and evidence remain. The request identity is retained in this tab for safe recovery; the token stays in memory.</p>
     <BaseButton :disabled="busy || token.length !== 64" @click="execute">{{ busy ? 'Observing…' : requestId ? 'Recover same request →' : 'Run real delivery →' }}</BaseButton>
-    <BaseButton v-if="evidence?.receipt && evidence.stock === 15 && evidence.outbox.status === 'processed' && !busy" secondary @click="newRun">Prepare a new run</BaseButton>
+    <BaseButton v-if="evidence && complete(evidence) && !busy" secondary @click="newRun">Prepare a new run</BaseButton>
   </footer>
 </template>
 <style scoped>

@@ -1,6 +1,6 @@
 //! Separate local demo credential; no CORS, cookies, operator actions or raw diagnostics.
 //! Credencial local separada; sem CORS, cookies ou ações de operador.
-use crate::application::demo::{self, Error, Intent, Repository};
+use crate::application::demo::{self, ActionIntent, Actions, Error, Intent, Repository};
 use axum::{
     Json, Router,
     extract::{DefaultBodyLimit, Path, State},
@@ -14,7 +14,7 @@ use std::{
 };
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
-pub fn router<R: Repository + 'static>(
+pub fn router<R: Repository + Actions + 'static>(
     repository: R,
     token: String,
     origin: String,
@@ -29,6 +29,11 @@ pub fn router<R: Repository + 'static>(
     let rate = Arc::new(Mutex::new((Instant::now(), 0u32)));
     Ok(Router::new()
         .route("/demo/runs", post(submit::<R>))
+        .route("/demo/actions", post(action::<R>))
+        .route("/demo/config",get(||async {
+            let value=|key:&str,default:&str| std::env::var(key).unwrap_or_else(|_|default.into());
+            Json(serde_json::json!({"database":value("POSTGRES_DB","reliable_event_relay"),"database_user":value("POSTGRES_USER",""),"database_host":"localhost","database_port":value("DEMO_DB_PORT","5433"),"management_url":format!("http://localhost:{}",value("DEMO_MANAGEMENT_PORT","15672")),"vhost":value("RABBITMQ_DEFAULT_VHOST","relay"),"exchange":value("RABBITMQ_EXCHANGE","relay.events"),"queue":value("RABBITMQ_QUEUE","relay.local")}))
+        }))
         .route("/demo/runs/{request_id}", get(evidence::<R>))
         .layer(DefaultBodyLimit::max(1024))
         .layer(axum::middleware::from_fn(
@@ -116,6 +121,16 @@ async fn evidence<R: Repository>(State(repo): State<Arc<R>>, Path(id): Path<Uuid
     match repo.evidence(id).await {
         Ok(Some(e)) => Json(e).into_response(),
         Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => error(e),
+    }
+}
+
+async fn action<R: Actions>(
+    State(repo): State<Arc<R>>,
+    Json(intent): Json<ActionIntent>,
+) -> Response {
+    match repo.submit_action(intent).await {
+        Ok(a) => (StatusCode::ACCEPTED, Json(a)).into_response(),
         Err(e) => error(e),
     }
 }

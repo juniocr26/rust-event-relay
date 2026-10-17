@@ -243,7 +243,9 @@ where
                 )
             } else if matches!(
                 error.kind(),
-                PublishErrorKind::Unroutable | PublishErrorKind::Rejected
+                PublishErrorKind::Unroutable
+                    | PublishErrorKind::Rejected
+                    | PublishErrorKind::RejectedBeforeSend
             ) {
                 let acquisition = claim
                     .retry

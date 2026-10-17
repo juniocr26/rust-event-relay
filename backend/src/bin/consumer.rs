@@ -74,8 +74,14 @@ async fn main() -> Result<(), &'static str> {
             prefetch = config.prefetch,
             "consumer starting; sequential admission; sources redacted"
         );
+        let processor = PostgresInventoryProcessor::new(pool.clone());
+        let processor = if std::env::var("DEMO_ENABLED").as_deref() == Ok("true") {
+            processor.with_demo_evidence()
+        } else {
+            processor
+        };
         run_consumer_observed(
-            &PostgresInventoryProcessor::new(pool.clone()),
+            &processor,
             &config,
             &rabbit,
             &mut shutdown,

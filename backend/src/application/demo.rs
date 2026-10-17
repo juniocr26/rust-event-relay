@@ -14,7 +14,10 @@ pub struct Intent {
 impl Intent {
     pub fn supported(&self) -> bool {
         !self.request_id.is_nil()
-            && self.scenario == "normal"
+            && matches!(
+                self.scenario.as_str(),
+                "normal" | "dedupe" | "concurrent" | "recovery"
+            )
             && self.initial_stock == 10
             && self.quantity == 5
     }
@@ -48,6 +51,14 @@ pub struct ReceiptEvidence {
 /// Narrow evidence DTO, never arbitrary event payloads.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Evidence {
+    #[serde(default)]
+    pub action: Option<Action>,
+    #[serde(default)]
+    pub observations: Vec<ConsumerObservation>,
+    #[serde(default)]
+    pub publications: Vec<PublicationObservation>,
+    #[serde(default)]
+    pub fault: Option<FaultEvidence>,
     pub run_id: Uuid,
     pub request_id: Uuid,
     pub event_id: Uuid,
@@ -88,4 +99,51 @@ pub async fn submit(repo: &impl Repository, intent: Intent) -> Result<Evidence, 
         return Err(Error::Invalid);
     }
     repo.submit(intent).await
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsumerObservation {
+    pub observation_id: Uuid,
+    pub action_id: Option<Uuid>,
+    pub context: String,
+    pub outcome: String,
+    pub observed_at: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicationObservation {
+    pub action_id: Option<Uuid>,
+    pub ordinal: i16,
+    pub outcome: String,
+    pub observed_at: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FaultEvidence {
+    pub condition: String,
+    pub injected_at: Option<String>,
+    pub retry_available_at: Option<String>,
+    pub retry_revision: Option<i64>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Action {
+    pub action_id: Uuid,
+    pub request_id: Uuid,
+    pub run_id: Uuid,
+    pub copies: i16,
+    pub state: String,
+    pub accepted_at: String,
+    pub finished_at: Option<String>,
+    pub queue_name: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ActionIntent {
+    pub request_id: Uuid,
+    pub run_id: Uuid,
+    pub copies: i16,
+}
+pub trait Actions: Send + Sync {
+    fn submit_action(
+        &self,
+        intent: ActionIntent,
+    ) -> impl std::future::Future<Output = Result<Action, Error>> + Send;
 }
