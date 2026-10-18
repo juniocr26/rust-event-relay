@@ -1,3 +1,12 @@
+# Startup e verificação de token
+
+
+O startup suportado no host é `python3 scripts/start-local.py`. Compila artefatos com `--locked` em `target/runtime`, verifica/faz backup do armazenamento antes de migrações pendentes e inicia Supervisor após os pré-requisitos. Ao iniciar o gerenciador, o entrypoint prepara binários automaticamente; `docker compose up` direto não migra dados retidos. Use o startup suportado em instalações novas. Schema ausente é falha da aplicação ao iniciar, não necessariamente falha de execução do launcher. Consulte `docker compose logs --tail 60 app` e `docker compose exec app supervisorctl status`; não repita restarts nem resete volumes. Paradas intencionais STOPPED continuam respeitadas no mesmo gerenciador. Testes compilam em `target/tests`, sem substituir binários dos serviços.
+
+Dentro de app: `python3 /app/scripts/demo-token.py rotate`. A rotação primeiro salva o token autoritativo, reinicia apenas HTTP em execução para carregá-lo, inicia uma vez programas FATAL/EXITED e preserva STOPPED intencional. Verifica acesso com token novo e rejeição do anterior, estabilidade dos processos, readiness dos processos em execução e topologia durável RabbitMQ via consultas de gerenciamento somente leitura. Não publica eventos nem purga filas. HTTP intencionalmente STOPPED mantém ativação pendente e retorna erro. Se falhar após ativação, informa explicitamente que a rotação já foi aplicada; consulte o token privadamente em `.env` e corrija a falha indicada antes de tentar novamente. Estado de processos Supervisor e topologia de filas são verificações distintas.
+
+---
+
 [README](../../../README.pt-BR.md) | [Catálogo](../index.md) | [English](../../en/operations/demo-token-connectivity.md)
 
 # Token local e conectividade

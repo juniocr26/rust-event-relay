@@ -140,7 +140,11 @@ where
         .confirm_select(ConfirmSelectOptions::default())
         .await
         .expect("test confirms");
-    let id = uuid::Uuid::now_v7().simple().to_string();
+    let id = format!(
+        "{}.{}",
+        std::env::var("RELAY_TEST_RUN_ID").unwrap_or_else(|_| "standalone".into()),
+        uuid::Uuid::now_v7().simple()
+    );
     let make = |kind: &str| Topology {
         exchange: format!("relay.it.{id}.{kind}.exchange"),
         queue: format!("relay.it.{id}.{kind}.queue"),

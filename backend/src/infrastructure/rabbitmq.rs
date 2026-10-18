@@ -385,7 +385,11 @@ mod tests {
     #[ignore = "requires real RabbitMQ and explicit credentials"]
     async fn closed_owned_connection_is_unavailable() {
         let mut config = RabbitMqConfig::from_lookup(|key| std::env::var(key).ok()).unwrap();
-        let id = uuid::Uuid::now_v7().simple().to_string();
+        let id = format!(
+            "{}.{}",
+            std::env::var("RELAY_TEST_RUN_ID").unwrap_or_else(|_| "standalone".into()),
+            uuid::Uuid::now_v7().simple()
+        );
         config.topology.exchange = format!("relay.it.{id}.exchange");
         config.topology.queue = format!("relay.it.{id}.queue");
         let publisher = RabbitMqPublisher::connect(config).await.unwrap();
@@ -421,7 +425,11 @@ mod tests {
     #[ignore = "requires real RabbitMQ and explicit credentials"]
     async fn publisher_admission_is_immediate_and_released_after_error_and_cancellation() {
         let mut config = RabbitMqConfig::from_lookup(|key| std::env::var(key).ok()).unwrap();
-        let id = uuid::Uuid::now_v7().simple().to_string();
+        let id = format!(
+            "{}.{}",
+            std::env::var("RELAY_TEST_RUN_ID").unwrap_or_else(|_| "standalone".into()),
+            uuid::Uuid::now_v7().simple()
+        );
         config.topology.exchange = format!("relay.it.{id}.exchange");
         config.topology.queue = format!("relay.it.{id}.queue");
         let publisher = RabbitMqPublisher::connect(config).await.unwrap();

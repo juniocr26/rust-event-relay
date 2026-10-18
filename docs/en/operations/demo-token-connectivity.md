@@ -1,3 +1,12 @@
+# Startup and token verification
+
+
+The supported host startup is `python3 scripts/start-local.py`. It builds the runtime artifacts with `--locked` in `target/runtime`, verifies/backs up existing storage before any pending forward migrations, and starts Supervisor only after prerequisites. On manager startup, the entrypoint prepares runtime binaries automatically; direct `docker compose up` does not migrate retained storage. Use the supported startup for fresh installations. Missing schemas are an application startup failure, not necessarily a launcher execution failure. Check `docker compose logs --tail 60 app` and `docker compose exec app supervisorctl status`; do not repeatedly restart or reset volumes. Named operator STOPPED states remain respected under the same manager. Tests build in `target/tests` and never replace service binaries.
+
+Inside app: `python3 /app/scripts/demo-token.py rotate`. Rotation saves the authoritative token first, restarts only running HTTP to reload it, starts FATAL/EXITED programs once, and preserves intentional STOPPED programs. It verifies new-token access and rejection of the previous token, named process stability, readiness of running processes and durable RabbitMQ topology through read-only management queries. These checks do not publish business events or purge queues. HTTP intentionally STOPPED leaves activation pending and returns nonzero. A failure after activation explicitly reports that rotation was already applied; retrieve the token privately from `.env` and fix the stated service fault before retrying. Supervisor process status and queue topology are separate checks.
+
+---
+
 [README](../../../README.md) | [Catalog](../index.md) | [Português](../../pt-BR/operations/demo-token-connectivity.md)
 
 # Local demo token and connectivity

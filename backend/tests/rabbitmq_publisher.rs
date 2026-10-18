@@ -44,7 +44,11 @@ fn uri() -> String {
 #[tokio::test]
 #[ignore = "requires a real RabbitMQ broker and explicit credentials"]
 async fn routed_envelope_properties_and_mandatory_return() {
-    let id = uuid::Uuid::now_v7().simple().to_string();
+    let id = format!(
+        "{}.{}",
+        std::env::var("RELAY_TEST_RUN_ID").unwrap_or_else(|_| "standalone".into()),
+        uuid::Uuid::now_v7().simple()
+    );
     let topology = Topology {
         exchange: format!("relay.it.{id}.exchange"),
         queue: format!("relay.it.{id}.queue"),
@@ -150,7 +154,11 @@ async fn withheld_confirmation_timeout_and_cancellation_are_uncertain_without_re
     .unwrap();
     let channel = connection.create_channel().await.unwrap();
     for cancel in [false, true] {
-        let id = uuid::Uuid::now_v7().simple().to_string();
+        let id = format!(
+            "{}.{}",
+            std::env::var("RELAY_TEST_RUN_ID").unwrap_or_else(|_| "standalone".into()),
+            uuid::Uuid::now_v7().simple()
+        );
         let topology = Topology {
             exchange: format!("relay.it.{id}.exchange"),
             queue: format!("relay.it.{id}.queue"),

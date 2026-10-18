@@ -56,6 +56,24 @@ fn binary_loads_dotenv_and_handles_signals() {
         thread,
         time::{Instant, SystemTime, UNIX_EPOCH},
     };
+    struct OwnedChild(std::process::Child);
+    impl std::ops::Deref for OwnedChild {
+        type Target = std::process::Child;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+    impl std::ops::DerefMut for OwnedChild {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+    impl Drop for OwnedChild {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
     for signal in ["-TERM", "-INT"] {
         let unique = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -73,16 +91,22 @@ fn binary_loads_dotenv_and_handles_signals() {
         let reserve = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let metrics_address = reserve.local_addr().unwrap();
         drop(reserve);
-        let mut child = Command::new(env!("CARGO_BIN_EXE_reliable-event-relay"))
-            .env("HTTP_METRICS_ADDR", metrics_address.to_string())
-            .current_dir(&directory)
-            .env_remove("APP_ENV")
-            .env_remove("HTTP_ADDR")
-            .env_remove("RUST_LOG")
-            .stdout(Stdio::from(fs::File::create(&log_path).unwrap()))
-            .stderr(Stdio::null())
-            .spawn()
-            .unwrap();
+        let mut child = OwnedChild(
+            Command::new(env!("CARGO_BIN_EXE_reliable-event-relay"))
+                .env_clear()
+                .env("PATH", std::env::var("PATH").unwrap_or_default())
+                .env("HTTP_METRICS_ADDR", metrics_address.to_string())
+                .current_dir(&directory)
+                .env_remove("APP_ENV")
+                .env_remove("HTTP_ADDR")
+                .env_remove("RUST_LOG")
+                .stdout(Stdio::from(fs::File::create(&log_path).unwrap()))
+                .stderr(Stdio::from(
+                    fs::OpenOptions::new().append(true).open(&log_path).unwrap(),
+                ))
+                .spawn()
+                .unwrap(),
+        );
         let deadline = Instant::now() + Duration::from_secs(5);
         loop {
             let logs = fs::read_to_string(&log_path).unwrap();

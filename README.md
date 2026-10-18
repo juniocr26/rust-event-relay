@@ -41,25 +41,27 @@ Open the frontend, choose a real scenario, open the modal and enter DEMO_TOKEN f
 
 ## Tests
 
+Host, from the repository root:
+
 ```sh
-docker compose exec -T app cargo fmt --check
-docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
-docker compose exec -T app cargo test --locked
-docker compose exec -T app cargo build --locked --bins
-docker compose exec -T app env RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps
-docker compose exec -T frontend npm ci
-docker compose exec -T frontend npm run type-check
-docker compose exec -T frontend npm run build
-python3 -B scripts/measure-isolated.py verification
-python3 -B scripts/test-application.py
-python3 -B scripts/test-clean-install.py
-python3 -B scripts/check-migrations.py
-python3 -B scripts/check-docs.py
-python3 -B -m unittest discover -s scripts -p 'test_*.py'
-git diff --check
+docker compose exec app tests
 ```
 
-The opt-in verification harness creates disposable PostgreSQL/RabbitMQ services; browser tests use a temporary copy of the main Compose composition. The clean-install harness copies only Git-visible candidate files and creates private credentials, isolated ports and fresh storage; it builds without host Cargo/node artifacts. These are temporary test installations, not another supported stack. Never run destructive fault tests against retained application services. CI configuration is in `.github/workflows/ci.yaml`; local success does not establish remote CI success.
+Inside app, from any directory: `tests`. Automation may use `docker compose exec -T app tests`.
+
+The command prepares locked npm dependencies and Chromium automatically, then runs Rust formatting/lint/tests/binary compilation/documentation, documentation links and Python tooling tests, frontend type checking/build/browser experience, real PostgreSQL/RabbitMQ/process integration tests, disposable SQLx migration upgrades/rollbacks, and real normal/duplicate/concurrent/recovery browser scenarios with test-owned processes and disposable databases/broker namespaces on the existing infrastructure. Live browser checks also cover paused-consumer recovery, unavailable HTTP and unknown-action inspection under an isolated Supervisor manager. It never migrates the main database or stops the managed application.
+
+First use downloads packages/browser and compiles Rust. Cargo test artifacts live in `target/tests`; managed service artifacts live in `target/runtime`. npm/browser caches and the isolated frontend workspace live under `/tmp/relay-tests` and are reused until container recreation. The frontend service’s node_modules is not modified. One invocation at a time is allowed. Each required phase stops on failure; the summary lists only completed phases. Exit codes: 0 success, 1 failure, 130 interruption. Diagnostics show a sanitized output tail and save the last failing phase to `/tmp/relay-tests/last-failure.log` inside app; Ctrl+C signals the owned process group and permits cleanup before forced termination. Cleanup errors are failures, not successful verification.
+
+Separate host acceptance (optional, potentially expensive):
+
+```sh
+python3 -B scripts/test-application.py
+python3 -B scripts/test-clean-install.py
+python3 -B scripts/measure-isolated.py verification
+```
+
+These checks orchestrate fresh Docker infrastructure, main Compose outage controls and clean installations; they cannot run inside app without host Docker access. Capacity campaigns remain optional; see the measurement script’s documented modes. Routine `tests` does not claim these acceptance checks ran. No Docker socket or privileged nesting is required.
 
 ## Operation and limits
 

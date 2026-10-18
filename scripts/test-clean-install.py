@@ -41,7 +41,7 @@ def main():
    run(['docker','build','-f','docker/Dockerfile.browser','-t',owner+'-browser','.'],stdout=subprocess.DEVNULL)
    # Rotate via the exact supported container command, capture privately, never report the secret.
    rotated=compose(['exec','-T','app','python3','/app/scripts/demo-token.py','rotate'],capture_output=True,text=True).stdout
-   assert rotated.startswith('Activated; previous token rejected.')
+   assert any(line.startswith('Activated; previous token rejected.') for line in rotated.splitlines())
    token=next(line.split('=',1)[1] for line in path.read_text().splitlines() if line.startswith('DEMO_TOKEN='))
    network=owner+'_default'
    browser=['docker','run','--rm','--network',network,'--mount','type=bind,src='+str(checkout/'frontend')+',dst=/app/frontend','-w','/app/frontend','--entrypoint','sh',owner+'-browser','-c']
@@ -52,7 +52,7 @@ def main():
    browser=browser[:2]+['--env','CLEAN_TEST_TOKEN','--env','PLAYWRIGHT_BASE_URL']+browser[2:]
    test_env=dict(env,CLEAN_TEST_TOKEN=token,PLAYWRIGHT_BASE_URL='http://localhost:'+str(ports[1]))
    compose(['exec','-T','frontend','npm','run','build'])
-   run(['docker','compose','exec','-T','app','cargo','test','--locked','--lib','--jobs','1'])
+   run(['docker','compose','exec','-T','-e','CARGO_TARGET_DIR=/app/target/tests','app','cargo','test','--locked','--lib','--jobs','1'])
    result=subprocess.run(browser+[script],cwd=checkout,env=test_env,capture_output=True,text=True,timeout=300)
    print(result.stdout.replace(token,'[redacted]'));print(result.stderr.replace(token,'[redacted]'))
    if result.returncode:raise RuntimeError('Clean-install browser checks failed; sanitized diagnostics above.')
@@ -68,7 +68,9 @@ def main():
    before=sql("SELECT jsonb_build_object('runs',(SELECT count(*) FROM demo.runs),'actions',(SELECT count(*) FROM demo.actions),'receipts',(SELECT count(*) FROM consumer.receipts),'stock',(SELECT sum(units) FROM consumer.stock));")
    compose(['stop','app','frontend']);compose(['start','app','frontend'])
    for _ in range(60):
-    status=compose(['exec','-T','app','supervisorctl','status'],capture_output=True,text=True).stdout
+    # The entrypoint prepares binaries before the Supervisor socket exists.
+    # Poll transient connection/status codes; retain the original bounded budget.
+    status=subprocess.run(cmd+['exec','-T','app','supervisorctl','status'],cwd=checkout,env=env,capture_output=True,text=True,timeout=10).stdout
     if status.count('RUNNING')==3:break
     time.sleep(1)
    assert status.count('RUNNING')==3

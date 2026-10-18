@@ -10,6 +10,12 @@ import sys
 import time
 import urllib.request
 import urllib.error
+import importlib.util
+
+sys.dont_write_bytecode = True
+_spec = importlib.util.spec_from_file_location("service_check", Path(__file__).with_name("service-check.py"))
+service_check = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(service_check)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,7 +40,8 @@ def replace_token(path, token):
         os.fsync(file.fileno())
 
 def status(token):
-    request = urllib.request.Request('http://127.0.0.1:8080/demo/config', headers={
+    address = os.environ.get('HTTP_ADDR', '127.0.0.1:8080').replace('0.0.0.0:', '127.0.0.1:')
+    request = urllib.request.Request('http://' + address + '/demo/config', headers={
         'Authorization': 'Bearer ' + token, 'X-Demo-Client': 'demo61'})
     try:
         with urllib.request.urlopen(request, timeout=2) as response:
@@ -46,7 +53,7 @@ def main():
     path = ROOT / '.env'
     if sys.argv[1:] == ['launch']:
         os.environ['DEMO_TOKEN'] = read_token(path)
-        os.execv('/app/target/debug/reliable-event-relay', ['reliable-event-relay'])
+        os.execv('/app/target/runtime/debug/reliable-event-relay', ['reliable-event-relay'])
     if sys.argv[1:] != ['rotate']:
         raise ValueError('Usage: python3 /app/scripts/demo-token.py rotate')
     # Serialize explicit rotations; HTTP launch reads the completed file without locking.
@@ -58,12 +65,24 @@ def rotate(path):
     old = read_token(path)
     token = secrets.token_hex(32)
     replace_token(path, token)
-    result = subprocess.run(['supervisorctl', 'restart', 'http'], capture_output=True)
-    if result.returncode:
-        raise ValueError('Token saved in .env; HTTP restart failed. Run supervisorctl start http; retrieve token privately from .env.')
+    try:
+        before = service_check.activate_http()
+    except Exception as error:
+        detail = str(error) if isinstance(error, ValueError) else 'Supervisor control unavailable; inspect named processes and startup logs (details redacted)'
+        try:
+            applied = status(token) == 200
+        except (OSError, urllib.error.URLError):
+            applied = False
+        state = 'Rotation already applied' if applied else 'Token saved in .env; activation not verified'
+        raise ValueError(state + '; service recovery failed: ' + detail) from None
     for _ in range(30):
         try:
             if status(token) == 200 and status(old) == 401:
+                try:
+                    service_check.verify(before)
+                except Exception as error:
+                    detail = str(error) if isinstance(error, ValueError) else 'service check unavailable; inspect Supervisor, readiness configuration and dependencies (details redacted)'
+                    raise ValueError('Rotation already applied and HTTP authenticated; service verification failed: ' + detail) from None
                 print('Activated; previous token rejected. Keep this token private. Enter it in Local demo token:')
                 print(token)
                 return

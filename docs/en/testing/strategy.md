@@ -1,3 +1,31 @@
+# Routine verification
+
+Host, from the repository root:
+
+```sh
+docker compose exec app tests
+```
+
+Inside app, from any directory: `tests`. Automation may use `docker compose exec -T app tests`.
+
+The command prepares locked npm dependencies and Chromium automatically, then runs Rust formatting/lint/tests/binary compilation/documentation, documentation links and Python tooling tests, frontend type checking/build/browser experience, real PostgreSQL/RabbitMQ/process integration tests, disposable SQLx migration upgrades/rollbacks, and real normal/duplicate/concurrent/recovery browser scenarios with test-owned processes and disposable databases/broker namespaces on the existing infrastructure. Live browser checks also cover paused-consumer recovery, unavailable HTTP and unknown-action inspection under an isolated Supervisor manager. It never migrates the main database or stops the managed application.
+
+First use downloads packages/browser and compiles Rust. Cargo test artifacts live in `target/tests`; managed service artifacts live in `target/runtime`. npm/browser caches and the isolated frontend workspace live under `/tmp/relay-tests` and are reused until container recreation. The frontend service’s node_modules is not modified. One invocation at a time is allowed. Each required phase stops on failure; the summary lists only completed phases. Exit codes: 0 success, 1 failure, 130 interruption. Diagnostics show a sanitized output tail and save the last failing phase to `/tmp/relay-tests/last-failure.log` inside app; Ctrl+C signals the owned process group and permits cleanup before forced termination. Cleanup errors are failures, not successful verification.
+
+Separate host acceptance (optional, potentially expensive):
+
+```sh
+python3 -B scripts/test-application.py
+python3 -B scripts/test-clean-install.py
+python3 -B scripts/measure-isolated.py verification
+```
+
+These checks orchestrate fresh Docker infrastructure, main Compose outage controls and clean installations; they cannot run inside app without host Docker access. Capacity campaigns remain optional; see the measurement script’s documented modes. Routine `tests` does not claim these acceptance checks ran. No Docker socket or privileged nesting is required.
+
+The reproduced lifecycle regression inherited `DEMO_ENABLED=true` from Compose. Its temporary directory contained only the intended dotenv fixture, but the child attempted demo database initialization and exited with `demo forward migration required`; stderr had been discarded. The test now clears inherited configuration, retains only PATH plus its own exporter address, captures stderr and reaps its child even on assertion failure. Dotenv loading, readiness/metrics and SIGTERM/SIGINT assertions remain.
+
+---
+
 **Current workflow:** run `python3 scripts/start-local.py` from the root. Rollout commands, dedicated-stack instructions and older observations below are historical; they do not replace current installation. See [application](../operations/application-scenarios.md) and [token/connectivity](../operations/demo-token-connectivity.md).
 
 Current native Cargo commands run in `backend/`; Docker app commands inherit `/app/backend`. See [frontend/backend](../guides/frontend-backend.md).

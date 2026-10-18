@@ -41,25 +41,27 @@ Abra o frontend, escolha um cenário real, abra o modal e informe DEMO_TOKEN do 
 
 ## Testes
 
+No host, a partir da raiz do repositório:
+
 ```sh
-docker compose exec -T app cargo fmt --check
-docker compose exec -T app cargo clippy --locked --all-targets --all-features -- -D warnings
-docker compose exec -T app cargo test --locked
-docker compose exec -T app cargo build --locked --bins
-docker compose exec -T app env RUSTDOCFLAGS='-D warnings' cargo doc --locked --no-deps
-docker compose exec -T frontend npm ci
-docker compose exec -T frontend npm run type-check
-docker compose exec -T frontend npm run build
-python3 -B scripts/measure-isolated.py verification
-python3 -B scripts/test-application.py
-python3 -B scripts/test-clean-install.py
-python3 -B scripts/check-migrations.py
-python3 -B scripts/check-docs.py
-python3 -B -m unittest discover -s scripts -p 'test_*.py'
-git diff --check
+docker compose exec app tests
 ```
 
-O harness opt-in cria PostgreSQL/RabbitMQ descartáveis; testes de navegador usam cópia temporária da composição principal. O harness de instalação copia apenas arquivos candidatos visíveis ao Git, cria credenciais privadas, portas isoladas e armazenamento novo; compila sem artefatos Cargo/node do host. São instalações temporárias de teste. Nunca execute falhas destrutivas nos serviços com evidências preservadas. CI está em `.github/workflows/ci.yaml`; sucesso local não comprova CI remoto.
+Dentro de app, em qualquer diretório: `tests`. Na automação: `docker compose exec -T app tests`.
+
+O comando prepara automaticamente dependências npm travadas e Chromium. Executa formatação/lint/testes/binários/documentação Rust, links da documentação e testes das ferramentas Python, tipos/build/browser do frontend, integrações reais PostgreSQL/RabbitMQ/processos, upgrades/rollbacks SQLx em banco descartável e os cenários reais normal/duplicado/concorrente/recuperação no navegador com processos próprios, bancos descartáveis e namespaces de broker na infraestrutura existente. O browser também verifica retomada do consumer pausado, HTTP indisponível e inspeção de ação desconhecida sob Supervisor isolado. Não migra o banco principal nem para os processos gerenciados da aplicação.
+
+A primeira execução baixa pacotes/browser e compila Rust. Os artefatos de teste ficam em `target/tests`; os serviços usam `target/runtime`. Caches npm/browser e a cópia isolada do frontend ficam em `/tmp/relay-tests`, reutilizados até recriar o container. O node_modules do serviço frontend não é modificado. Somente uma execução simultânea é permitida. Uma falha obrigatória interrompe a sequência; o resumo lista apenas fases concluídas. Códigos: 0 sucesso, 1 falha, 130 interrupção. Os diagnósticos mostram a parte final sanitizada e salvam a última fase com falha em `/tmp/relay-tests/last-failure.log` dentro de app; Ctrl+C sinaliza o grupo de processos próprio e permite limpeza antes de encerramento forçado. Falha de limpeza é reportada como falha.
+
+Aceitação separada no host (opcional e potencialmente cara):
+
+```sh
+python3 -B scripts/test-application.py
+python3 -B scripts/test-clean-install.py
+python3 -B scripts/measure-isolated.py verification
+```
+
+Essas verificações orquestram infraestrutura Docker nova, controles de indisponibilidade na composição principal e instalações limpas. Exigem Docker no host; não pertencem ao app. Campanhas de capacidade continuam opcionais; consulte os modos documentados no script de medição. `tests` não afirma executar essas aceitações. Não é necessário socket Docker nem modo privilegiado.
 
 ## Operação e limites
 

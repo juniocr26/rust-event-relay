@@ -33,30 +33,48 @@ class TokenTests(unittest.TestCase):
                         module.replace_token(path, 'c' * 64)
                     self.assertEqual(path.read_text(), content)
 
-    def test_activation_restarts_only_http_and_checks_both_tokens(self):
+    def test_activation_checks_both_tokens_and_services(self):
         from unittest.mock import patch
-        from types import SimpleNamespace
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / '.env'
             path.write_text('DEMO_TOKEN=' + 'a' * 64 + '\n')
-            with patch.object(module.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as restart, patch.object(module, 'status', side_effect=[200, 401]) as status, patch('builtins.print') as display:
+            with patch.object(module.service_check, 'activate_http', return_value={'http':'RUNNING'}) as activate, patch.object(module.service_check, 'verify') as verify, patch.object(module, 'status', side_effect=[200,401]), patch('builtins.print') as display:
                 module.rotate(path)
-                new = module.read_token(path)
-                self.assertNotEqual(new, 'a' * 64)
-                restart.assert_called_once_with(['supervisorctl', 'restart', 'http'], capture_output=True)
-                self.assertEqual(status.call_args_list[0].args, (new,))
-                self.assertEqual(status.call_args_list[1].args, ('a' * 64,))
-                self.assertIn('Keep this token private', display.call_args_list[0].args[0])
-                self.assertEqual(display.call_args_list[1].args, (new,))
+                activate.assert_called_once()
+                verify.assert_called_once_with({'http':'RUNNING'})
+                self.assertEqual(display.call_args_list[-1].args, (module.read_token(path),))
 
-    def test_restart_failure_keeps_authoritative_replacement_without_displaying_it(self):
+    def test_service_failure_reports_rotation_already_applied(self):
         from unittest.mock import patch
-        from types import SimpleNamespace
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / '.env'
             path.write_text('DEMO_TOKEN=' + 'a' * 64 + '\n')
-            with patch.object(module.subprocess, 'run', return_value=SimpleNamespace(returncode=1)), patch('builtins.print') as display:
-                with self.assertRaises(ValueError):
+            with patch.object(module.service_check, 'activate_http', return_value={'http':'RUNNING'}), patch.object(module.service_check, 'verify', side_effect=ValueError('relay readiness failed')), patch.object(module, 'status', side_effect=[200,401]), patch('builtins.print') as display:
+                with self.assertRaisesRegex(ValueError, 'Rotation already applied'):
                     module.rotate(path)
                 self.assertNotEqual(module.read_token(path), 'a' * 64)
+                display.assert_not_called()
+
+    def test_activation_failure_keeps_authoritative_replacement(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / '.env'
+            path.write_text('DEMO_TOKEN=' + 'a' * 64 + '\n')
+            with patch.object(module.service_check, 'activate_http', side_effect=ValueError('http intentionally STOPPED')), patch.object(module, 'status', return_value=503), patch('builtins.print') as display:
+                with self.assertRaisesRegex(ValueError, 'Token saved'):
+                    module.rotate(path)
+                self.assertNotEqual(module.read_token(path), 'a' * 64)
+                display.assert_not_called()
+
+    def test_control_timeout_after_activation_reports_applied_without_low_level_details(self):
+        from unittest.mock import patch
+        import subprocess
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / '.env'
+            path.write_text('DEMO_TOKEN=' + 'a' * 64 + '\n')
+            failure = subprocess.TimeoutExpired(['sensitive-low-level-argument'], 10)
+            with patch.object(module.service_check, 'activate_http', return_value={'http':'RUNNING'}), patch.object(module.service_check, 'verify', side_effect=failure), patch.object(module, 'status', side_effect=[200,401]), patch('builtins.print') as display:
+                with self.assertRaisesRegex(ValueError, 'Rotation already applied') as caught:
+                    module.rotate(path)
+                self.assertNotIn('sensitive-low-level-argument', str(caught.exception))
                 display.assert_not_called()

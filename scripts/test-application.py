@@ -16,6 +16,7 @@ def campaign():
  for service in config['services'].values():
   service.pop('ports',None);service.pop('networks',None);service.pop('build',None)
  app=config['services']['app'];app['image']='rust-event-relay-app'
+ app['entrypoint']=['/bin/sh','-ec','mkdir -p /tmp/relay-supervisor; chmod 700 /tmp/relay-supervisor; exec "$@"','test-entrypoint'];app['command']=['/usr/bin/supervisord','-c','/etc/supervisor/supervisord.conf']
  app['environment'].update({'DEMO_ORIGIN':'http://localhost:5173','POSTGRES_USER':'relay_test','POSTGRES_PASSWORD':password,'POSTGRES_DB':'relay_test','RABBITMQ_DEFAULT_USER':'relay_test','RABBITMQ_DEFAULT_PASS':password,'RABBITMQ_DEFAULT_VHOST':'relay','REPLAY_OPERATORS':'','DEMO_ENABLED':'true'})
  app['volumes']=[{'type':'bind','source':str(ROOT),'target':'/app','read_only':True},{'type':'bind','source':str(ROOT/'target'),'target':'/app/target','read_only':True}]
  app.update({'mem_limit':'1g','cpus':2,'pids_limit':256})
@@ -68,6 +69,11 @@ def campaign():
    action_queues=[q for q in queues if q['name'].startswith('relay.demo.')]
    assert len(action_queues)==7 and all(q['consumers']==0 and q['messages_ready']==0 and q['messages_unacknowledged']==0 for q in action_queues)
    print('Independent SQL verifies normal, duplicate, concurrent duplicate and controlled retry evidence.')
+   retained=sql("SELECT (SELECT count(*) FROM demo.runs),(SELECT count(*) FROM demo.actions),(SELECT count(*) FROM consumer.receipts);")
+   run(['up','-d','--no-deps','--force-recreate','--wait','app'])
+   assert run(['exec','-T','app','supervisorctl','status'],capture_output=True,text=True).stdout.count('RUNNING')==3
+   assert sql("SELECT (SELECT count(*) FROM demo.runs),(SELECT count(*) FROM demo.actions),(SELECT count(*) FROM consumer.receipts);")==retained
+   print('App container recreation preserves existing real runs/actions/receipts and restores all three roles.')
    # Test-owned fixture: retained unknown state, not a claim of a newly injected crash.
    sql("UPDATE demo.actions SET state='unknown' WHERE action_id=(SELECT action_id FROM demo.actions ORDER BY accepted_at DESC LIMIT 1);")
    run(['exec','-T','frontend','npx','playwright','test','--config','playwright.live.config.ts','--grep','unknown action inspection'])

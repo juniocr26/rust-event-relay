@@ -19,6 +19,21 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
 def run(args, sql=None):
+    if "--container" in sys.argv:
+        import os
+        if args[0] == "exec" and args[2] == "postgres":
+            database = args[-1] if args[-2:-1] == ["migration-check"] else os.environ["POSTGRES_DB"]
+            command = ["psql", "-X", "-w", "-h", os.environ["POSTGRES_HOST"], "-p", os.environ["POSTGRES_PORT"], "-U", os.environ["POSTGRES_USER"], "-d", database, "-v", "ON_ERROR_STOP=1", "-At", "-F", "|"]
+            environment = {**os.environ, "PGPASSWORD": os.environ["POSTGRES_PASSWORD"], "PGCONNECT_TIMEOUT": "5", "PGOPTIONS": "-c statement_timeout=10000 -c lock_timeout=3000"}
+        else:
+            database = next(a.split("=", 1)[1] for a in args if a.startswith("POSTGRES_DB="))
+            command = args[args.index("sqlx"):]
+            environment = {**os.environ, "POSTGRES_DB": database}
+        result = subprocess.run(command, cwd=ROOT / "backend", input=sql, text=True, capture_output=True, env=environment, timeout=60)
+        if result.returncode:
+            raise RuntimeError("isolated migration operation failed; driver output redacted")
+        return result.stdout.strip()
+
     result = subprocess.run(
         [*COMPOSE, *args], cwd=ROOT, input=sql,
         text=True, capture_output=True, timeout=60,

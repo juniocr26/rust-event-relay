@@ -46,7 +46,11 @@ where
             .expect("admin connection deadline"),
         "admin connection",
     );
-    let name = format!("relay_it_{}", Uuid::now_v7().simple());
+    let name = format!(
+        "relay_it_{}_{}",
+        std::env::var("RELAY_TEST_RUN_ID").unwrap_or_else(|_| "standalone".into()),
+        &Uuid::now_v7().simple().to_string()[12..]
+    );
     println!("isolated database: {name}");
     // Identifier consists exclusively of a fixed prefix and hexadecimal UUID.
     checked(

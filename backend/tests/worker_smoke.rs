@@ -71,7 +71,7 @@ async fn smoke(supervised: bool, interactive: bool, outage: bool) {
         checked(sqlx::raw_sql(include_str!("../migrations/20261012000000_add_durable_retry.up.sql")).execute(&pool).await,"retry migration");
         let event_id = uuid::Uuid::now_v7();
         checked(sqlx::query("INSERT INTO relay.outbox_events (id,event_type,aggregate_type,aggregate_id,schema_version,occurred_at,payload) VALUES ($1,'test','test','1',1,clock_timestamp(),'{\"smoke\":true}')").bind(event_id).execute(&pool).await,"seed test event");
-        let name = format!("relay.it.{}",uuid::Uuid::now_v7().simple());
+        let name = format!("relay.it.{}.{}",std::env::var("RELAY_TEST_RUN_ID").unwrap_or_else(|_| "standalone".into()),uuid::Uuid::now_v7().simple());
         let exchange = format!("{name}.exchange"); let queue = format!("{name}.queue");
         let mut uri=url::Url::parse("amqp://rabbitmq/relay").unwrap();
         uri.set_username(&std::env::var("RABBITMQ_DEFAULT_USER").unwrap()).unwrap();

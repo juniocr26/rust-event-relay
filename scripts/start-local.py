@@ -41,7 +41,7 @@ def main():
    except OSError:raise SystemExit(f'Configured host port {port} is occupied. Free it; no alternate port was selected.')
  run('docker','compose','up','-d','--wait','postgres','rabbitmq')
  run('docker','compose','build','app')
- run('docker','compose','run','--rm','--no-deps','app','cargo','build','--locked','--bins')
+ run('docker','compose','run','--rm','--no-deps','-e','CARGO_TARGET_DIR=/app/target/runtime','app','cargo','build','--locked','--bins')
  run(sys.executable,'scripts/consolidate-storage.py','--apply')
  run('docker','compose','up','-d','app','frontend')
  resume_failed_processes()
