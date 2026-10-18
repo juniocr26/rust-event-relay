@@ -1,3 +1,13 @@
+# Current RabbitMQ contract
+
+The relay publishes original stable-ID envelopes to durable direct `relay.events`, routing key `event`, source queue `relay.local`, vhost `relay`. Mandatory routing/returns and publisher confirms classify acceptance, known rejection/unroutability and uncertainty. Database leases protect state transitions, not external sends. Reconnection is not proof of prior nonacceptance; retry can duplicate transport.
+
+The inventory consumer is implemented with manual ACK after its atomic stock/receipt transaction. Invalid/unsupported/conflicting input requires confirmed application-managed quarantine before source ACK; preservation failure retains source. Defaults are `relay.quarantine`, key `inventory`, queue `relay.quarantine.inventory`. Duplicate actions use their own durable `relay.demo.<action UUID>` queue/key and bounded temporary consumers. SQL terminal dead_letter differs from broker quarantine. Broker credentials are separate from demo/operator tokens; current AMQP is not a verified production TLS or payload-encryption path.
+
+[Complete event/ACK/uncertainty trace](../guides/implementation-study.md). Earlier adapter-only and missing-consumer statements below retain their original milestone scope, not the current contract.
+
+## Historical reference (original dates and milestone scope)
+
 Current resource admission and instrumentation: publisher/quarantine reject saturation immediately before serialization; no internal admission waiters. Earlier dated admission descriptions below are historical. [Milestone 5.1](../operations/milestone-5-1.md).
 
 #

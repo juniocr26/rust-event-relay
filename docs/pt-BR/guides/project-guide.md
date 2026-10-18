@@ -1,3 +1,11 @@
+# Guia atual — revisão de código em 2026-10-18
+
+Comece pelo [README](../../../README.pt-BR.md) para instalar e pelo [estudo da implementação](implementation-study.md) para acompanhar código/evidência. `backend/` contém domínio Rust, portas/políticas, adaptadores PostgreSQL/AMQP/HTTP e testes; `frontend/` contém componentes reais de cenários/inspeção Vue e fixtures ilustrativas separadas. `backend/migrations` fornece nove migrations ordenadas; `docker/supervisor` gerencia HTTP, relay e consumidor. Artefatos runtime e testes são separados.
+
+Um Compose principal usa `python3 scripts/start-local.py`; stack dedicada é histórica. APIs de produtor/execução/ação/histórico e consumidor atômico estão implementados. Inspecione fatos reais e depois estude falhas/incerteza nos testes, separadamente das animações. Comandos e árvores abaixo pertencem às revisões originais, não ao startup atual. Esta revisão não muda URL remota ou nome de repositório.
+
+## Referência histórica (datas e escopo originais)
+
 [Registro histórico: guia e aceite atuais](../operations/milestone-6-3.md)
 
 **Fluxo atual de estudo — Marco 5.3:** outbox → aquisição relay → confirmação RabbitMQ → conclusão SQL relay → recibo/estoque consumer → envio ACK. Retry/incerteza, SQL dead_letter e quarentena broker são ramos separados; replay autorizado preserva identidade e não repete efeito já receipted. [Cenários medidos, cobertura e limites](../operations/milestone-5-3.md). Frontend continua ilustração local rotulada; Marco 6 indefinido.

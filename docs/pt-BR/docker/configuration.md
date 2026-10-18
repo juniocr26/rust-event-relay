@@ -1,3 +1,13 @@
+# Fluxo local suportado — código atual
+
+Use `python3 scripts/start-local.py` após configurar privadamente a partir de `.env.example`. `compose.yaml` principal executa app, frontend, PostgreSQL e RabbitMQ. Launcher prepara binários locked, verifica histórico e trata migration forward necessária com backup protegido/prova de restauração antes de iniciar os papéis. Compose direto não fornece esse protocolo em dados retidos. `compose.demo.yaml` e procedimentos dedicados abaixo são históricos.
+
+Padrões: frontend localhost:5173; HTTP localhost:8080; PostgreSQL localhost:5433; management localhost:15672. Readiness/métricas internas usam 9100/9101/9102, sem publicação no host. Bind PostgreSQL e volume RabbitMQ sobrevivem stop; não devem ser resetados como reparo de dependências. Credenciais de inicialização não rotacionam clusters existentes. Tokens ficam privados e fora de VITE_*.
+
+[Configuração, ciclo e recuperação atuais](../operations/application-scenarios.md) | [Token persistente e conectividade](../operations/demo-token-connectivity.md). Comandos abaixo são históricos salvo conciliação explícita nessas referências; nenhum comando Docker foi executado nesta revisão.
+
+## Referência histórica (datas e escopo originais)
+
 **Fluxo atual:** execute `python3 scripts/start-local.py` na raiz. Os comandos de rollout, stack dedicada e observações antigas abaixo são históricos; não substituem a instalação atual. Consulte [aplicação](../operations/application-scenarios.md) e [token/conectividade](../operations/demo-token-connectivity.md).
 
 [Registro histórico: instalação e endereços atuais](../operations/application-scenarios.md)

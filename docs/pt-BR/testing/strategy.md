@@ -1,3 +1,13 @@
+# Estratégia atual de testes e atribuição de evidência
+
+Comando completo suportado: `docker compose exec app tests` (dentro de app: `tests`). Prepara ferramentas isoladas e executa Rust format/lint/testes/build/rustdoc, checks documentais/testes das ferramentas, frontend/browser, testes descartáveis PostgreSQL/RabbitMQ/processos/migrations e cenários reais. É validação de runtime e **não foi executada nesta manutenção documental**. O [README](../../../README.pt-BR.md) detalha fases, isolamento, códigos e limpeza.
+
+Testes de política/fakes demonstram sequência, resultados tipados e orçamento determinístico; banco/broker exercitam agendamentos selecionados de transação, confirm, replay, quarentena e consumidor. Browser separa operações normal/duplicada/concorrente/retry de animações ilustrativas. Unidade não estabelece dependências instaladas; integrações finitas não cobrem todo interleaving. Helpers e ignores opt-in não devem virar passes substantivos indiscriminadamente.
+
+[Auditoria final](../operations/final-audit.md) e [manifesto](../../audit/2026-10-17/manifest.json) atribuem aceite à base de 2026-10-17. Comandos host de instalação limpa/aplicação/capacidade são separados e potencialmente caros; rotina não implica execução deles. Esta revisão só executou validação documental/testes isolados da ferramenta. [Rastreio de código a testes](../guides/implementation-study.md). Comandos/resultados anteriores abaixo preservam escopo original.
+
+## Referência histórica (datas e escopo originais)
+
 # Verificação de rotina
 
 No host, a partir da raiz do repositório:

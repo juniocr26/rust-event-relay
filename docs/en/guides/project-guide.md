@@ -1,3 +1,11 @@
+# Current project guide — 2026-10-18 source review
+
+Start at the [README](../../../README.md) for installation and the [implementation study](implementation-study.md) for the code-to-evidence reading path. `backend/` contains Rust domain, application ports/policy, PostgreSQL/AMQP/HTTP adapters and test definitions; `frontend/` contains Vue real-scenario/inspection components plus isolated illustrative fixtures. `backend/migrations` supplies nine ordered versioned migrations; `docker/supervisor` manages HTTP, relay and consumer. Runtime artifacts and test artifacts are separate.
+
+One main Compose workflow uses `python3 scripts/start-local.py`; the dedicated demo stack is historical. Producer/run/action/history APIs and atomic consumer are implemented. Use real scenarios to inspect producer/outbox/consumer facts, then study crash/uncertainty tests independently of simulated playback. Historical commands and directory snapshots below belong to their original revisions, not current startup guidance. No remote URL or repository name is changed by this review.
+
+## Historical reference (original dates and milestone scope)
+
 [Historical record: current application guide and acceptance](../operations/milestone-6-3.md)
 
 **Current study flow — Milestone 5.3:** outbox → relay acquisition → RabbitMQ confirmation → SQL relay completion → consumer receipt/stock → ACK-send. Retry/uncertainty, SQL dead_letter and broker quarantine are separate branches; authorized replay keeps identity and cannot repeat an already receipted effect. [Measured scenarios, full coverage and decision limits](../operations/milestone-5-3.md). Frontend remains a labelled local illustration; Milestone 6 is undefined.

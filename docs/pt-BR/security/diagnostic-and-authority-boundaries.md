@@ -1,3 +1,11 @@
+# Limites atuais de segurança e autoridade
+
+HTTP local inclui produtor/ações/evidência autenticados, além de health. Bearer demo é independente das credenciais privilegiadas de replay. Middleware confere token, origem/header, tamanho, taxa, concorrência e prazos; replay deriva ator/orçamento de configuração confiável e fica desabilitado com REPLAY_OPERATORS vazio. Token no navegador só em memória, identificadores em session storage. Não implica contas públicas.
+
+Token/revisão/lease PostgreSQL autorizam transições. Conteúdo imutável/constraints de recibo protegem efeito local contra processamento duplicado comum; proprietários privilegiados podem contornar proteções. Nenhum deles faz fencing de envios AMQP. Credenciais, diagnóstico sanitizado e persistência não são criptografia da aplicação/TLS. HTTP/AMQP locais não devem ser descritos como transporte produtivo seguro. Consulte [limites finais](../guides/implementation-study.md) e [operação de token](../operations/demo-token-connectivity.md). Descrições abaixo de apenas health/consumidor ausente são históricas.
+
+## Referência histórica (datas e escopo originais)
+
 # Autoridade, diagnóstico e transporte
 
 [English](../../en/security/diagnostic-and-authority-boundaries.md) | [Português brasileiro](diagnostic-and-authority-boundaries.md)

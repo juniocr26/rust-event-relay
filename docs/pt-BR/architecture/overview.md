@@ -1,3 +1,13 @@
+# Arquitetura atual — escopo local final
+
+HTTP compõe API limitada de produtor/evidência; relay adquire/publica outbox; consumidor confirma efeito local de estoque. Supervisor gerencia ciclos separados. Vue chama HTTP pelo proxy para cenários reais e inspeção GET. PostgreSQL controla produtor, relay e consumidor em schemas separados; RabbitMQ controla transporte durável. Nenhum projeto irmão é dependência de runtime.
+
+Produtor confirma fato de recebimento e outbox atomicamente. Publicação usa leases/revisões, confirms, retry durável e replay autorizado. Consumidor confirma recibo/estoque atomicamente e tenta ACK. São fronteiras independentes: consumidor pode confirmar antes da conclusão observada do relay; enviar ACK com sucesso não prova recebimento. Identidade estável/recibos retidos impedem segundo efeito local suportado, não transporte duplicado.
+
+Siga [um evento por código, tabelas, topologia e UI](../guides/implementation-study.md) para diagrama, fluxo 10 → 15 → 15, limites e entrevista. [ADRs 007–012](../index.md#adr) explicam posse, retry, replay, consumidor e demo. Seções abaixo preservam marcos anteriores; afirmações de worker/produtor/consumidor/API ausentes são históricas.
+
+## Referência histórica (datas e escopo originais)
+
 [Registro histórico: guia e aceite atuais](../operations/milestone-6-3.md)
 
 Schema/contratos atuais: [Marco 3.2](milestone-3-2.md). Seções de marcos anteriores abaixo descrevem o escopo original.

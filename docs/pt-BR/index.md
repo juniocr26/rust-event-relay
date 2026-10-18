@@ -1,51 +1,10 @@
-[Preparação histórica do Marco 6 — comparação e proposta de escopo](operations/milestone-6-preparation.md).
+# Catálogo de documentação: Rust Event Relay
 
-[Guia atual da aplicação](operations/application-scenarios.md) · [Aceite do Marco 6.3](operations/milestone-6-3.md)
+[README](../../README.pt-BR.md) | [English / Português brasileiro](../en/index.md)
 
-**Fechamento histórico do Marco 5 (17/10/2026):** [5.3 protocolo, medições, matriz, rollout e decisões](operations/milestone-5-3.md) | [Dados finitos](../en/testing/milestone-5-3-results.json). Fechado com limitações explícitas não bloqueantes; Marco 6 ainda indefinido naquele momento. Entradas datadas anteriores permanecem históricas.
-
-# Catálogo de documentação: rust-event-relay
-
-[Introdução do projeto](../../README.pt-BR.md) | [Outro idioma](../en/index.md)
-
-Percurso: propósito/setup → arquitetura/contratos → segurança/falhas → testes/evidência → operações. Na biblioteca: catálogo/dossiê → entrevista por projeto → fundamentos → falhas. Marcos/refactors/handoff históricos descrevem datas originais; revisão/checklist explica escopo atual.
-
-- [Marco 5.2 — prontidão, atualidade e rollout validado do 5.1](operations/milestone-5-2.md)
-
-## Contrato atual de recursos e observabilidade
-
-- [Marco 5.1 — limites de recursos e métricas por processo](operations/milestone-5-1.md)
-
-## Rollout local atual
-
-- [Marco 4.5 — rollout controlado, backup verificado, demonstração preservada e recuperação](operations/milestone-4-5-rollout.md)
-
-## Fechamento atual do Marco 4
-
-- [Marco 4.4 — verificação, matriz de aceitação e rollout](operations/milestone-4-4-review.md)
-- [Inventário de ambiente e configuração efetiva](docker/environment-inventory.md)
-
-
-## architecture
-
-- [Marco 2.6 — Recuperação integrada](architecture/milestone-2-6.md)
-
-- [Milestone 2.5 — Worker](architecture/milestone-2-5.md)
-
-- [Marco 2.4 — Caso de uso de entrega](architecture/milestone-2-4.md)
-
-Componentes, fluxos e fronteiras implementadas.
-
-- [Semântica de falhas e transações - Marco 1.8](architecture/failure-and-transactions.md)
-- [Marco 2.1 — Publisher RabbitMQ e gestão de processos](architecture/milestone-2-1.md)
-- [Marco 2.2 — Estado de entrega e posse de eventos](architecture/milestone-2-2.md)
-- [Marco 2.3 — Operações PostgreSQL de posse](architecture/milestone-2-3.md)
-- [Arquitetura](architecture/overview.md)
-- [Abstração de persistência — Marco 1.5](architecture/persistence-contracts.md)
+Comece pela [instalação](../../README.pt-BR.md), depois [acompanhe um evento](guides/implementation-study.md), [operação atual](operations/application-scenarios.md), [testes](testing/strategy.md) e a prática de entrevista do guia. Aceite final é [evidência datada](operations/final-audit.md), não execução nova. Páginas de marcos abaixo são históricas; “atual” nos títulos refere-se ao marco registrado.
 
 ## adr
-
-Decisões e consequências; IDs/histórico preservados.
 
 - [ADR 001 — Usar Rust para o relay](adr/001-use-rust-for-the-relay.md)
 - [ADR 002 — Usar PostgreSQL para armazenamento durável de eventos](adr/002-use-postgresql-for-durable-event-storage.md)
@@ -54,96 +13,83 @@ Decisões e consequências; IDs/histórico preservados.
 - [ADR 005 — Separar Contratos de Persistência do Relay da Infraestrutura PostgreSQL](adr/005-separate-persistence-contracts-from-postgresql.md)
 - [ADR 006 — Publisher RabbitMQ confirmado e Supervisor local](adr/006-rabbitmq-publisher-and-supervisor.md)
 - [ADR 007 — Posse durável da entrega com transações curtas](adr/007-durable-delivery-ownership.md)
+- [ADR 008 — Política durável de falhas e contratos de recuperação](adr/008-durable-failure-policy.md)
+- [ADR 009 — Replay autorizado, idempotente e auditável](adr/009-authorized-idempotent-replay.md)
+- [ADR 010 — Efeito atômico de estoque e quarentena pela aplicação](adr/010-atomic-consumer-and-quarantine.md)
+- [ADR 011: execuções locais com evidência persistente](adr/011-persistent-demo-runs.md)
+- [ADR 012 — ambiente único e cenários reais limitados](adr/012-one-application-real-scenarios.md)
 
-## guides
+## architecture
 
-- [Frontend/backend preparation](guides/frontend-backend.md)
-
-Setup, pré-requisitos e procedimentos de leitura.
-
-- [Dependências de desenvolvimento e recuperação](guides/dependencies.md)
-- [Guia do projeto](guides/project-guide.md)
-
-## testing
-
-Estratégia, inventários e evidências datadas.
-
-- [Testes](testing/strategy.md)
-- [Resultados de validação](testing/validation-results.md)
-
-## docker
-
-Imagens, serviços, mounts e configuração local.
-
-- [Docker e configuração](docker/configuration.md)
+- [Semântica de falhas e transações - Marco 1.8](architecture/failure-and-transactions.md)
+- [Marco 2.1 — Publisher RabbitMQ e gestão de processos](architecture/milestone-2-1.md)
+- [Marco 2.2 — Estado de entrega e posse de eventos](architecture/milestone-2-2.md)
+- [Marco 2.3 — Operações PostgreSQL de posse da entrega](architecture/milestone-2-3.md)
+- [Marco 2.4 — Orquestração do caso de uso de entrega](architecture/milestone-2-4.md)
+- [Marco 2.5 — Composição e operação do worker](architecture/milestone-2-5.md)
+- [Marco 2.6 — Experimentos integrados de recuperação](architecture/milestone-2-6.md)
+- [Marco 3.1 — Política durável de falhas e contratos de recuperação](architecture/milestone-3-1.md)
+- [Marco 3.2 — Estado durável de retry e transições PostgreSQL](architecture/milestone-3-2.md)
+- [Marco 3.3 — Integração da política durável de falhas](architecture/milestone-3-3.md)
+- [Marco 3.4 — Descoberta limitada e isolamento seguro](architecture/milestone-3-4.md)
+- [Marco 3.5 — Replay autorizado, idempotente e auditável](architecture/milestone-3-5.md)
+- [Marco 4.1 — Contratos do consumidor de estoque](architecture/milestone-4-1.md)
+- [Marco 4.2 — persistência atômica de estoque no PostgreSQL](architecture/milestone-4-2.md)
+- [Marco 4.3 — Consumidor RabbitMQ e quarentena confirmada](architecture/milestone-4-3.md)
+- [Arquitetura](architecture/overview.md)
+- [Abstração de persistência — Marco 1.5](architecture/persistence-contracts.md)
 
 ## database
-
-Modelos, constraints, migrações e consistência.
 
 - [Migrações de banco — Marco 1.3](database/migrations.md)
 - [Schema outbox — Marco 1.4](database/outbox-schema.md)
 - [Repositório PostgreSQL — Marco 1.6](database/postgres-repository.md)
 - [Decisão PostgreSQL e infraestrutura local](database/postgresql.md)
 
+## docker
+
+- [Docker e configuração](docker/configuration.md)
+- [Inventário de ambiente — Marco 4.4](docker/environment-inventory.md)
+
+## guides
+
+- [Dependências de desenvolvimento e recuperação](guides/dependencies.md)
+- [Preparação frontend/backend — 2026-10-12](guides/frontend-backend.md)
+- [Implementação local final: um evento, cinco fronteiras de evidência](guides/implementation-study.md)
+- [Guia do projeto](guides/project-guide.md)
+
 ## integrations
 
-Fronteiras verificadas e ausência de integrações.
-
-- [Integração verificada do publisher](integrations/rabbitmq-contract.md)
+- [rabbitmq-contract](integrations/rabbitmq-contract.md)
 
 ## operations
 
-- [Token e conectividade](operations/demo-token-connectivity.md)
-
-- [Revisão de aceitação do Marco 2](operations/milestone-2-review.md)
-
-Diagnóstico, recuperação, checklists e registros históricos.
-
-- [rust-event-relay: Checklist de conclusão do repositório](operations/completion-checklist.md)
-- [Implantação, observabilidade e lacunas de evidência](operations/deployment-and-evidence.md)
+- [Startup e verificação de token](operations/application-scenarios.md)
+- [Manutenção documental — 2026-10-18](operations/completion-checklist.md)
+- [Startup e verificação de token](operations/demo-token-connectivity.md)
+- [deployment-and-evidence](operations/deployment-and-evidence.md)
+- [Auditoria final de implementação - 17/10/2026](operations/final-audit.md)
 - [Handoff do Marco 1](operations/handoff-marco-1.md)
+- [Rollout local e inicialização automática do relay](operations/local-relay-rollout.md)
 - [Revisão de fechamento do Marco 1](operations/milestone-1-review.md)
+- [Revisão de aceitação do Marco 2 — 2026-10-12](operations/milestone-2-review.md)
+- [Marco 3.6 — Aceitação integrada e auditoria completa do projeto](operations/milestone-3-review.md)
+- [Marco 4.4 — verificação completa e fechamento do Marco 4](operations/milestone-4-4-review.md)
+- [Marco 4.5 — rollout local controlado e verificação operacional](operations/milestone-4-5-rollout.md)
+- [Marco 5.1 — limites de recursos e fundamentos de observabilidade](operations/milestone-5-1.md)
+- [Marco 5.2 — prontidão e atualidade operacional](operations/milestone-5-2.md)
+- [Marco 5.3 — medições reproduzíveis e aceitação](operations/milestone-5-3.md)
+- [Marco 6.1 — entrega real com evidência persistente](operations/milestone-6-1.md)
+- [Marco 6.2 — entrega duplicada com evidência durável](operations/milestone-6-2.md)
+- [Milestone 6.3 — aceitação final](operations/milestone-6-3.md)
+- [Preparação do Marco 6 — comparação e escopo da interface real](operations/milestone-6-preparation.md)
+- [Procedimento de replay do operador](operations/replay.md)
 
 ## security
 
-Autenticação, autorização, dados e recursos.
-
 - [Autoridade, diagnóstico e transporte](security/diagnostic-and-authority-boundaries.md)
 
-Aplicabilidade e omissões estão justificadas no [checklist](operations/completion-checklist.md). Não há categorias vazias.
+## testing
 
-- [Milestone 3.1 — durable failure policy and roadmap](architecture/milestone-3-1.md)
-- [ADR 008 — durable failure policy](adr/008-durable-failure-policy.md)
-
-- [Marco 3.2 — persistência atual](architecture/milestone-3-2.md)
-
-[Marco 3.3 — integração atual](architecture/milestone-3-3.md).
-
-[Rollout local e inicialização automática do relay](operations/local-relay-rollout.md).
-
-
-## Marco 3.4 — descoberta/isolamento atuais
-
-Descoberta limitada e isolamento com autoridade atual implementados; replay permanece 3.5 e fechamento integrado 3.6. Rollout local preservado; esta alteração não tem migration ou reinício compartilhado. [Marco 3.4 — descoberta/isolamento atuais](architecture/milestone-3-4.md).
-
-[Milestone 3.5 — replay](architecture/milestone-3-5.md) | [ADR 009](adr/009-authorized-idempotent-replay.md) | [Operator replay](operations/replay.md)
-
-
-## Aceitação atual do Marco 3.6 — 13/10/2026
-
-[Auditoria completa, matriz rastreável, contagens executadas, lacunas operacionais e leitura guiada](operations/milestone-3-review.md). Marco 3 fechado com limitações explícitas não bloqueantes; rollout replay compartilhado, idempotência consumer, frontend/backend real e prontidão produtiva permanecem separados. Seções anteriores preservam o escopo histórico datado.
-
-
-## Marco 4.1 — contratos implementados; runtime planejado
-
-[Estoque, deduplicação, quarentena e 4.2–4.4](architecture/milestone-4-1.md) | [ADR 010](adr/010-atomic-consumer-and-quarantine.md).
-
-[Milestone 4.2 — PostgreSQL](architecture/milestone-4-2.md).
-
-[Marco 4.3 — runtime consumidor e quarentena confirmada](architecture/milestone-4-3.md).
-
-- [Milestone 6.1 — persistent real delivery](operations/milestone-6-1.md)
-- [ADR 011 — persistent demo runs](adr/011-persistent-demo-runs.md)
-
-- [Marco 6.2 — duplicatas duráveis](operations/milestone-6-2.md)
+- [Verificação de rotina](testing/strategy.md)
+- [Resultados de validação](testing/validation-results.md)

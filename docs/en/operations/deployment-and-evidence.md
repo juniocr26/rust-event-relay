@@ -1,3 +1,11 @@
+# Current operation and evidence boundaries
+
+The supported launcher and one main Compose environment run separate HTTP/relay/consumer roles plus Vue. Use [current installation and operation](application-scenarios.md), [token recovery](demo-token-connectivity.md) and [the final event study](../guides/implementation-study.md). Source, on-disk binary and loaded process are separate evidence; rebuilding alone does not prove a running revision. Named Supervisor controls preserve deliberate stops under the same manager. Keep test artifacts separate from runtime artifacts.
+
+The [2026-10-17 final acceptance](final-audit.md) records local portfolio closure at its own base; later startup/token/test-tool source changes were inspected statically here. Historical results do not establish the current live environment, remote CI or production readiness. Database backup does not include broker queues; automatic retention/general repair/HA/TLS are outside this bounded delivery. No service, migration, network or application test was executed in this documentation review. Earlier rollout status below remains dated history.
+
+## Historical reference (original dates and milestone scope)
+
 [Historical record: current installation and addresses](../operations/application-scenarios.md)
 
 **Current deployment/evidence — 2026-10-17:** [5.3](milestone-5-3.md) records exact remote 5.2 CI, controlled named rollout, loaded hashes, finite isolated measurements and preserved demonstration. 5.3 itself is local test/docs/comment work and was not deployed. Older records below retain their original scope.

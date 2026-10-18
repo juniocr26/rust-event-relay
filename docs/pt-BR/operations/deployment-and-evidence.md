@@ -1,3 +1,11 @@
+# Operação atual e limites de evidência
+
+Launcher suportado e Compose principal executam HTTP/relay/consumidor separados e Vue. Use [instalação/operação atuais](application-scenarios.md), [recuperação de token](demo-token-connectivity.md) e [estudo final](../guides/implementation-study.md). Código, binário em disco e processo carregado são evidências distintas; rebuild não prova revisão em execução. Controles nomeados Supervisor preservam paradas deliberadas sob mesmo manager. Artefatos de teste ficam separados do runtime.
+
+[Aceite de 2026-10-17](final-audit.md) registra conclusão local em sua própria base; mudanças posteriores de startup/token/ferramentas foram inspecionadas estaticamente aqui. Resultados históricos não estabelecem ambiente atual, CI remoto ou produção. Backup do banco não inclui filas; retenção/reparo gerais/HA/TLS ficam fora do escopo limitado. Nenhum serviço, migration, rede ou teste da aplicação foi executado nesta revisão. Status de rollout abaixo permanece histórico datado.
+
+## Referência histórica (datas e escopo originais)
+
 [Registro histórico: instalação e endereços atuais](../operations/application-scenarios.md)
 
 **Deploy/evidência atual — 17/10/2026:** [5.3](milestone-5-3.md) registra CI remoto exato 5.2, rollout nominal controlado, hashes carregados, medições isoladas finitas e demonstração preservada. 5.3 é trabalho local de testes/docs/comentário, sem deploy. Registros anteriores mantêm seu escopo original.

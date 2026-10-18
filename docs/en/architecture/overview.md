@@ -1,3 +1,13 @@
+# Current architecture — final local portfolio scope
+
+The HTTP binary composes the bounded producer/evidence API; the relay binary acquires and publishes outbox events; the consumer binary commits local inventory effects. Supervisor manages their separate lifecycles. Vue calls HTTP through its proxy for real scenarios and GET-only inspection. PostgreSQL owns producer, relay and consumer state in separate schemas; RabbitMQ owns durable transport. No sibling project is a runtime dependency.
+
+The producer commits the goods-receipt fact and canonical outbox atomically. Publication uses database leases/revisions, confirms, durable retry and authorized replay. The consumer commits receipt and stock atomically, then attempts ACK. These are independent boundaries: a consumer can commit before relay completion is observed, and successful ACK send does not prove broker receipt. Stable identity and retained receipts prevent a second supported local effect, not duplicate transport.
+
+Follow [one event through source, tables, topology and UI](../guides/implementation-study.md) for the current component diagram, 10 → 15 → 15 flow, resource limits and interview path. [ADRs 007–012](../index.md#adr) explain authority, retry, replay, consumer and demo consequences. The sections below preserve earlier milestones; formerly missing worker/producer/consumer/API statements are historical.
+
+## Historical reference (original dates and milestone scope)
+
 [Historical record: current application guide and acceptance](../operations/milestone-6-3.md)
 
 Current schema/contracts: [Milestone 3.2](milestone-3-2.md). Earlier milestone sections below describe their original scope.

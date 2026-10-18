@@ -1,3 +1,20 @@
+# Documentation maintenance — 2026-10-18
+
+Baseline `6e5e64fbffea1eb3ec50b828648f3fa9e708cf6c`; initially clean worktree. This is static documentation maintenance. Historical test counts below belong to their original date/revision and were not rerun.
+
+- [x] Inventory/source review
+- [x] Structure and implementation content
+- [x] Equivalent English/Portuguese coverage
+- [x] Navigation and local links
+- [x] Project interview and Engineering Library coverage
+- [x] Evidence gaps and justified exceptions
+
+[Current source review and evidence limits](../guides/implementation-study.md).
+
+Completion concerns documentation coverage, not production readiness, runtime certification or closure of evidence gaps. Validator results are recorded in the library review.
+
+## Historical checklists (original dates and scope)
+
 [Historical record: current application guide and acceptance](../operations/milestone-6-3.md)
 
 **Current 5.3 acceptance — 2026-10-17:** [Full matrix and Milestone 5 closure](milestone-5-3.md). Remote 5.2 selected and deliberately deployed; finite isolated measurements/final checks passed. Project production readiness not established; Milestone 6 undefined. Entries below retain their dated scope.

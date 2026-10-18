@@ -1,3 +1,13 @@
+# Contrato RabbitMQ atual
+
+Relay publica envelopes originais com ID estável em direct durável `relay.events`, chave `event`, fila `relay.local`, vhost `relay`. Mandatory/returns e confirms classificam aceitação, rejeição/unroutable conhecidos e incerteza. Leases protegem transições SQL, não envios externos. Reconexão não prova não aceitação anterior; retry pode duplicar transporte.
+
+Consumidor de estoque implementado usa ACK manual após transação atômica de estoque/recibo. Entrada inválida/não suportada/conflitante exige quarentena confirmada gerida pela aplicação antes do ACK; falha de preservação mantém origem. Padrões: `relay.quarantine`, chave `inventory`, fila `relay.quarantine.inventory`. Ações duplicadas usam fila/chave durável `relay.demo.<UUID da ação>` e consumidores temporários limitados. dead_letter SQL difere da quarentena broker. Credenciais do broker diferem de tokens demo/operador; AMQP atual não é caminho produtivo verificado de TLS/criptografia do payload.
+
+[Rastreio completo de evento/ACK/incerteza](../guides/implementation-study.md). Afirmações abaixo de adaptador isolado/consumidor ausente pertencem ao marco original, não ao contrato atual.
+
+## Referência histórica (datas e escopo originais)
+
 Admissão e instrumentação atuais: publisher/quarentena rejeitam saturação antes da serialização, sem waiters internos. Descrições datadas abaixo são históricas. [Milestone 5.1](../operations/milestone-5-1.md).
 
 #

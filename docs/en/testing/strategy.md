@@ -1,3 +1,13 @@
+# Current testing strategy and evidence attribution
+
+The supported full application test command is `docker compose exec app tests` (inside app: `tests`). It prepares isolated tooling, then runs Rust format/lint/tests/build/rustdoc, documentation checks/tool tests, frontend checks and browser tests, disposable PostgreSQL/RabbitMQ/process/migration tests and real local scenarios. It is application/runtime validation and was **not executed in this documentation maintenance**. The [README](../../../README.md#tests) documents phases, artifact isolation, failure codes and cleanup.
+
+Policy/fake tests establish call ordering, typed outcomes and deterministic budgets; database/broker tests exercise selected real transaction, confirm, replay, quarantine and consumer schedules. Browser tests distinguish actual normal/duplicate/concurrent/retry operations from illustrative animations. Unit success does not establish installed native/runtime dependencies; finite integration schedules do not establish all possible interleavings. Historical helper dispatchers and opt-in ignores must not be counted as substantive passes blindly.
+
+[Final audit](../operations/final-audit.md) and its [manifest](../../audit/2026-10-17/manifest.json) attribute historical acceptance to the recorded 2026-10-17 base. Host clean-install/application/capacity commands remain separate and potentially expensive; routine tests do not imply they ran. This review executed only documentation validation and isolated documentation-tool tests. [Trace code to test definitions](../guides/implementation-study.md). Earlier test commands/results below retain their original scope.
+
+## Historical reference (original dates and milestone scope)
+
 # Routine verification
 
 Host, from the repository root:

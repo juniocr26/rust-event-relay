@@ -1,3 +1,13 @@
+# Supported local workflow — current source
+
+Use `python3 scripts/start-local.py` after private configuration from `.env.example`. The main `compose.yaml` runs app, frontend, PostgreSQL and RabbitMQ. The launcher prepares locked binaries, verifies history and handles necessary forward migration with protected backup/restore proof before starting supervised roles. Direct Compose startup does not provide the same retained-storage migration protocol. `compose.demo.yaml` and dedicated-stack procedures below are historical artifacts.
+
+Defaults: frontend localhost:5173; HTTP localhost:8080; PostgreSQL localhost:5433; broker management localhost:15672. Internal metrics/readiness listeners are 9100/9101/9102, not published host endpoints. PostgreSQL bind storage and RabbitMQ named volume survive ordinary stop; neither should be reset as dependency repair. Initialization credentials do not rotate existing clusters. Tokens stay private and outside VITE_*.
+
+[Current configuration, lifecycle and recovery](../operations/application-scenarios.md) | [Persistent token and connectivity](../operations/demo-token-connectivity.md). Commands below are historical guidance unless explicitly reconciled by those current references; no Docker command ran during this review.
+
+## Historical reference (original dates and milestone scope)
+
 **Current workflow:** run `python3 scripts/start-local.py` from the root. Rollout commands, dedicated-stack instructions and older observations below are historical; they do not replace current installation. See [application](../operations/application-scenarios.md) and [token/connectivity](../operations/demo-token-connectivity.md).
 
 [Historical record: current installation and addresses](../operations/application-scenarios.md)

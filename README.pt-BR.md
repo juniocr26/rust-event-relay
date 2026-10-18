@@ -83,3 +83,5 @@ MIT — [LICENSE](LICENSE).
 [Token, ativação persistente e diagnóstico](docs/pt-BR/operations/demo-token-connectivity.md).
 
 Dentro do contêiner app: `python3 /app/scripts/demo-token.py rotate`.
+
+[Estudo e entrevista: acompanhe produtor, posse, confirms, consumidor, ACK e evidência correlacionada](docs/pt-BR/guides/implementation-study.md). Revisão estática em 2026-10-18; aceite histórico não reexecutado.

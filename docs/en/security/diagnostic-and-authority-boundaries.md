@@ -1,3 +1,11 @@
+# Current security and authority boundaries
+
+The local HTTP application includes authenticated producer/actions/evidence, not only health. Demo Bearer authentication is independent of privileged replay credentials. Demo middleware checks token, origin/client header, body size, rate, concurrency and deadlines; operator replay derives actor/allowance from trusted server configuration and is disabled when REPLAY_OPERATORS is empty. Browser token stays in memory, identifiers in session storage. No public-user account system is implied.
+
+PostgreSQL token/revision/lease checks authorize relay transitions. Consumer immutable-content/receipt constraints protect supported local effects against ordinary duplicate processing; privileged database owners can bypass safeguards. Neither mechanism fences external AMQP sends. Credentials, obfuscation of diagnostics and durable storage are not application encryption or TLS. Current local AMQP/HTTP must not be described as production transport security. Inspect [the final implementation boundaries](../guides/implementation-study.md) and [token operation](../operations/demo-token-connectivity.md). Earlier health-only/missing-consumer descriptions below are historical.
+
+## Historical reference (original dates and milestone scope)
+
 # Authority, diagnostics and transport
 
 [English](diagnostic-and-authority-boundaries.md) | [Português brasileiro](../../pt-BR/security/diagnostic-and-authority-boundaries.md)
